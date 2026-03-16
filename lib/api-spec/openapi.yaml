@@ -1,22 +1,34 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Grupo Beija-flor Internal Social Network API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: posts
+    description: Posts and feed
+  - name: channels
+    description: Channel management
+  - name: comments
+    description: Comment operations
+  - name: tickets
+    description: Support tickets
+  - name: birthdays
+    description: Birthday list
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,788 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Email not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/complete-onboarding:
+    post:
+      operationId: completeOnboarding
+      tags: [auth]
+      summary: Complete user onboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteOnboardingRequest"
+      responses:
+        "200":
+          description: Onboarding complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      parameters:
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/avatar:
+    post:
+      operationId: updateAvatar
+      tags: [users]
+      summary: Update user avatar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAvatarRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/allowed-emails:
+    get:
+      operationId: listAllowedEmails
+      tags: [users]
+      summary: List allowed emails
+      responses:
+        "200":
+          description: List of allowed emails
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllowedEmail"
+    post:
+      operationId: addAllowedEmail
+      tags: [users]
+      summary: Add allowed email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAllowedEmailRequest"
+      responses:
+        "200":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllowedEmail"
+
+  /admin/allowed-emails/{id}:
+    delete:
+      operationId: removeAllowedEmail
+      tags: [users]
+      summary: Remove allowed email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      summary: List channels for current user
+      responses:
+        "200":
+          description: List of channels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
+    post:
+      operationId: createChannel
+      tags: [channels]
+      summary: Create channel (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelRequest"
+      responses:
+        "200":
+          description: Created channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+
+  /channels/{id}:
+    get:
+      operationId: getChannel
+      tags: [channels]
+      summary: Get channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+    patch:
+      operationId: updateChannel
+      tags: [channels]
+      summary: Update channel (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChannelRequest"
+      responses:
+        "200":
+          description: Updated channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+    delete:
+      operationId: deleteChannel
+      tags: [channels]
+      summary: Delete channel (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /channels/{id}/can-post:
+    get:
+      operationId: canPostInChannel
+      tags: [channels]
+      summary: Check if user can post in channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Permission check
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanPostResponse"
+
+  /channels/{id}/allowed-posters:
+    post:
+      operationId: addAllowedPoster
+      tags: [channels]
+      summary: Add allowed poster to channel (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAllowedPosterRequest"
+      responses:
+        "200":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+    delete:
+      operationId: removeAllowedPoster
+      tags: [channels]
+      summary: Remove allowed poster from channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAllowedPosterRequest"
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      summary: List posts (feed)
+      parameters:
+        - name: channelId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostsPage"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Create post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostRequest"
+      responses:
+        "200":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{id}:
+    get:
+      operationId: getPost
+      tags: [posts]
+      summary: Get post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+    delete:
+      operationId: deletePost
+      tags: [posts]
+      summary: Delete post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /posts/{id}/like:
+    post:
+      operationId: likePost
+      tags: [posts]
+      summary: Like/unlike post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Like status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+
+  /posts/{id}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List comments for a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Create comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "200":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /comments/{id}:
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Delete comment (own or moderator)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /comments/{id}/report:
+    post:
+      operationId: reportComment
+      tags: [comments]
+      summary: Report a comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "200":
+          description: Reported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [comments]
+      summary: List reported comments (moderator/admin)
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List tickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, closed]
+      responses:
+        "200":
+          description: Tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketRequest"
+      responses:
+        "200":
+          description: Created ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+    patch:
+      operationId: updateTicketStatus
+      tags: [tickets]
+      summary: Update ticket status (assigned team)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketRequest"
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}/messages:
+    get:
+      operationId: listTicketMessages
+      tags: [tickets]
+      summary: List ticket messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TicketMessage"
+    post:
+      operationId: addTicketMessage
+      tags: [tickets]
+      summary: Add message to ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketMessageRequest"
+      responses:
+        "200":
+          description: Message added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketMessage"
+
+  /birthdays:
+    get:
+      operationId: listBirthdays
+      tags: [birthdays]
+      summary: List upcoming birthdays
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Birthdays
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BirthdayUser"
+
+  /admin/ticket-handlers:
+    get:
+      operationId: listTicketHandlers
+      tags: [tickets]
+      summary: List ticket handlers
+      responses:
+        "200":
+          description: Handlers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TicketHandler"
+    post:
+      operationId: addTicketHandler
+      tags: [tickets]
+      summary: Add ticket handler
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTicketHandlerRequest"
+      responses:
+        "200":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/ticket-handlers/{userId}:
+    delete:
+      operationId: removeTicketHandler
+      tags: [tickets]
+      summary: Remove ticket handler
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +828,556 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    CompleteOnboardingRequest:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+        acceptedTerms:
+          type: boolean
+        readDocuments:
+          type: boolean
+      required:
+        - acceptedTerms
+        - readDocuments
+
+    UpdateAvatarRequest:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+      required:
+        - avatarUrl
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          enum: [marketing, adm, socio, posto, churrascaria, gerente]
+          nullable: true
+        role:
+          type: string
+          enum: [user, moderator, admin, master_admin]
+        birthDate:
+          type: string
+          nullable: true
+        admissionDate:
+          type: string
+          nullable: true
+        onboardingCompleted:
+          type: boolean
+        acceptedTerms:
+          type: boolean
+        readDocuments:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - onboardingCompleted
+        - acceptedTerms
+        - readDocuments
+        - createdAt
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+          enum: [marketing, adm, socio, posto, churrascaria, gerente]
+        role:
+          type: string
+          enum: [user, moderator, admin, master_admin]
+        birthDate:
+          type: string
+          nullable: true
+        admissionDate:
+          type: string
+          nullable: true
+
+    AllowedEmail:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        addedAt:
+          type: string
+      required:
+        - id
+        - email
+        - addedAt
+
+    AddAllowedEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        tag:
+          type: string
+          enum: [marketing, adm, socio, posto, churrascaria, gerente]
+        role:
+          type: string
+          enum: [user, moderator, admin, master_admin]
+        temporaryPassword:
+          type: string
+      required:
+        - email
+        - name
+        - temporaryPassword
+
+    Channel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        allowedTags:
+          type: array
+          items:
+            type: string
+        isInternalComm:
+          type: boolean
+        postCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - allowedTags
+        - isInternalComm
+        - postCount
+        - createdAt
+
+    CreateChannelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        allowedTags:
+          type: array
+          items:
+            type: string
+        isInternalComm:
+          type: boolean
+      required:
+        - name
+        - allowedTags
+
+    UpdateChannelRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        allowedTags:
+          type: array
+          items:
+            type: string
+        isInternalComm:
+          type: boolean
+
+    CanPostResponse:
+      type: object
+      properties:
+        canPost:
+          type: boolean
+      required:
+        - canPost
+
+    AddAllowedPosterRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+      required:
+        - userId
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        authorId:
+          type: integer
+        author:
+          $ref: "#/components/schemas/UserBasic"
+        channelId:
+          type: integer
+        channel:
+          $ref: "#/components/schemas/ChannelBasic"
+        likeCount:
+          type: integer
+        commentCount:
+          type: integer
+        likedByMe:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - content
+        - authorId
+        - author
+        - channelId
+        - channel
+        - likeCount
+        - commentCount
+        - likedByMe
+        - createdAt
+
+    PostsPage:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        total:
+          type: integer
+        page:
+          type: integer
+        hasMore:
+          type: boolean
+      required:
+        - posts
+        - total
+        - page
+        - hasMore
+
+    CreatePostRequest:
+      type: object
+      properties:
+        content:
+          type: string
+        imageUrl:
+          type: string
+        channelId:
+          type: integer
+      required:
+        - content
+        - channelId
+
+    LikeResponse:
+      type: object
+      properties:
+        liked:
+          type: boolean
+        likeCount:
+          type: integer
+      required:
+        - liked
+        - likeCount
+
+    UserBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        role:
+          type: string
+      required:
+        - id
+        - name
+        - role
+
+    ChannelBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        icon:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        authorId:
+          type: integer
+        author:
+          $ref: "#/components/schemas/UserBasic"
+        postId:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - content
+        - authorId
+        - author
+        - postId
+        - createdAt
+
+    CreateCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    ReportRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        commentId:
+          type: integer
+        comment:
+          $ref: "#/components/schemas/Comment"
+        reporterId:
+          type: integer
+        reporter:
+          $ref: "#/components/schemas/UserBasic"
+        reason:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - commentId
+        - comment
+        - reporterId
+        - reporter
+        - reason
+        - createdAt
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, closed]
+        category:
+          type: string
+        authorId:
+          type: integer
+        author:
+          $ref: "#/components/schemas/UserBasic"
+        messageCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - status
+        - category
+        - authorId
+        - author
+        - messageCount
+        - createdAt
+        - updatedAt
+
+    CreateTicketRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+      required:
+        - title
+        - description
+        - category
+
+    UpdateTicketRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, closed]
+
+    TicketMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketId:
+          type: integer
+        content:
+          type: string
+        authorId:
+          type: integer
+        author:
+          $ref: "#/components/schemas/UserBasic"
+        createdAt:
+          type: string
+      required:
+        - id
+        - ticketId
+        - content
+        - authorId
+        - author
+        - createdAt
+
+    CreateTicketMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    BirthdayUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        birthDate:
+          type: string
+        daysUntil:
+          type: integer
+      required:
+        - id
+        - name
+        - birthDate
+        - daysUntil
+
+    TicketHandler:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        user:
+          $ref: "#/components/schemas/UserBasic"
+        addedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - user
+        - addedAt
+
+    AddTicketHandlerRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+      required:
+        - userId
