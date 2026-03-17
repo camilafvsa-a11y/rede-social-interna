@@ -9,6 +9,7 @@ export default function AdminLayout() {
       <Stack.Screen name="channels" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="ticket-handlers" />
+      <Stack.Screen name="terms" />
     </Stack>
   );
 }

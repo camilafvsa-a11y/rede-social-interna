@@ -15,6 +15,7 @@ const ADMIN_SECTIONS = [
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
   { icon: "help-circle", title: "Responsáveis por Chamados", desc: "Gerenciar equipe de suporte", route: "/admin/ticket-handlers" },
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
+  { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },
 ];
 
 export default function AdminScreen() {

@@ -3,15 +3,15 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
 const C = Colors.light;
 
-function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
+function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -22,12 +22,12 @@ function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
         <Icon sf={{ default: "number", selected: "number" }} />
         <Label>Canais</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="birthdays">
-        <Icon sf={{ default: "gift", selected: "gift.fill" }} />
-        <Label>Aniversários</Label>
+      <NativeTabs.Trigger name="integra">
+        <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
+        <Label>Integra</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
-        <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
+        <Icon sf={{ default: "questionmark.bubble", selected: "questionmark.bubble.fill" }} />
         <Label>Chamados</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
@@ -38,7 +38,7 @@ function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
+function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -82,11 +82,11 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         }}
       />
       <Tabs.Screen
-        name="birthdays"
+        name="integra"
         options={{
-          title: "Aniversários",
+          title: "Integra",
           tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="gift" tintColor={color} size={24} /> : <Feather name="gift" size={22} color={color} />,
+            isIOS ? <SymbolView name="doc.text" tintColor={color} size={24} /> : <Feather name="file-text" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -105,13 +105,13 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
             isIOS ? <SymbolView name="person" tintColor={color} size={24} /> : <Feather name="user" size={22} color={color} />,
         }}
       />
+      {/* Hide old birthdays tab if still present */}
+      <Tabs.Screen name="birthdays" options={{ href: null }} />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin" || user?.role === "master_admin";
-  if (isLiquidGlassAvailable()) return <NativeTabLayout isAdmin={isAdmin} />;
-  return <ClassicTabLayout isAdmin={isAdmin} />;
+  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
+  return <ClassicTabLayout />;
 }
