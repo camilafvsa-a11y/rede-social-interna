@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
-  ActivityIndicator, TouchableOpacity,
+  ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -11,19 +11,32 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import PostCard from "@/components/PostCard";
 import Colors from "@/constants/colors";
-import { Platform } from "react-native";
 
 const C = Colors.light;
-const isWeb = Platform.OS === "web";
+
+const ICON_MAP: Record<string, string> = {
+  globe: "🌐", megaphone: "📣", "trending-up": "📈",
+  briefcase: "💼", droplet: "⛽", coffee: "🍖", award: "🏆",
+  hash: "#", users: "👥", default: "#",
+};
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
+
+  const { data: channels = [] } = useQuery<any[]>({
+    queryKey: ["channels"],
+    queryFn: () => api.get("/channels"),
+  });
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["feed"],
-    queryFn: () => api.get("/posts?limit=30"),
+    queryKey: ["feed", selectedChannel],
+    queryFn: () =>
+      api.get(selectedChannel
+        ? `/posts?channelId=${selectedChannel}&limit=40`
+        : "/posts?limit=40"),
   });
 
   const posts = data?.posts || [];
@@ -35,10 +48,51 @@ export default function FeedScreen() {
   }, [refetch]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const botPad = Platform.OS === "web" ? 34 + 84 : 100;
+
+  const ListHeader = (
+    <View>
+      {/* Create post box */}
+      <TouchableOpacity
+        style={styles.createBox}
+        onPress={() => router.push("/channel/create-post")}
+        activeOpacity={0.85}
+      >
+        <View style={styles.createAvatar}>
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.createAvatarImg} />
+          ) : (
+            <Text style={styles.createAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
+          )}
+        </View>
+        <View style={styles.createInputFake}>
+          <Text style={styles.createPlaceholder}>O que você está pensando?</Text>
+        </View>
+        <View style={styles.createImageBtn}>
+          <Feather name="image" size={18} color={C.tint} />
+        </View>
+      </TouchableOpacity>
+
+      {/* Channel filter hint */}
+      {selectedChannel && (
+        <View style={styles.filterBanner}>
+          <Feather name="filter" size={13} color={C.tint} />
+          <Text style={styles.filterBannerText}>
+            Filtrando por: <Text style={{ fontFamily: "Inter_700Bold" }}>
+              #{channels.find((c: any) => c.id === selectedChannel)?.name}
+            </Text>
+          </Text>
+          <TouchableOpacity onPress={() => setSelectedChannel(null)}>
+            <Feather name="x" size={14} color={C.tint} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
+      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Olá, {user?.name?.split(" ")[0]} 👋</Text>
@@ -46,47 +100,91 @@ export default function FeedScreen() {
         </View>
         <TouchableOpacity
           style={styles.newPostBtn}
-          onPress={() => router.push("/channel/create")}
+          onPress={() => router.push("/channel/create-post")}
           activeOpacity={0.8}
         >
           <Feather name="edit-3" size={20} color={C.tint} />
         </TouchableOpacity>
       </View>
 
+      {/* Channel filter bar */}
+      <View style={styles.channelBarWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.channelBarContent}
+        >
+          {/* "Todos" pill */}
+          <TouchableOpacity
+            style={[styles.channelPill, selectedChannel === null && styles.channelPillActive]}
+            onPress={() => setSelectedChannel(null)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.channelPillText, selectedChannel === null && styles.channelPillTextActive]}>
+              Todos
+            </Text>
+          </TouchableOpacity>
+
+          {channels.map((ch: any) => {
+            const active = selectedChannel === ch.id;
+            return (
+              <TouchableOpacity
+                key={ch.id}
+                style={[styles.channelPill, active && styles.channelPillActive]}
+                onPress={() => setSelectedChannel(active ? null : ch.id)}
+                activeOpacity={0.8}
+              >
+                {ch.isInternalComm && (
+                  <Feather name="shield" size={11} color={active ? "#fff" : C.tint} style={{ marginRight: 3 }} />
+                )}
+                <Text style={[styles.channelPillText, active && styles.channelPillTextActive]}>
+                  {ch.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Posts list */}
       <FlatList
         data={posts}
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item }) => (
           <PostCard post={item} onLikeChange={refetch} onDelete={refetch} />
         )}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} />}
-        contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad + 100 }]}
-        ListHeaderComponent={
-          <TouchableOpacity
-            style={styles.createPostCard}
-            onPress={() => router.push("/channel/create-post")}
-            activeOpacity={0.8}
-          >
-            <View style={styles.createPostAvatar}>
-              <Text style={styles.createPostAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
-            </View>
-            <Text style={styles.createPostPlaceholder}>O que você está pensando?</Text>
-            <Feather name="image" size={20} color={C.textSecondary} />
-          </TouchableOpacity>
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />
         }
+        contentContainerStyle={[styles.listContent, { paddingBottom: botPad }]}
+        ListHeaderComponent={ListHeader}
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.empty}>
-              <Feather name="inbox" size={48} color={C.textMuted} />
-              <Text style={styles.emptyText}>Nenhum post ainda</Text>
-              <Text style={styles.emptySubText}>Seja o primeiro a postar!</Text>
+              <View style={styles.emptyIcon}>
+                <Feather name="inbox" size={36} color={C.tint} />
+              </View>
+              <Text style={styles.emptyText}>Nenhuma publicação ainda</Text>
+              <Text style={styles.emptySubText}>
+                {selectedChannel
+                  ? "Nenhum post neste canal. Seja o primeiro!"
+                  : "Seja o primeiro a publicar algo!"}
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={() => router.push("/channel/create-post")}
+                activeOpacity={0.8}
+              >
+                <Feather name="edit-3" size={15} color="#fff" />
+                <Text style={styles.emptyBtnText}>Criar publicação</Text>
+              </TouchableOpacity>
             </View>
           ) : null
         }
         showsVerticalScrollIndicator={false}
       />
 
-      {isLoading && (
+      {isLoading && !refreshing && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={C.tint} />
         </View>
@@ -97,30 +195,106 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
+
+  /* Header */
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 12,
-    backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+    backgroundColor: C.surface,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  greeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  greeting: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   headerTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
-  newPostBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  createPostCard: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    backgroundColor: C.surface, borderRadius: 16,
-    marginHorizontal: 16, marginVertical: 10,
-    padding: 14,
+  newPostBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "#f0fdf4",
+    alignItems: "center", justifyContent: "center",
+  },
+
+  /* Channel bar */
+  channelBarWrapper: {
+    backgroundColor: C.surface,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  channelBarContent: {
+    paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: "row",
+  },
+  channelPill: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: C.surfaceAlt,
     borderWidth: 1, borderColor: C.border,
   },
-  createPostAvatar: {
+  channelPillActive: {
+    backgroundColor: C.tint,
+    borderColor: C.tint,
+  },
+  channelPillText: {
+    fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary,
+  },
+  channelPillTextActive: { color: "#fff" },
+
+  /* Create post */
+  createBox: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: C.surface,
+    marginHorizontal: 14, marginTop: 12, marginBottom: 4,
+    padding: 12, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+  },
+  createAvatar: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    overflow: "hidden",
   },
-  createPostAvatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
-  createPostPlaceholder: { flex: 1, color: C.placeholder, fontFamily: "Inter_400Regular", fontSize: 14 },
+  createAvatarImg: { width: 38, height: 38, borderRadius: 19 },
+  createAvatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
+  createInputFake: {
+    flex: 1, backgroundColor: C.inputBg,
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9,
+    borderWidth: 1, borderColor: C.borderLight,
+  },
+  createPlaceholder: { color: C.placeholder, fontFamily: "Inter_400Regular", fontSize: 14 },
+  createImageBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center",
+  },
+
+  /* Filter banner */
+  filterBanner: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 14, marginBottom: 4, marginTop: 2,
+    backgroundColor: "#f0fdf4", borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  filterBannerText: { flex: 1, fontSize: 12, color: C.tint, fontFamily: "Inter_400Regular" },
+
+  /* List */
   listContent: { paddingTop: 4 },
-  empty: { alignItems: "center", paddingTop: 80, gap: 8 },
-  emptyText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
-  emptySubText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular" },
-  loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.6)" },
+
+  /* Empty */
+  empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 40, gap: 10 },
+  emptyIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: "#f0fdf4",
+    alignItems: "center", justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
+  emptySubText: { fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: C.tint, paddingHorizontal: 18, paddingVertical: 10,
+    borderRadius: 20, marginTop: 4,
+  },
+  emptyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.7)",
+  },
 });
