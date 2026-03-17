@@ -306,16 +306,20 @@ Dados Confidenciais:
         desc: "Ser pontual e não faltar sem justificativa. Utilizamos registro biométrico diário.",
         icon: "clock" as const,
         required: true,
-        content: `A pontualidade é fundamental para o bom funcionamento da equipe e do atendimento.
+        content: `Compromissos:
+• Ser pontual e não faltar ao trabalho sem justificativa
+• Atestados médicos devem ser encaminhados ao coordenador ou RH no primeiro dia de afastamento
 
-Nossas diretrizes:
-• Seja pontual ao iniciar e encerrar sua jornada de trabalho
-• Não falte sem justificativa prévia ou atestado médico
-• Utilize o registro biométrico diário obrigatoriamente
-• Em caso de atrasos ou faltas, comunique seu gestor imediatamente
+Registro de Ponto Biométrico:
+Deve ser feito diariamente:
 
-Em caso de dúvidas sobre registro de ponto ou jornada:
-Contato RH: (31) 98496-0448`,
+• No início da jornada de trabalho
+• Na saída para intervalo
+• No retorno do intervalo
+• No final da jornada de trabalho
+
+Importante:
+Respeitamos integralmente nosso horário de trabalho, pois a jornada é a venda de nossa capacidade de produção. Durante o expediente, não realizamos atividades não relacionadas ao trabalho sem aprovação do gestor.`,
       },
     ],
   },
