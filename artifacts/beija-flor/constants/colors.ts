@@ -1,6 +1,6 @@
-const primary = "#006B3F";
-const primaryLight = "#008C52";
-const primaryDark = "#004D2C";
+const primary = "#2563EB";
+const primaryLight = "#3B82F6";
+const primaryDark = "#1D4ED8";
 const accent = "#FFD700";
 
 export default {
