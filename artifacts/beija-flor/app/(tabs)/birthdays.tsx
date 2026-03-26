@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { router, useNavigation } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
@@ -107,6 +108,8 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
 
 export default function BirthdaysScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const canGoBack = navigation.canGoBack();
   const [tab, setTab] = useState<Tab>("today");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -126,7 +129,12 @@ export default function BirthdaysScreen() {
     <View style={[styles.container, { paddingTop: topPad }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Aniversários</Text>
+        {canGoBack && (
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="arrow-left" size={22} color={C.text} />
+          </TouchableOpacity>
+        )}
+        <Text style={[styles.title, canGoBack && { flex: 1 }]}>Aniversários</Text>
         <Feather name="gift" size={22} color={C.tint} />
       </View>
 
@@ -226,7 +234,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 12,
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+    gap: 12,
   },
+  backBtn: { padding: 2 },
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
 
   /* Sub-tabs */

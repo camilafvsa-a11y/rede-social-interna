@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -25,11 +26,20 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
+  const [birthdayBannerDismissed, setBirthdayBannerDismissed] = useState(false);
 
   const { data: channels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
   });
+
+  const { data: birthdays = [] } = useQuery<any[]>({
+    queryKey: ["birthdays-today"],
+    queryFn: () => api.get("/birthdays?days=1"),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const todayBirthdays = (birthdays as any[]).filter((b: any) => b.daysUntil === 0);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["feed", selectedChannel],
@@ -106,6 +116,28 @@ export default function FeedScreen() {
           <Feather name="edit-3" size={20} color={C.tint} />
         </TouchableOpacity>
       </View>
+
+      {/* Birthday banner — shown only on days with birthdays, dismissible */}
+      {todayBirthdays.length > 0 && !birthdayBannerDismissed && (
+        <TouchableOpacity
+          style={styles.birthdayBanner}
+          onPress={() => router.push("/birthdays" as any)}
+          activeOpacity={0.88}
+        >
+          <Text style={styles.birthdayBannerEmoji}>🎂</Text>
+          <Text style={styles.birthdayBannerText} numberOfLines={1}>
+            {todayBirthdays.length === 1
+              ? `${todayBirthdays[0].name} faz aniversário hoje!`
+              : `${todayBirthdays.slice(0, 2).map((b: any) => b.name.split(" ")[0]).join(" e ")}${todayBirthdays.length > 2 ? ` +${todayBirthdays.length - 2}` : ""} fazem aniversário hoje!`}
+          </Text>
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation(); setBirthdayBannerDismissed(true); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={15} color="#166534" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
 
       {/* Channel filter bar */}
       <View style={styles.channelBarWrapper}>
@@ -296,5 +328,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.7)",
+  },
+
+  /* Birthday banner */
+  birthdayBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: "#BBF7D0",
+  },
+  birthdayBannerEmoji: { fontSize: 18 },
+  birthdayBannerText: {
+    flex: 1, fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#166534",
   },
 });
