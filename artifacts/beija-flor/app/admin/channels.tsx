@@ -55,21 +55,25 @@ export default function AdminChannelsScreen() {
   const [form, setForm] = useState<Form>({
     name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "",
   });
+  const [origForm, setOrigForm] = useState<Form | null>(null);
 
   const { data: channels = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["admin-channels"],
     queryFn: () => api.get("/channels"),
   });
 
+  const EMPTY_FORM: Form = { name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "" };
+
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "" });
+    setForm(EMPTY_FORM);
+    setOrigForm(EMPTY_FORM);
     setShowModal(true);
   }
 
   function openEdit(ch: any) {
     setEditing(ch);
-    setForm({
+    const f: Form = {
       name: ch.name,
       description: ch.description || "",
       icon: ch.icon || "hash",
@@ -77,9 +81,26 @@ export default function AdminChannelsScreen() {
       isInternalComm: ch.isInternalComm,
       coverImageUrl: ch.coverImageUrl || "",
       color: ch.color || "",
-    });
+    };
+    setForm(f);
+    setOrigForm(f);
     setShowModal(true);
   }
+
+  function formIsDirty(f: Form, orig: Form | null): boolean {
+    if (!orig) return false;
+    return (
+      f.name !== orig.name ||
+      f.description !== orig.description ||
+      f.icon !== orig.icon ||
+      f.isInternalComm !== orig.isInternalComm ||
+      f.coverImageUrl !== orig.coverImageUrl ||
+      f.color !== orig.color ||
+      JSON.stringify([...f.allowedTags].sort()) !== JSON.stringify([...orig.allowedTags].sort())
+    );
+  }
+
+  const channelIsDirty = formIsDirty(form, origForm);
 
   function toggleTag(tag: string) {
     setForm((prev) => ({
@@ -334,9 +355,9 @@ export default function AdminChannelsScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.submitBtn, saving && { opacity: 0.7 }]}
+                style={[styles.submitBtn, (saving || !channelIsDirty) && { opacity: 0.4 }]}
                 onPress={save}
-                disabled={saving}
+                disabled={saving || !channelIsDirty}
                 activeOpacity={0.85}
               >
                 {saving ? (

@@ -91,6 +91,12 @@ export default function UserDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [banning, setBanning] = useState(false);
 
+  // Original values for dirty-check
+  const [origData, setOrigData] = useState<{
+    role: string; tag: string | null; extraTags: string[];
+    appBanned: boolean; birthDate: string; cpf: string; admissionDate: string;
+  } | null>(null);
+
   // Calendar picker state for post ban
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedBanDate, setSelectedBanDate] = useState<Date | null>(null);
@@ -104,15 +110,33 @@ export default function UserDetailScreen() {
 
   useEffect(() => {
     if (user) {
-      setRole(user.role === "master_admin" ? "admin" : user.role);
-      setTag(user.tag ?? null);
-      setExtraTags(Array.isArray(user.extraTags) ? user.extraTags : []);
-      setAppBanned(user.appBanned ?? false);
-      setBirthDate(user.birthDate ?? "");
-      setCpf(user.cpf ?? "");
-      setAdmissionDate(user.admissionDate ?? "");
+      const r = user.role === "master_admin" ? "admin" : user.role;
+      const t = user.tag ?? null;
+      const et = Array.isArray(user.extraTags) ? user.extraTags : [];
+      const ab = user.appBanned ?? false;
+      const bd = user.birthDate ?? "";
+      const cp = user.cpf ?? "";
+      const ad = user.admissionDate ?? "";
+      setRole(r);
+      setTag(t);
+      setExtraTags(et);
+      setAppBanned(ab);
+      setBirthDate(bd);
+      setCpf(cp);
+      setAdmissionDate(ad);
+      setOrigData({ role: r, tag: t, extraTags: et, appBanned: ab, birthDate: bd, cpf: cp, admissionDate: ad });
     }
   }, [user]);
+
+  const isDirty = origData !== null && (
+    role !== origData.role ||
+    tag !== origData.tag ||
+    appBanned !== origData.appBanned ||
+    birthDate !== origData.birthDate ||
+    cpf !== origData.cpf ||
+    admissionDate !== origData.admissionDate ||
+    JSON.stringify([...extraTags].sort()) !== JSON.stringify([...origData.extraTags].sort())
+  );
 
   function toggleExtraTag(key: string) {
     setExtraTags((prev) =>
@@ -134,6 +158,7 @@ export default function UserDetailScreen() {
       });
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
       await qc.invalidateQueries({ queryKey: ["admin-user", id] });
+      setOrigData({ role, tag, extraTags, appBanned, birthDate, cpf, admissionDate });
       Alert.alert("Salvo!", "Alterações aplicadas com sucesso.");
     } catch (e: any) {
       Alert.alert("Erro", e.message || "Não foi possível salvar.");
@@ -247,9 +272,9 @@ export default function UserDetailScreen() {
           Editar colaborador
         </Text>
         <TouchableOpacity
-          style={[styles.saveBtn, (saving || isMaster) && { opacity: 0.5 }]}
+          style={[styles.saveBtn, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={saving || isMaster}
+          disabled={saving || isMaster || !isDirty}
         >
           {saving
             ? <ActivityIndicator size="small" color="#fff" />
@@ -606,9 +631,9 @@ export default function UserDetailScreen() {
 
         {/* Save button bottom */}
         <TouchableOpacity
-          style={[styles.saveBtnFull, (saving || isMaster) && { opacity: 0.5 }]}
+          style={[styles.saveBtnFull, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={saving || isMaster}
+          disabled={saving || isMaster || !isDirty}
           activeOpacity={0.8}
         >
           {saving
