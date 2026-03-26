@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
-  ActivityIndicator, Platform, Modal, TextInput, ScrollView, Switch, Image,
+  ActivityIndicator, Platform, Modal, TextInput, ScrollView, Switch, Image, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -51,6 +51,7 @@ export default function AdminChannelsScreen() {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Form>({
     name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "",
   });
@@ -108,10 +109,13 @@ export default function AdminChannelsScreen() {
 
   async function save() {
     if (!form.name.trim()) { Alert.alert("Atenção", "Nome é obrigatório."); return; }
+    if (saving) return;
+    setSaving(true);
     try {
       const payload = {
         ...form,
         coverImageUrl: form.coverImageUrl || null,
+        color: form.color || null,
       };
       if (editing) {
         await api.patch(`/channels/${editing.id}`, payload);
@@ -122,6 +126,8 @@ export default function AdminChannelsScreen() {
       setShowModal(false);
     } catch (e: any) {
       Alert.alert("Erro", e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -203,6 +209,7 @@ export default function AdminChannelsScreen() {
       {isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
 
       <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.modalHeader}>
@@ -326,12 +333,22 @@ export default function AdminChannelsScreen() {
                 />
               </View>
 
-              <TouchableOpacity style={styles.submitBtn} onPress={save}>
-                <Text style={styles.submitText}>{editing ? "Salvar" : "Criar Canal"}</Text>
+              <TouchableOpacity
+                style={[styles.submitBtn, saving && { opacity: 0.7 }]}
+                onPress={save}
+                disabled={saving}
+                activeOpacity={0.85}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitText}>{editing ? "Salvar" : "Criar Canal"}</Text>
+                )}
               </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
