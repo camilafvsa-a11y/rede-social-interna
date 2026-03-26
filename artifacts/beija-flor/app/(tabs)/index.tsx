@@ -25,7 +25,9 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
-  const [birthdayBannerDismissed, setBirthdayBannerDismissed] = useState(false);
+  const todayKey = new Date().toDateString();
+  const [birthdayBannerDismissedOn, setBirthdayBannerDismissedOn] = useState<string | null>(null);
+  const birthdayBannerDismissed = birthdayBannerDismissedOn === todayKey;
 
   const { data: channels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
@@ -130,7 +132,7 @@ export default function FeedScreen() {
               : `${todayBirthdays.slice(0, 2).map((b: any) => b.name.split(" ")[0]).join(" e ")}${todayBirthdays.length > 2 ? ` +${todayBirthdays.length - 2}` : ""} fazem aniversário hoje!`}
           </Text>
           <TouchableOpacity
-            onPress={(e) => { e.stopPropagation(); setBirthdayBannerDismissed(true); }}
+            onPress={(e) => { e.stopPropagation(); setBirthdayBannerDismissedOn(todayKey); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Feather name="x" size={15} color="#166534" />
