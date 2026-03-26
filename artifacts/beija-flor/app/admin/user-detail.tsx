@@ -37,6 +37,21 @@ function getInitials(name: string) {
   return name?.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() ?? "?";
 }
 
+function maskDate(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+function maskCpf(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
 function formatBanDate(dateStr: string | null): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -127,9 +142,9 @@ export default function UserDetailScreen() {
       const t = user.tag ?? null;
       const et = Array.isArray(user.extraTags) ? user.extraTags : [];
       const ab = user.appBanned ?? false;
-      const bd = user.birthDate ?? "";
-      const cp = user.cpf ?? "";
-      const ad = user.admissionDate ?? "";
+      const bd = maskDate(user.birthDate ?? "");
+      const cp = maskCpf(user.cpf ?? "");
+      const ad = maskDate(user.admissionDate ?? "");
       setRole(r);
       setTag(t);
       setExtraTags(et);
@@ -619,17 +634,18 @@ export default function UserDetailScreen() {
           <TextInput
             style={styles.input}
             value={birthDate}
-            onChangeText={setBirthDate}
+            onChangeText={(t) => setBirthDate(maskDate(t))}
             placeholder="DD/MM/AAAA"
             placeholderTextColor={C.textMuted}
             keyboardType="numeric"
+            maxLength={10}
           />
 
           <Text style={[styles.fieldLabel, { marginTop: 12 }]}>CPF</Text>
           <TextInput
             style={styles.input}
             value={cpf}
-            onChangeText={setCpf}
+            onChangeText={(t) => setCpf(maskCpf(t))}
             placeholder="000.000.000-00"
             placeholderTextColor={C.textMuted}
             keyboardType="numeric"
@@ -640,10 +656,11 @@ export default function UserDetailScreen() {
           <TextInput
             style={styles.input}
             value={admissionDate}
-            onChangeText={setAdmissionDate}
+            onChangeText={(t) => setAdmissionDate(maskDate(t))}
             placeholder="DD/MM/AAAA"
             placeholderTextColor={C.textMuted}
             keyboardType="numeric"
+            maxLength={10}
           />
         </View>
 
