@@ -134,7 +134,7 @@ export default function TicketScreen() {
                   {item.author?.avatarUrl ? (
                     <Image source={{ uri: item.author.avatarUrl }} style={styles.msgAvatarImg} />
                   ) : (
-                    <Text style={styles.msgAvatarInitial}>{item.author?.name?.[0]?.toUpperCase()}</Text>
+                    <Feather name="user" size={14} color="#9CA3AF" />
                   )}
                 </View>
               )}
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 20 },
   msgRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 6 },
   msgRowMe: { flexDirection: "row-reverse" },
-  msgAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  msgAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   msgAvatarImg: { width: 30, height: 30, borderRadius: 15 },
   msgAvatarInitial: { color: "#1E3A8A", fontSize: 12, fontFamily: "Inter_700Bold" },
   msgBubble: { maxWidth: "75%", borderRadius: 16, padding: 10 },

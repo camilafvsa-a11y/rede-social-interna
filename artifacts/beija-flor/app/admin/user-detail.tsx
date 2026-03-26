@@ -232,8 +232,8 @@ export default function UserDetailScreen() {
       >
         {/* User profile header */}
         <View style={styles.profileCard}>
-          <View style={[styles.avatar, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff" }]}>
-            <Text style={[styles.avatarText, !appBanned && { color: "#1E3A8A" }]}>{getInitials(user.name)}</Text>
+          <View style={[styles.avatar, { backgroundColor: appBanned ? "#EF4444" : "#F3F4F6" }]}>
+            <Feather name="user" size={32} color={appBanned ? "#fff" : "#9CA3AF"} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.profileName}>{user.name}</Text>

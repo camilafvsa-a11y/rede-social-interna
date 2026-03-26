@@ -153,7 +153,7 @@ export default function CreatePostScreen() {
                   <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
                 ) : (
                   <View style={[styles.mentionAvatar, styles.mentionAvatarFallback]}>
-                    <Text style={styles.mentionAvatarInitial}>{item.name?.[0]?.toUpperCase()}</Text>
+                    <Feather name="user" size={14} color="#9CA3AF" />
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: C.borderLight,
   },
-  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fff" },
+  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#F3F4F6" },
   mentionAvatarFallback: { alignItems: "center", justifyContent: "center" },
   mentionAvatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 13 },
   mentionName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },

@@ -83,7 +83,7 @@ export default function AdminTicketHandlersScreen() {
               {item.user?.avatarUrl ? (
                 <Image source={{ uri: item.user.avatarUrl }} style={styles.avatarImg} />
               ) : (
-                <Text style={styles.avatarInitial}>{item.user?.name?.[0]?.toUpperCase()}</Text>
+                <Feather name="user" size={20} color="#9CA3AF" />
               )}
             </View>
             <View style={styles.handlerInfo}>
@@ -130,7 +130,7 @@ export default function AdminTicketHandlersScreen() {
                     {u.avatarUrl ? (
                       <Image source={{ uri: u.avatarUrl }} style={styles.avatarImg} />
                     ) : (
-                      <Text style={styles.avatarInitial}>{u.name?.[0]?.toUpperCase()}</Text>
+                      <Feather name="user" size={18} color="#9CA3AF" />
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface, borderRadius: 14, padding: 12,
     borderColor: C.border,
   },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   avatarImg: { width: 44, height: 44, borderRadius: 22 },
   avatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 16 },
   handlerInfo: { flex: 1 },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   searchBar: { flexDirection: "row", alignItems: "center", gap: 8, margin: 12, backgroundColor: C.inputBg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, borderColor: C.border },
   searchInput: { flex: 1, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
   userItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.borderLight },
-  userAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  userAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   userName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   userEmail: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
 });

@@ -127,7 +127,7 @@ export default function PostScreen() {
                   {item.author?.avatarUrl ? (
                     <Image source={{ uri: item.author.avatarUrl }} style={styles.commentAvatarImg} />
                   ) : (
-                    <Text style={styles.commentAvatarInitial}>{item.author?.name?.[0]?.toUpperCase()}</Text>
+                    <Feather name="user" size={16} color="#9CA3AF" />
                   )}
                 </View>
               </TouchableOpacity>
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   commentsLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.textSecondary, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
   listContent: { paddingBottom: 20 },
   commentCard: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingVertical: 10 },
-  commentAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  commentAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   commentAvatarImg: { width: 34, height: 34, borderRadius: 17 },
   commentAvatarInitial: { color: "#1E3A8A", fontSize: 13, fontFamily: "Inter_700Bold" },
   commentBody: { flex: 1, backgroundColor: C.surfaceAlt, borderRadius: 12, padding: 10 },

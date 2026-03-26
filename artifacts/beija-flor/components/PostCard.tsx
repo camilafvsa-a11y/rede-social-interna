@@ -135,7 +135,7 @@ export default function PostCard({ post, onLikeChange, onDelete, compact }: Post
               {post.author?.avatarUrl ? (
                 <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImg} />
               ) : (
-                <Text style={styles.avatarInitial}>{post.author?.name?.[0]?.toUpperCase() || "?"}</Text>
+                <Feather name="user" size={20} color="#9CA3AF" />
               )}
             </View>
           </TouchableOpacity>
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "#fff",
+    backgroundColor: "#F3F4F6",
     alignItems: "center", justifyContent: "center",
     overflow: "hidden",
   },

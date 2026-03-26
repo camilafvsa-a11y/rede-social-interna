@@ -105,7 +105,7 @@ export default function ProfileScreen() {
             <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>{user?.name?.[0]?.toUpperCase()}</Text>
+              <Feather name="user" size={40} color="#9CA3AF" />
             </View>
           )}
           <View style={styles.editBadge}>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   profileCard: { alignItems: "center", backgroundColor: C.surface, paddingVertical: 28, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border },
   avatarContainer: { position: "relative", marginBottom: 12 },
   avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: C.tint },
-  avatarFallback: { width: 90, height: 90, borderRadius: 45, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  avatarFallback: { width: 90, height: 90, borderRadius: 45, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
   avatarInitial: { color: "#1E3A8A", fontSize: 32, fontFamily: "Inter_700Bold" },
   editBadge: { position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: C.tint, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#fff" },
   profileName: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },

@@ -47,7 +47,7 @@ function UserRow({
   return (
     <View style={styles.row}>
       <View style={[styles.avatar, done && styles.avatarDone]}>
-        <Text style={[styles.avatarText, done && { color: "#fff" }]}>{getInitials(item.user.name)}</Text>
+        <Feather name="user" size={18} color={done ? "#fff" : "#9CA3AF"} />
       </View>
 
       <View style={{ flex: 1, gap: 4 }}>
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "#fff",
+    backgroundColor: "#F3F4F6",
     alignItems: "center", justifyContent: "center",
     flexShrink: 0, marginTop: 2,
   },

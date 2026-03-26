@@ -63,7 +63,7 @@ export default function ProfileViewScreen() {
                 <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarInitial}>{user.name?.[0]?.toUpperCase()}</Text>
+                  <Feather name="user" size={36} color="#9CA3AF" />
                 </View>
               )}
             </View>
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   avatarWrap: { marginBottom: 12 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.tint },
-  avatarFallback: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  avatarFallback: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
   avatarInitial: { color: "#1E3A8A", fontSize: 28, fontFamily: "Inter_700Bold" },
   name: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },
   email: { fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular", marginBottom: 12 },

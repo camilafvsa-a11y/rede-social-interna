@@ -351,7 +351,7 @@ export default function FeedScreen() {
             <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
           ) : (
             <View style={styles.headerAvatarFallback}>
-              <Text style={styles.headerAvatarInitial}>{user?.name?.[0]?.toUpperCase()}</Text>
+              <Feather name="user" size={22} color="#9CA3AF" />
             </View>
           )}
         </TouchableOpacity>
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   headerAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.tint },
   headerAvatarFallback: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center",
   },
   headerAvatarInitial: { color: "#1E3A8A", fontSize: 18, fontFamily: "Inter_700Bold" },
   headerGreetingBlock: { flex: 1 },

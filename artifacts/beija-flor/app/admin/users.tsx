@@ -101,8 +101,8 @@ export default function AdminUsersScreen() {
                 {u.avatarUrl ? (
                   <Image source={{ uri: u.avatarUrl }} style={styles.avatar} />
                 ) : (
-                  <View style={[styles.avatarFallback, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff" }]}>
-                    <Text style={[styles.avatarInitial, !appBanned && { color: "#1E3A8A" }]}>{getInitials(u.name)}</Text>
+                  <View style={[styles.avatarFallback, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#F3F4F6" }]}>
+                    <Feather name="user" size={22} color={appBanned ? "#fff" : "#9CA3AF"} />
                   </View>
                 )}
                 {(appBanned || postBanned) && (

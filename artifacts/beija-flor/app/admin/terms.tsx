@@ -172,7 +172,7 @@ export default function AdminTermsScreen() {
                   {item.user?.avatarUrl ? (
                     <Image source={{ uri: item.user.avatarUrl }} style={styles.avatarImg} />
                   ) : (
-                    <Text style={styles.avatarInitial}>{item.user?.name?.[0]?.toUpperCase()}</Text>
+                    <Feather name="user" size={18} color="#9CA3AF" />
                   )}
                 </View>
                 <View style={styles.userInfo}>
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   userAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#F3F4F6",
     alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
