@@ -33,14 +33,6 @@ const ROLES = [
   { key: "admin", label: "Administrador", color: "#8B5CF6", icon: "shield" as const },
 ];
 
-const BAN_DURATIONS = [
-  { label: "1 dia", days: 1 },
-  { label: "2 dias", days: 2 },
-  { label: "3 dias", days: 3 },
-  { label: "1 semana", days: 7 },
-  { label: "Permanente", days: 36500 },
-];
-
 function getInitials(name: string) {
   return name?.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() ?? "?";
 }
@@ -99,6 +91,13 @@ export default function UserDetailScreen() {
   const [saving, setSaving] = useState(false);
   const [banning, setBanning] = useState(false);
 
+  // Calendar picker state for post ban
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedBanDate, setSelectedBanDate] = useState<Date | null>(null);
+  const today = new Date();
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth()); // 0-based
+
   // Current ban info (from user data)
   const banned = user ? isBannedNow(user.bannedUntil) : false;
   const banLabel = user ? formatBanDate(user.bannedUntil) : "";
@@ -143,11 +142,12 @@ export default function UserDetailScreen() {
     }
   }
 
-  async function handleBan(days: number) {
-    const until = new Date();
-    until.setDate(until.getDate() + days);
-    const permanent = days >= 36000;
-    const label = permanent ? "permanentemente" : `por ${days === 1 ? "1 dia" : days === 7 ? "1 semana" : `${days} dias`}`;
+  async function applyBan(until: Date | "permanent") {
+    const isPermanent = until === "permanent";
+    const dateStr = isPermanent ? "9999-12-31T23:59:59Z" : (until as Date).toISOString();
+    const label = isPermanent
+      ? "permanentemente"
+      : `até ${(until as Date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
 
     Alert.alert(
       "Confirmar banimento",
@@ -160,9 +160,35 @@ export default function UserDetailScreen() {
           onPress: async () => {
             setBanning(true);
             try {
-              await api.patch(`/users/${id}`, {
-                bannedUntil: permanent ? "9999-12-31T23:59:59Z" : until.toISOString(),
-              });
+              await api.patch(`/users/${id}`, { bannedUntil: dateStr });
+              await qc.invalidateQueries({ queryKey: ["admin-user", id] });
+              await qc.invalidateQueries({ queryKey: ["admin-users"] });
+              setSelectedBanDate(null);
+              setShowCalendar(false);
+            } catch (e: any) {
+              Alert.alert("Erro", e.message);
+            } finally {
+              setBanning(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleUnban() {
+    Alert.alert(
+      "Revogar banimento",
+      `Liberar ${user?.name} para postar novamente?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Revogar",
+          style: "default",
+          onPress: async () => {
+            setBanning(true);
+            try {
+              await api.patch(`/users/${id}`, { bannedUntil: null });
               await qc.invalidateQueries({ queryKey: ["admin-user", id] });
               await qc.invalidateQueries({ queryKey: ["admin-users"] });
             } catch (e: any) {
@@ -176,18 +202,23 @@ export default function UserDetailScreen() {
     );
   }
 
-  async function handleUnban() {
-    setBanning(true);
-    try {
-      await api.patch(`/users/${id}`, { bannedUntil: null });
-      await qc.invalidateQueries({ queryKey: ["admin-user", id] });
-      await qc.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      Alert.alert("Erro", e.message);
-    } finally {
-      setBanning(false);
-    }
+  // Calendar helpers
+  function getDaysInMonth(year: number, month: number) {
+    return new Date(year, month + 1, 0).getDate();
   }
+  function getFirstWeekday(year: number, month: number) {
+    return new Date(year, month, 1).getDay(); // 0=Sun
+  }
+  function prevMonth() {
+    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); }
+    else setCalMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
+    else setCalMonth(m => m + 1);
+  }
+  const MONTHS_PT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const DAYS_PT = ["D","S","T","Q","Q","S","S"];
 
   if (isLoading || !user) {
     return (
@@ -345,6 +376,7 @@ export default function UserDetailScreen() {
         <View style={styles.card}>
           <SectionTitle icon="slash" title="Banimento de Postagem" />
 
+          {/* Status atual */}
           <View style={styles.banStatusRow}>
             <View style={[styles.banDot, { backgroundColor: banned ? "#EF4444" : "#059669" }]} />
             <Text style={[styles.banStatusText, { color: banned ? "#EF4444" : "#059669" }]}>
@@ -352,6 +384,7 @@ export default function UserDetailScreen() {
             </Text>
           </View>
 
+          {/* Revogar banimento */}
           {banned && (
             <TouchableOpacity
               style={[styles.unbanBtn, banning && { opacity: 0.5 }]}
@@ -363,32 +396,126 @@ export default function UserDetailScreen() {
                 ? <ActivityIndicator size="small" color="#059669" />
                 : <>
                   <Feather name="check-circle" size={14} color="#059669" />
-                  <Text style={styles.unbanBtnText}>Desbanir agora</Text>
+                  <Text style={styles.unbanBtnText}>Revogar Banimento</Text>
                 </>}
             </TouchableOpacity>
           )}
 
-          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Aplicar banimento por:</Text>
-          <View style={styles.banGrid}>
-            {BAN_DURATIONS.map((b) => (
-              <TouchableOpacity
-                key={b.days}
-                style={[styles.banChip, b.days >= 36000 && styles.banChipPermanent]}
-                onPress={() => handleBan(b.days)}
-                disabled={banning || isMaster}
-                activeOpacity={0.8}
-              >
-                <Feather
-                  name={b.days >= 36000 ? "x-circle" : "clock"}
-                  size={12}
-                  color={b.days >= 36000 ? "#EF4444" : "#D97706"}
-                />
-                <Text style={[styles.banChipText, b.days >= 36000 && { color: "#EF4444" }]}>
-                  {b.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* ── Novo banimento ── */}
+          {!isMaster && (
+            <>
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Novo banimento:</Text>
+
+              {/* Quick actions row */}
+              <View style={styles.banQuickRow}>
+                <TouchableOpacity
+                  style={styles.banCalBtn}
+                  onPress={() => { setShowCalendar(v => !v); setSelectedBanDate(null); }}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="calendar" size={14} color={C.tint} />
+                  <Text style={styles.banCalBtnText}>
+                    {selectedBanDate
+                      ? selectedBanDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                      : "Selecionar data"}
+                  </Text>
+                  <Feather name={showCalendar ? "chevron-up" : "chevron-down"} size={14} color={C.textMuted} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.banPermanentBtn}
+                  onPress={() => applyBan("permanent")}
+                  disabled={banning}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="x-circle" size={14} color="#EF4444" />
+                  <Text style={styles.banPermanentBtnText}>Permanente</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Inline Calendar */}
+              {showCalendar && (() => {
+                const totalDays = getDaysInMonth(calYear, calMonth);
+                const firstDay = getFirstWeekday(calYear, calMonth);
+                const cells: (number | null)[] = [
+                  ...Array(firstDay).fill(null),
+                  ...Array.from({ length: totalDays }, (_, i) => i + 1),
+                ];
+                return (
+                  <View style={styles.calendar}>
+                    {/* Month nav */}
+                    <View style={styles.calHeader}>
+                      <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
+                        <Feather name="chevron-left" size={18} color={C.text} />
+                      </TouchableOpacity>
+                      <Text style={styles.calMonthLabel}>{MONTHS_PT[calMonth]} {calYear}</Text>
+                      <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
+                        <Feather name="chevron-right" size={18} color={C.text} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Day labels */}
+                    <View style={styles.calDayRow}>
+                      {DAYS_PT.map((d, i) => (
+                        <Text key={i} style={styles.calDayLabel}>{d}</Text>
+                      ))}
+                    </View>
+
+                    {/* Day grid */}
+                    <View style={styles.calGrid}>
+                      {cells.map((day, i) => {
+                        if (!day) return <View key={i} style={styles.calCell} />;
+                        const cellDate = new Date(calYear, calMonth, day);
+                        const isPast = cellDate < today && !(cellDate.toDateString() === today.toDateString());
+                        const isSelected = selectedBanDate?.toDateString() === cellDate.toDateString();
+                        const isToday = cellDate.toDateString() === today.toDateString();
+                        return (
+                          <TouchableOpacity
+                            key={i}
+                            style={[
+                              styles.calCell,
+                              isSelected && styles.calCellSelected,
+                              isToday && !isSelected && styles.calCellToday,
+                              isPast && styles.calCellPast,
+                            ]}
+                            onPress={() => { if (!isPast) setSelectedBanDate(cellDate); }}
+                            disabled={isPast}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={[
+                              styles.calCellText,
+                              isSelected && styles.calCellTextSelected,
+                              isPast && styles.calCellTextPast,
+                              isToday && !isSelected && { color: C.tint, fontFamily: "Inter_700Bold" },
+                            ]}>{day}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {/* Apply button */}
+                    {selectedBanDate && (
+                      <TouchableOpacity
+                        style={[styles.banApplyBtn, banning && { opacity: 0.5 }]}
+                        onPress={() => applyBan(selectedBanDate)}
+                        disabled={banning}
+                        activeOpacity={0.8}
+                      >
+                        {banning
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <>
+                            <Feather name="slash" size={14} color="#fff" />
+                            <Text style={styles.banApplyBtnText}>
+                              Banir até {selectedBanDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
+                            </Text>
+                          </>}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })()}
+            </>
+          )}
         </View>
 
         {/* ── Dados Pessoais ── */}
@@ -608,15 +735,56 @@ const styles = StyleSheet.create({
     borderColor: "#BBF7D0",
   },
   unbanBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#059669" },
-  banGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  banChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 10, borderColor: "#FDE68A",
-    backgroundColor: "#FFFBEB",
+  /* Ban quick actions */
+  banQuickRow: { flexDirection: "row", gap: 8, marginTop: 8 },
+  banCalBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 10, borderWidth: 1, borderColor: "#BFDBFE",
+    backgroundColor: "#EFF6FF",
   },
-  banChipPermanent: { borderColor: "#FECACA", backgroundColor: "#FEF2F2" },
-  banChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#D97706" },
+  banCalBtnText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: "#1D4ED8" },
+  banPermanentBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 10, borderWidth: 1, borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+  },
+  banPermanentBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#EF4444" },
+
+  /* Inline calendar */
+  calendar: {
+    marginTop: 10, borderRadius: 12, borderWidth: 1,
+    borderColor: C.border, backgroundColor: C.surface,
+    padding: 12, overflow: "hidden",
+  },
+  calHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  calNavBtn: { padding: 6, borderRadius: 8, backgroundColor: C.surfaceAlt },
+  calMonthLabel: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text },
+  calDayRow: { flexDirection: "row", marginBottom: 4 },
+  calDayLabel: {
+    flex: 1, textAlign: "center",
+    fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textMuted,
+    paddingVertical: 4,
+  },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    justifyContent: "center", alignItems: "center",
+    borderRadius: 8,
+  },
+  calCellSelected: { backgroundColor: "#2563EB" },
+  calCellToday: { backgroundColor: "#EFF6FF" },
+  calCellPast: { opacity: 0.3 },
+  calCellText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
+  calCellTextSelected: { color: "#fff", fontFamily: "Inter_700Bold" },
+  calCellTextPast: { color: C.textMuted },
+  banApplyBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: "#DC2626", borderRadius: 10, padding: 12, marginTop: 10,
+  },
+  banApplyBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
 
   /* Input */
   input: {
