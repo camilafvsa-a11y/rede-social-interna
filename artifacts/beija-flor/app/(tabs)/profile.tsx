@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   adminBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.tint },
   profileCard: { alignItems: "center", backgroundColor: C.surface, paddingVertical: 28, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.border },
   avatarContainer: { position: "relative", marginBottom: 12 },
-  avatar: { width: 90, height: 90, borderRadius: 45 },
+  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: C.tint },
   avatarFallback: { width: 90, height: 90, borderRadius: 45, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
   avatarInitial: { color: "#fff", fontSize: 32, fontFamily: "Inter_700Bold" },
   editBadge: { position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: C.tint, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#fff" },

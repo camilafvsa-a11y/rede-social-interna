@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     alignItems: "center", borderWidth: 1, borderColor: C.border,
   },
   avatarWrap: { marginBottom: 12 },
-  avatar: { width: 80, height: 80, borderRadius: 40 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.tint },
   avatarFallback: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
   avatarInitial: { color: "#fff", fontSize: 28, fontFamily: "Inter_700Bold" },
   name: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },
