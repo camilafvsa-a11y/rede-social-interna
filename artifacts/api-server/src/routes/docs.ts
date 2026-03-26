@@ -5,7 +5,7 @@ import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
 const router = Router();
 
-const TOTAL_DOCS = 16;
+const TOTAL_DOCS = 15;
 
 router.get("/my", requireAuth, async (req, res) => {
   const user = (req as any).user;

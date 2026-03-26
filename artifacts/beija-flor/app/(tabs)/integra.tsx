@@ -795,7 +795,7 @@ export default function IntegraScreen() {
   }>({
     queryKey: ["my-docs-progress"],
     queryFn: () => api.get("/docs/my"),
-    initialData: { readKeys: [], completionCount: 0, totalDocs: 16 },
+    initialData: { readKeys: [], completionCount: 0, totalDocs: 15 },
   });
 
   const readKeysSet = new Set(docsProgress?.readKeys ?? []);
@@ -819,8 +819,8 @@ export default function IntegraScreen() {
 
   const signedCount = TERMS.filter((t) => getAcceptance(t.key)).length;
   const docsReadCount = readKeysSet.size;
-  const totalDocs = TERMS.length + POLICY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0) + VALUES_DATA.length;
-  const totalRead = Math.min(docsReadCount + signedCount, totalDocs);
+  const totalDocs = POLICY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0) + VALUES_DATA.length;
+  const totalRead = Math.min(docsReadCount, totalDocs);
   const percent = Math.round((totalRead / totalDocs) * 100);
   const completionCount = docsProgress?.completionCount ?? 0;
 
