@@ -325,6 +325,66 @@ Respeitamos integralmente nosso horário de trabalho, pois a jornada é a venda 
   },
 ];
 
+// ─── Nossos Valores ────────────────────────────────────────────────────────
+const VALUES_DATA = [
+  {
+    key: "etica",
+    title: "Ética é Inegociável",
+    desc: "Atuamos com integridade, lealdade e eficiência em nosso trabalho. A ética é a base de tudo que fazemos, guiando nossas decisões e ações diárias.",
+    icon: "shield" as const,
+    color: "#2563EB",
+    colorBg: "#EFF6FF",
+    practices: [
+      "Trabalhamos de forma isenta e leal",
+      "Temos tolerância zero contra corrupção",
+      "Não aceitamos subornos de qualquer espécie",
+      "Antes de agir, perguntamos: É legal? É ético? Está de acordo com nossa cultura?",
+    ],
+  },
+  {
+    key: "comprometimento",
+    title: "Comprometimento em Fazer o Bem",
+    desc: "Nosso compromisso vai além dos negócios. Buscamos constantemente elevar os padrões de qualidade e transformar a experiência de cada cliente.",
+    icon: "heart" as const,
+    color: "#DC2626",
+    colorBg: "#FEF2F2",
+    practices: [
+      "Garantimos a confiança em nosso combustível e excelência alimentar",
+      "Nossa equipe é treinada para transformar cada visita em um momento especial",
+      "Apoiamos direitos humanos universais e locais de trabalho seguros",
+      "Temos consciência do impacto ambiental e trabalhamos para minimizá-lo",
+    ],
+  },
+  {
+    key: "simplicidade",
+    title: "Simplicidade e Respeito",
+    desc: "Nossa característica mais marcante é a simplicidade. Respeitamos a diversidade e tratamos todos com dignidade, criando um ambiente acolhedor.",
+    icon: "users" as const,
+    color: "#7C3AED",
+    colorBg: "#F5F3FF",
+    practices: [
+      "Tratamos superiores, subordinados, fornecedores e clientes com dignidade",
+      "Somos contrários a todo tipo de preconceito e discriminação",
+      "Promovemos um ambiente seguro, sem assédio ou injustiça",
+      "Respeitamos a privacidade de todos os colegas de trabalho",
+    ],
+  },
+  {
+    key: "trabalho_equipe",
+    title: "Trabalho em Equipe é Indispensável",
+    desc: "Crescemos de forma sustentável nos adaptando a diversos momentos. Como o beija-flor, nos mantemos firmes em pleno voo, trabalhando juntos.",
+    icon: "star" as const,
+    color: "#D97706",
+    colorBg: "#FFFBEB",
+    practices: [
+      "Mais de 600 colaboradores engajados no mesmo propósito",
+      "Mantemos um bom relacionamento entre colegas",
+      "Cooperamos com investigações quando solicitado",
+      "Nossa equipe é comprometida e treinada para servir com excelência",
+    ],
+  },
+];
+
 // ─── Utilitários ───────────────────────────────────────────────────────────
 function formatDateTime(isoStr: string): string {
   const d = new Date(isoStr);
@@ -520,6 +580,52 @@ function TermCard({
   );
 }
 
+// ─── Card de valores (expansível com checklist) ───────────────────────────
+function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <View style={[styles.valueCard, { borderLeftColor: value.color }]}>
+      <TouchableOpacity
+        style={styles.valueCardHeader}
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.valueIcon, { backgroundColor: value.colorBg }]}>
+          <Feather name={value.icon} size={20} color={value.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.valueTitle}>{value.title}</Text>
+          <Text style={styles.valueDesc} numberOfLines={expanded ? undefined : 2}>
+            {value.desc}
+          </Text>
+        </View>
+        <Feather
+          name={expanded ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={C.textMuted}
+          style={{ marginLeft: 6, flexShrink: 0 }}
+        />
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={styles.valueContent}>
+          <View style={styles.valueDivider} />
+          <Text style={styles.practicesLabel}>Como praticamos:</Text>
+          {value.practices.map((practice, i) => (
+            <View key={i} style={styles.practiceRow}>
+              <View style={[styles.practiceCheck, { backgroundColor: value.color }]}>
+                <Feather name="check" size={10} color="#fff" />
+              </View>
+              <Text style={styles.practiceText}>{practice}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Tela Principal ────────────────────────────────────────────────────────
 export default function IntegraScreen() {
   const insets = useSafeAreaInsets();
@@ -634,6 +740,26 @@ export default function IntegraScreen() {
               ))}
             </View>
           </View>
+        ))}
+
+        {/* ── Seção: Nossos Valores ── */}
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionIconWrap, { backgroundColor: "#FEF2F2" }]}>
+            <Feather name="heart" size={14} color="#DC2626" />
+          </View>
+          <Text style={styles.sectionTitle}>Nossos Valores</Text>
+        </View>
+
+        {/* Quote banner */}
+        <View style={styles.valueBanner}>
+          <Feather name="zap" size={22} color="rgba(255,255,255,0.7)" />
+          <Text style={styles.valueBannerText}>
+            "Nossos valores servem como base para todas as nossas operações e interações. Eles orientam nossas ações diárias e definem quem somos."
+          </Text>
+        </View>
+
+        {VALUES_DATA.map((value) => (
+          <ValueCard key={value.key} value={value} />
         ))}
       </ScrollView>
     </View>
@@ -762,4 +888,55 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "#BBF7D0",
   },
   signedBannerText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#166534" },
+
+  /* Value banner (quote) */
+  valueBanner: {
+    backgroundColor: C.tint, borderRadius: 14, padding: 18,
+    alignItems: "center", gap: 10,
+  },
+  valueBannerText: {
+    fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff",
+    textAlign: "center", lineHeight: 22,
+  },
+
+  /* Value cards */
+  valueCard: {
+    backgroundColor: C.surface, borderRadius: 14,
+    borderWidth: 1, borderColor: C.border,
+    borderLeftWidth: 4,
+    overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+  },
+  valueCardHeader: {
+    flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14,
+  },
+  valueIcon: {
+    width: 42, height: 42, borderRadius: 12,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  valueTitle: {
+    fontSize: 15, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4,
+  },
+  valueDesc: {
+    fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18,
+  },
+  valueContent: { paddingHorizontal: 14, paddingBottom: 16 },
+  valueDivider: { height: 1, backgroundColor: C.borderLight, marginBottom: 12 },
+  practicesLabel: {
+    fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textMuted,
+    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10,
+  },
+  practiceRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 8,
+  },
+  practiceCheck: {
+    width: 20, height: 20, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0, marginTop: 1,
+  },
+  practiceText: {
+    flex: 1, fontSize: 13, color: C.text,
+    fontFamily: "Inter_400Regular", lineHeight: 19,
+  },
 });
