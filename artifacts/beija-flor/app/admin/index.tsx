@@ -17,6 +17,7 @@ const ADMIN_SECTIONS = [
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
   { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },
   { icon: "book-open", title: "Progresso de Leitura", desc: "Ver % de documentos lidos por colaborador e resetar progresso", route: "/admin/doc-progress" },
+  { icon: "database", title: "Exportar / Importar", desc: "Baixar planilha CSV de colaboradores ou importar em lote", route: "/admin/export-import" },
 ];
 
 export default function AdminScreen() {

@@ -58,6 +58,22 @@ router.post("/accept", requireAuth, async (req, res) => {
   });
 });
 
+router.get("/admin/user/:userId", requireAdmin, async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  if (isNaN(userId)) { res.status(400).json({ error: "Invalid userId" }); return; }
+  const acceptances = await db
+    .select()
+    .from(termAcceptancesTable)
+    .where(eq(termAcceptancesTable.userId, userId))
+    .orderBy(desc(termAcceptancesTable.acceptedAt));
+  res.json(acceptances.map((a) => ({
+    id: a.id,
+    termKey: a.termKey,
+    termTitle: a.termTitle,
+    acceptedAt: a.acceptedAt?.toISOString?.() ?? a.acceptedAt,
+  })));
+});
+
 router.get("/admin/all", requireAdmin, async (req, res) => {
   const acceptances = await db
     .select()

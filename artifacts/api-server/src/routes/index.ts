@@ -8,6 +8,7 @@ import ticketsRouter from "./tickets.js";
 import birthdaysRouter from "./birthdays.js";
 import termsRouter from "./terms.js";
 import docsRouter from "./docs.js";
+import exportRouter from "./export.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/tickets", ticketsRouter);
 router.use("/birthdays", birthdaysRouter);
 router.use("/terms", termsRouter);
 router.use("/docs", docsRouter);
+router.use("/data", exportRouter);
 
 export default router;

@@ -81,6 +81,13 @@ export default function UserDetailScreen() {
     enabled: !!id,
   });
 
+  const { data: userTerms } = useQuery<any[]>({
+    queryKey: ["admin-user-terms", id],
+    queryFn: () => api.get(`/terms/admin/user/${id}`),
+    enabled: !!id,
+    initialData: [],
+  });
+
   // Form state
   const [role, setRole] = useState("user");
   const [tag, setTag] = useState<string | null>(null);
@@ -420,6 +427,56 @@ export default function UserDetailScreen() {
           />
         </View>
 
+        {/* ── Termos Assinados ── */}
+        {(() => {
+          const imageTerm = (userTerms ?? []).find((t: any) => t.termKey === "image_voice_authorization");
+          const hasImage = !!imageTerm;
+          const signedDate = hasImage
+            ? new Date(imageTerm.acceptedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+            : null;
+          const allTerms = (userTerms ?? []).filter((t: any) => t.termKey !== "image_voice_authorization");
+          return (
+            <View style={styles.card}>
+              <SectionTitle icon="file-text" title="Termos Assinados" />
+
+              {/* Termo de imagem destacado */}
+              <View style={[styles.termRow, { borderColor: hasImage ? "#BBF7D0" : "#FECACA", backgroundColor: hasImage ? "#F0FDF4" : "#FEF2F2" }]}>
+                <View style={[styles.termDot, { backgroundColor: hasImage ? "#059669" : "#EF4444" }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.termTitle, { color: hasImage ? "#059669" : "#DC2626" }]}>
+                    {hasImage ? "✓ Assinou" : "✗ Não assinou"} — Termo de Uso de Imagem e Voz
+                  </Text>
+                  {signedDate && (
+                    <Text style={styles.termDate}>Assinado em {signedDate}</Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Outros termos */}
+              {allTerms.length > 0 && (
+                <>
+                  <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Outros termos</Text>
+                  {allTerms.map((t: any) => (
+                    <View key={t.id} style={[styles.termRow, { borderColor: "#BFDBFE", backgroundColor: "#EFF6FF" }]}>
+                      <View style={[styles.termDot, { backgroundColor: "#3B82F6" }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.termTitle, { color: "#1D4ED8" }]}>{t.termTitle}</Text>
+                        <Text style={styles.termDate}>
+                          {new Date(t.acceptedAt).toLocaleDateString("pt-BR")}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {(userTerms ?? []).length === 0 && (
+                <Text style={styles.termEmpty}>Nenhum termo assinado ainda.</Text>
+              )}
+            </View>
+          );
+        })()}
+
         {/* Save button bottom */}
         <TouchableOpacity
           style={[styles.saveBtnFull, (saving || isMaster) && { opacity: 0.5 }]}
@@ -568,6 +625,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, fontFamily: "Inter_400Regular", color: C.text,
   },
+
+  /* Term acceptance */
+  termRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+    padding: 10, borderRadius: 10, borderWidth: 1,
+  },
+  termDot: { width: 8, height: 8, borderRadius: 4, marginTop: 3, flexShrink: 0 },
+  termTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  termDate: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
+  termEmpty: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", paddingVertical: 8 },
 
   /* Save full button */
   saveBtnFull: {
