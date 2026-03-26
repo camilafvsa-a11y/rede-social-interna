@@ -40,6 +40,11 @@ router.post("/login", async (req, res) => {
     return;
   }
 
+  if (user.appBanned) {
+    res.status(403).json({ error: "Acesso bloqueado. Sua conta foi banida do aplicativo. Entre em contato com o administrador." });
+    return;
+  }
+
   res.json({ user: formatUser(user), token: String(user.id) });
 });
 

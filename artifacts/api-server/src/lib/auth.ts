@@ -18,6 +18,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  if (user.appBanned) {
+    res.status(403).json({ error: "Sua conta foi banida. Entre em contato com o administrador." });
+    return;
+  }
   (req as any).user = user;
   next();
 }
@@ -43,6 +47,11 @@ export function simpleHash(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
+export function isBannedFromPosting(user: any): boolean {
+  if (!user.bannedUntil) return false;
+  return new Date(user.bannedUntil) > new Date();
+}
+
 export function formatUser(user: any) {
   return {
     id: user.id,
@@ -50,9 +59,13 @@ export function formatUser(user: any) {
     email: user.email,
     avatarUrl: user.avatarUrl,
     tag: user.tag,
+    extraTags: user.extraTags ?? [],
     role: user.role,
+    cpf: user.cpf,
     birthDate: user.birthDate,
     admissionDate: user.admissionDate,
+    bannedUntil: user.bannedUntil?.toISOString?.() ?? user.bannedUntil ?? null,
+    appBanned: user.appBanned ?? false,
     onboardingCompleted: user.onboardingCompleted,
     acceptedTerms: user.acceptedTerms,
     readDocuments: user.readDocuments,

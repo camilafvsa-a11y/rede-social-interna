@@ -22,6 +22,7 @@ router.get("/", requireAdmin, async (req, res) => {
 
 router.get("/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
+  if (id === "admin") { res.status(404).json({ error: "Not found" }); return; }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(id))).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   res.json(formatUser(user));
@@ -29,7 +30,10 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 router.patch("/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, tag, role, birthDate, admissionDate } = req.body;
+  const {
+    name, tag, role, birthDate, admissionDate,
+    cpf, extraTags, bannedUntil, appBanned,
+  } = req.body;
   const currentUser = (req as any).user;
   const [target] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(id))).limit(1);
   if (!target) { res.status(404).json({ error: "User not found" }); return; }
@@ -37,9 +41,10 @@ router.patch("/:id", requireAdmin, async (req, res) => {
     res.status(403).json({ error: "Não é possível editar o administrador mestre" });
     return;
   }
+
   const updates: any = {};
   if (name !== undefined) updates.name = name;
-  if (tag !== undefined) updates.tag = tag;
+  if (tag !== undefined) updates.tag = tag || null;
   if (role !== undefined) {
     if (target.role === "master_admin") {
       res.status(403).json({ error: "Não é possível alterar o papel do administrador mestre" });
@@ -49,6 +54,10 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   }
   if (birthDate !== undefined) updates.birthDate = birthDate;
   if (admissionDate !== undefined) updates.admissionDate = admissionDate;
+  if (cpf !== undefined) updates.cpf = cpf;
+  if (extraTags !== undefined) updates.extraTags = extraTags;
+  if (bannedUntil !== undefined) updates.bannedUntil = bannedUntil ? new Date(bannedUntil) : null;
+  if (appBanned !== undefined) updates.appBanned = appBanned;
 
   const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, parseInt(id))).returning();
   res.json(formatUser(updated));
