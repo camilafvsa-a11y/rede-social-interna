@@ -14,6 +14,21 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
+// ─── Header helpers ──────────────────────────────────────────────────────────
+const WEEKDAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const MONTHS_HEADER = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "Bom dia";
+  if (h >= 12 && h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+function getTodayLabel(): string {
+  const d = new Date();
+  return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} de ${MONTHS_HEADER[d.getMonth()]}`;
+}
+
 // ─── Birthday helpers ────────────────────────────────────────────────────────
 const TAG_LABELS_BD: Record<string, string> = {
   marketing: "Marketing", adm: "Adm", socio: "Sócio",
@@ -314,13 +329,29 @@ export default function FeedScreen() {
     <View style={[styles.container, { paddingTop: topPad }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Olá, {user?.name?.split(" ")[0]} 👋</Text>
-          <Text style={styles.headerTitle}>Feed</Text>
+        {/* Avatar (→ profile) */}
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.85}>
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
+          ) : (
+            <View style={styles.headerAvatarFallback}>
+              <Text style={styles.headerAvatarInitial}>{user?.name?.[0]?.toUpperCase()}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Greeting block */}
+        <View style={styles.headerGreetingBlock}>
+          <Text style={styles.headerGreeting} numberOfLines={1}>
+            {getGreeting()}, <Text style={styles.headerGreetingName}>{user?.name?.split(" ")[0]}!</Text>
+          </Text>
+          <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
         </View>
+
+        {/* Create post action */}
         {mainTab === "feed" && (
           <TouchableOpacity style={styles.newPostBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
-            <Feather name="edit-3" size={20} color={C.tint} />
+            <Feather name="edit-3" size={18} color="#fff" />
           </TouchableOpacity>
         )}
       </View>
@@ -391,6 +422,19 @@ export default function FeedScreen() {
             </TouchableOpacity>
           )}
           <ChannelFilterBar chList={regularChannels} selected={feedChannelId} onSelect={setFeedChannelId} />
+          {/* Channel cover banner */}
+          {feedChannelId && (() => {
+            const ch = regularChannels.find((c: any) => c.id === feedChannelId);
+            return ch?.coverImageUrl ? (
+              <View style={styles.coverBanner}>
+                <Image source={{ uri: ch.coverImageUrl }} style={styles.coverBannerImg} resizeMode="cover" />
+                <View style={styles.coverBannerOverlay}>
+                  <Text style={styles.coverBannerName}>{ch.name}</Text>
+                  {ch.description ? <Text style={styles.coverBannerDesc}>{ch.description}</Text> : null}
+                </View>
+              </View>
+            ) : null;
+          })()}
           <PostsList
             posts={feedPosts}
             loading={feedLoading}
@@ -421,6 +465,19 @@ export default function FeedScreen() {
             </View>
           </View>
           <ChannelFilterBar chList={internalChannels} selected={internoChannelId} onSelect={setInternoChannelId} />
+          {/* Channel cover banner */}
+          {internoChannelId && (() => {
+            const ch = internalChannels.find((c: any) => c.id === internoChannelId);
+            return ch?.coverImageUrl ? (
+              <View style={styles.coverBanner}>
+                <Image source={{ uri: ch.coverImageUrl }} style={styles.coverBannerImg} resizeMode="cover" />
+                <View style={styles.coverBannerOverlay}>
+                  <Text style={styles.coverBannerName}>{ch.name}</Text>
+                  {ch.description ? <Text style={styles.coverBannerDesc}>{ch.description}</Text> : null}
+                </View>
+              </View>
+            ) : null;
+          })()}
           <PostsList
             posts={internoPosts}
             loading={internoLoading}
@@ -525,15 +582,24 @@ const styles = StyleSheet.create({
 
   /* Header */
   header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingVertical: 12,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  greeting: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
-  headerTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
+  headerAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.tint },
+  headerAvatarFallback: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: "#93C5FD",
+  },
+  headerAvatarInitial: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" },
+  headerGreetingBlock: { flex: 1 },
+  headerGreeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 14 },
+  headerDate: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
   newPostBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center",
+    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
   },
 
   /* Main 3-tab bar */
@@ -558,6 +624,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5, paddingVertical: 1, marginLeft: 1,
   },
   mainTabBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },
+
+  /* Channel cover banner */
+  coverBanner: { position: "relative", height: 130, overflow: "hidden" },
+  coverBannerImg: { width: "100%", height: "100%" },
+  coverBannerOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 16, paddingVertical: 10,
+  },
+  coverBannerName: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" },
+  coverBannerDesc: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontFamily: "Inter_400Regular", marginTop: 2 },
 
   /* Birthday notification banner */
   birthdayBanner: {

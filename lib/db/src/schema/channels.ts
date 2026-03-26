@@ -9,6 +9,7 @@ export const channelsTable = pgTable("channels", {
   icon: text("icon"),
   allowedTags: text("allowed_tags").notNull().default("[]"),
   isInternalComm: boolean("is_internal_comm").notNull().default(false),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

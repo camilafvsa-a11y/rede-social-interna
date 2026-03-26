@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
-  ActivityIndicator, Platform, Modal, TextInput, ScrollView, Switch,
+  ActivityIndicator, Platform, Modal, TextInput, ScrollView, Switch, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
 
@@ -17,14 +18,24 @@ const TAG_LABELS: Record<string, string> = {
   marketing: "Marketing", adm: "Adm", socio: "Sócio",
   posto: "Posto", churrascaria: "Churrascaria", gerente: "Gerente",
 };
-
 const ICON_OPTIONS = ["hash", "globe", "megaphone", "briefcase", "users", "star", "award", "trending-up", "coffee", "droplet"];
+
+type Form = {
+  name: string;
+  description: string;
+  icon: string;
+  allowedTags: string[];
+  isInternalComm: boolean;
+  coverImageUrl: string;
+};
 
 export default function AdminChannelsScreen() {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", description: "", icon: "hash", allowedTags: [] as string[], isInternalComm: false });
+  const [form, setForm] = useState<Form>({
+    name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "",
+  });
 
   const { data: channels = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["admin-channels"],
@@ -33,13 +44,20 @@ export default function AdminChannelsScreen() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false });
+    setForm({ name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "" });
     setShowModal(true);
   }
 
   function openEdit(ch: any) {
     setEditing(ch);
-    setForm({ name: ch.name, description: ch.description || "", icon: ch.icon || "hash", allowedTags: ch.allowedTags || [], isInternalComm: ch.isInternalComm });
+    setForm({
+      name: ch.name,
+      description: ch.description || "",
+      icon: ch.icon || "hash",
+      allowedTags: ch.allowedTags || [],
+      isInternalComm: ch.isInternalComm,
+      coverImageUrl: ch.coverImageUrl || "",
+    });
     setShowModal(true);
   }
 
@@ -52,13 +70,34 @@ export default function AdminChannelsScreen() {
     }));
   }
 
+  async function pickCover() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      const uri = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+      setForm((prev) => ({ ...prev, coverImageUrl: uri }));
+    }
+  }
+
   async function save() {
     if (!form.name.trim()) { Alert.alert("Atenção", "Nome é obrigatório."); return; }
     try {
+      const payload = {
+        ...form,
+        coverImageUrl: form.coverImageUrl || null,
+      };
       if (editing) {
-        await api.patch(`/channels/${editing.id}`, form);
+        await api.patch(`/channels/${editing.id}`, payload);
       } else {
-        await api.post("/channels", form);
+        await api.post("/channels", payload);
       }
       await refetch();
       setShowModal(false);
@@ -78,8 +117,8 @@ export default function AdminChannelsScreen() {
           } catch (e: any) {
             Alert.alert("Erro", e.message);
           }
-        }
-      }
+        },
+      },
     ]);
   }
 
@@ -102,11 +141,24 @@ export default function AdminChannelsScreen() {
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item: ch }) => (
           <View style={styles.channelCard}>
-            <View style={[styles.iconWrap, ch.isInternalComm && { backgroundColor: C.tint }]}>
-              <Feather name={(ch.icon || "hash") as any} size={18} color={ch.isInternalComm ? "#fff" : C.tint} />
-            </View>
+            {/* Cover image thumbnail */}
+            {ch.coverImageUrl ? (
+              <Image source={{ uri: ch.coverImageUrl }} style={styles.coverThumb} />
+            ) : (
+              <View style={[styles.iconWrap, ch.isInternalComm && { backgroundColor: C.tint }]}>
+                <Feather name={(ch.icon || "hash") as any} size={18} color={ch.isInternalComm ? "#fff" : C.tint} />
+              </View>
+            )}
             <View style={styles.chInfo}>
-              <Text style={styles.chName}>{ch.name}</Text>
+              <View style={styles.chNameRow}>
+                <Text style={styles.chName}>{ch.name}</Text>
+                {ch.isInternalComm && (
+                  <View style={styles.internBadge}>
+                    <Feather name="shield" size={10} color={C.tint} />
+                    <Text style={styles.internBadgeText}>Interno</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.chDesc} numberOfLines={1}>{ch.description || "Sem descrição"}</Text>
               {ch.allowedTags?.length > 0 && (
                 <Text style={styles.chTags}>{ch.allowedTags.map((t: string) => TAG_LABELS[t]).join(", ")}</Text>
@@ -136,12 +188,54 @@ export default function AdminChannelsScreen() {
                 <Feather name="x" size={24} color={C.text} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalContent}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+
+              {/* Cover photo */}
+              <Text style={styles.fieldLabel}>Foto de Capa</Text>
+              <TouchableOpacity style={styles.coverPickerBtn} onPress={pickCover} activeOpacity={0.8}>
+                {form.coverImageUrl ? (
+                  <View style={styles.coverPreviewWrap}>
+                    <Image source={{ uri: form.coverImageUrl }} style={styles.coverPreview} resizeMode="cover" />
+                    <View style={styles.coverOverlay}>
+                      <Feather name="camera" size={20} color="#fff" />
+                      <Text style={styles.coverOverlayText}>Alterar foto</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.coverPickerEmpty}>
+                    <Feather name="image" size={28} color={C.textMuted} />
+                    <Text style={styles.coverPickerHint}>Toque para adicionar uma foto de capa</Text>
+                    <Text style={styles.coverPickerSub}>Proporção ideal: 16:9</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {form.coverImageUrl ? (
+                <TouchableOpacity
+                  style={styles.removeCoverBtn}
+                  onPress={() => setForm((prev) => ({ ...prev, coverImageUrl: "" }))}
+                >
+                  <Feather name="trash-2" size={13} color={C.danger} />
+                  <Text style={styles.removeCoverText}>Remover foto de capa</Text>
+                </TouchableOpacity>
+              ) : null}
+
               <Text style={styles.fieldLabel}>Nome *</Text>
-              <TextInput style={styles.input} value={form.name} onChangeText={(v) => setForm({ ...form, name: v })} placeholder="Ex: Marketing" placeholderTextColor={C.placeholder} />
+              <TextInput
+                style={styles.input}
+                value={form.name}
+                onChangeText={(v) => setForm({ ...form, name: v })}
+                placeholder="Ex: Marketing"
+                placeholderTextColor={C.placeholder}
+              />
 
               <Text style={styles.fieldLabel}>Descrição</Text>
-              <TextInput style={styles.input} value={form.description} onChangeText={(v) => setForm({ ...form, description: v })} placeholder="Descrição do canal" placeholderTextColor={C.placeholder} />
+              <TextInput
+                style={styles.input}
+                value={form.description}
+                onChangeText={(v) => setForm({ ...form, description: v })}
+                placeholder="Descrição do canal"
+                placeholderTextColor={C.placeholder}
+              />
 
               <Text style={styles.fieldLabel}>Ícone</Text>
               <View style={styles.iconGrid}>
@@ -207,32 +301,64 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface, borderRadius: 14, padding: 12,
     borderWidth: 1, borderColor: C.border,
   },
+  coverThumb: { width: 48, height: 36, borderRadius: 8 },
   iconWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center" },
   chInfo: { flex: 1 },
+  chNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   chName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  internBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#EFF6FF", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2 },
+  internBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: C.tint },
   chDesc: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   chTags: { fontSize: 11, color: C.tint, fontFamily: "Inter_500Medium", marginTop: 2 },
   editBtn: { padding: 6 },
   empty: { alignItems: "center", paddingTop: 60 },
   emptyText: { fontSize: 15, color: C.textSecondary, fontFamily: "Inter_500Medium" },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.6)" },
+
+  /* Modal */
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalSheet: { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%" },
+  modalSheet: { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "93%" },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: C.border },
   modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
   modalContent: { padding: 16, gap: 4 },
-  fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text, marginTop: 8, marginBottom: 4 },
+  fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text, marginTop: 12, marginBottom: 6 },
   input: { backgroundColor: C.inputBg, borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
+
+  /* Cover picker */
+  coverPickerBtn: { borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border, borderStyle: "dashed" },
+  coverPickerEmpty: {
+    height: 120, alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: C.surfaceAlt,
+  },
+  coverPickerHint: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_500Medium" },
+  coverPickerSub: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
+  coverPreviewWrap: { position: "relative" },
+  coverPreview: { width: "100%", height: 140 },
+  coverOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: "rgba(0,0,0,0.45)", paddingVertical: 8,
+  },
+  coverOverlayText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  removeCoverBtn: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6, alignSelf: "flex-end" },
+  removeCoverText: { fontSize: 12, color: C.danger, fontFamily: "Inter_500Medium" },
+
+  /* Icon grid */
   iconGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   iconOption: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center" },
   iconOptionSelected: { backgroundColor: C.tint, borderColor: C.tint },
+
+  /* Tags */
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tagChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },
   tagChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
   tagChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
+
+  /* Switch */
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: C.surfaceAlt, borderRadius: 10, padding: 12, marginTop: 8 },
   switchLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   switchDesc: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular", marginTop: 2 },
+
   submitBtn: { backgroundColor: C.tint, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 16 },
   submitText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
