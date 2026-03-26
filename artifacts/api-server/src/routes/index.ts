@@ -7,6 +7,7 @@ import postsRouter from "./posts.js";
 import ticketsRouter from "./tickets.js";
 import birthdaysRouter from "./birthdays.js";
 import termsRouter from "./terms.js";
+import docsRouter from "./docs.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/posts", postsRouter);
 router.use("/tickets", ticketsRouter);
 router.use("/birthdays", birthdaysRouter);
 router.use("/terms", termsRouter);
+router.use("/docs", docsRouter);
 
 export default router;

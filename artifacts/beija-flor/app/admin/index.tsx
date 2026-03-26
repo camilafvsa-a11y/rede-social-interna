@@ -16,6 +16,7 @@ const ADMIN_SECTIONS = [
   { icon: "help-circle", title: "Responsáveis por Chamados", desc: "Gerenciar equipe de suporte", route: "/admin/ticket-handlers" },
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
   { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },
+  { icon: "book-open", title: "Progresso de Leitura", desc: "Ver % de documentos lidos por colaborador e resetar progresso", route: "/admin/doc-progress" },
 ];
 
 export default function AdminScreen() {

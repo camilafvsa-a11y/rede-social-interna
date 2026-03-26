@@ -1,17 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform,
 } from "react-native";
+import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-// ─── Termos que requerem assinatura ────────────────────────────────────────
+// ─── Termos ────────────────────────────────────────────────────────────────
 const TERMS = [
   {
     key: "image_voice_authorization",
@@ -41,7 +42,7 @@ Ao participar das ações do Grupo Beija-flor, o participante declara estar de a
   },
 ];
 
-// ─── Políticas e documentos (sem assinatura) ──────────────────────────────
+// ─── Políticas ─────────────────────────────────────────────────────────────
 const POLICY_SECTIONS = [
   {
     section: "Código de Conduta",
@@ -394,15 +395,69 @@ function formatDateTime(isoStr: string): string {
   });
 }
 
-// ─── Card de política (expansível) ────────────────────────────────────────
+// ─── Gráfico circular de progresso ─────────────────────────────────────────
+function CircularProgress({ percent, size = 110 }: { percent: number; size?: number }) {
+  const sw = 10;
+  const r = (size - sw) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (Math.min(percent, 100) / 100) * circ;
+  const done = percent >= 100;
+
+  return (
+    <Svg width={size} height={size}>
+      <Circle cx={cx} cy={cy} r={r} stroke={C.borderLight} strokeWidth={sw} fill="none" />
+      <G rotation="-90" origin={`${cx}, ${cy}`}>
+        <Circle
+          cx={cx} cy={cy} r={r}
+          stroke={done ? "#059669" : C.tint}
+          strokeWidth={sw} fill="none"
+          strokeDasharray={`${circ} ${circ}`}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </G>
+    </Svg>
+  );
+}
+
+// ─── Checkbox de leitura ───────────────────────────────────────────────────
+function ReadCheckbox({
+  isRead, onPress, loading,
+}: { isRead: boolean; onPress: () => void; loading: boolean }) {
+  return (
+    <TouchableOpacity
+      style={[styles.readCheckRow, isRead && styles.readCheckRowDone]}
+      onPress={onPress}
+      disabled={isRead || loading}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.readCheck, isRead && styles.readCheckDone]}>
+        {loading
+          ? <ActivityIndicator size="small" color={C.tint} />
+          : isRead
+            ? <Feather name="check" size={12} color="#fff" />
+            : null}
+      </View>
+      <Text style={[styles.readCheckLabel, isRead && styles.readCheckLabelDone]}>
+        {isRead ? "Marcado como lido" : "Marcar como lido"}
+      </Text>
+      {isRead && <Feather name="check-circle" size={14} color="#059669" />}
+    </TouchableOpacity>
+  );
+}
+
+// ─── Card de política ──────────────────────────────────────────────────────
 function PolicyCard({
-  item,
-  sectionColor,
-  sectionColorBg,
+  item, sectionColor, sectionColorBg, isRead, onMarkRead, markLoading,
 }: {
   item: typeof POLICY_SECTIONS[0]["items"][0];
   sectionColor: string;
   sectionColorBg: string;
+  isRead: boolean;
+  onMarkRead: () => void;
+  markLoading: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -421,9 +476,15 @@ function PolicyCard({
             <Text style={styles.policyTitle} numberOfLines={expanded ? undefined : 1}>
               {item.title}
             </Text>
-            {item.required && (
+            {item.required && !isRead && (
               <View style={styles.requiredBadge}>
                 <Text style={styles.requiredText}>Obrigatório</Text>
+              </View>
+            )}
+            {isRead && (
+              <View style={styles.readBadge}>
+                <Feather name="check" size={9} color="#059669" />
+                <Text style={styles.readBadgeText}>Lido</Text>
               </View>
             )}
           </View>
@@ -443,26 +504,35 @@ function PolicyCard({
         <View style={styles.policyContent}>
           <View style={styles.policyDivider} />
           <Text style={styles.policyContentText}>{item.content}</Text>
+          <View style={{ marginTop: 14 }}>
+            <ReadCheckbox isRead={isRead} onPress={onMarkRead} loading={markLoading} />
+          </View>
         </View>
       )}
     </View>
   );
 }
 
-// ─── Card de termo (com assinatura) ───────────────────────────────────────
+// ─── Card de termo ─────────────────────────────────────────────────────────
 function TermCard({
-  term,
-  acceptance,
-  onAccept,
+  term, acceptance, onAccept, isRead, onMarkRead,
 }: {
   term: typeof TERMS[0];
   acceptance: any;
   onAccept: () => void;
+  isRead: boolean;
+  onMarkRead: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [checked, setChecked] = useState(false);
   const isSigned = !!acceptance;
+
+  useEffect(() => {
+    if (isSigned && !isRead) {
+      onMarkRead();
+    }
+  }, [isSigned]);
 
   async function handleAccept() {
     if (!checked) {
@@ -479,6 +549,7 @@ function TermCard({
             setAccepting(true);
             try {
               await api.post("/terms/accept", { termKey: term.key, termTitle: term.title });
+              onMarkRead();
               onAccept();
             } catch (e: any) {
               Alert.alert("Erro", e.message);
@@ -507,18 +578,14 @@ function TermCard({
               {term.title}
             </Text>
             <View style={[styles.requiredBadge, isSigned && styles.signedBadge]}>
-              {isSigned
-                ? <Feather name="check" size={10} color="#059669" />
-                : null}
+              {isSigned ? <Feather name="check" size={10} color="#059669" /> : null}
               <Text style={[styles.requiredText, isSigned && { color: "#059669" }]}>
                 {isSigned ? "Assinado" : "Pendente"}
               </Text>
             </View>
           </View>
           {isSigned
-            ? <Text style={styles.signedSubtext}>
-                Aceito em {formatDateTime(acceptance.acceptedAt)}
-              </Text>
+            ? <Text style={styles.signedSubtext}>Aceito em {formatDateTime(acceptance.acceptedAt)}</Text>
             : <Text style={styles.policyDesc} numberOfLines={1}>Toque para ler e assinar</Text>
           }
         </View>
@@ -580,8 +647,15 @@ function TermCard({
   );
 }
 
-// ─── Card de valores (expansível com checklist) ───────────────────────────
-function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
+// ─── Card de valores ───────────────────────────────────────────────────────
+function ValueCard({
+  value, isRead, onMarkRead, markLoading,
+}: {
+  value: typeof VALUES_DATA[0];
+  isRead: boolean;
+  onMarkRead: () => void;
+  markLoading: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -595,7 +669,15 @@ function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
           <Feather name={value.icon} size={20} color={value.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.valueTitle}>{value.title}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={[styles.valueTitle, { flex: 1 }]}>{value.title}</Text>
+            {isRead && (
+              <View style={styles.readBadge}>
+                <Feather name="check" size={9} color="#059669" />
+                <Text style={styles.readBadgeText}>Lido</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.valueDesc} numberOfLines={expanded ? undefined : 2}>
             {value.desc}
           </Text>
@@ -620,6 +702,9 @@ function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
               <Text style={styles.practiceText}>{practice}</Text>
             </View>
           ))}
+          <View style={{ marginTop: 6 }}>
+            <ReadCheckbox isRead={isRead} onPress={onMarkRead} loading={markLoading} />
+          </View>
         </View>
       )}
     </View>
@@ -633,20 +718,48 @@ export default function IntegraScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 + 84 : 100;
 
-  const { data: acceptances = [], isLoading, refetch } = useQuery<any[]>({
+  const [markingKey, setMarkingKey] = useState<string | null>(null);
+
+  const { data: acceptances = [], isLoading: termsLoading, refetch: refetchTerms } = useQuery<any[]>({
     queryKey: ["my-terms"],
     queryFn: () => api.get("/terms/my"),
   });
+
+  const { data: docsProgress, refetch: refetchDocs } = useQuery<{
+    readKeys: string[];
+    completionCount: number;
+    totalDocs: number;
+  }>({
+    queryKey: ["my-docs-progress"],
+    queryFn: () => api.get("/docs/my"),
+    initialData: { readKeys: [], completionCount: 0, totalDocs: 16 },
+  });
+
+  const readKeysSet = new Set(docsProgress?.readKeys ?? []);
+
+  async function markRead(key: string) {
+    if (readKeysSet.has(key)) return;
+    setMarkingKey(key);
+    try {
+      await api.post("/docs/mark", { documentKey: key });
+      await refetchDocs();
+    } catch (e: any) {
+      Alert.alert("Erro", "Não foi possível salvar o progresso.");
+    } finally {
+      setMarkingKey(null);
+    }
+  }
 
   function getAcceptance(key: string) {
     return acceptances.find((a: any) => a.termKey === key) || null;
   }
 
-  const totalDocs =
-    TERMS.length +
-    POLICY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0);
-
   const signedCount = TERMS.filter((t) => getAcceptance(t.key)).length;
+  const docsReadCount = readKeysSet.size;
+  const totalDocs = TERMS.length + POLICY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0) + VALUES_DATA.length;
+  const totalRead = Math.min(docsReadCount + signedCount, totalDocs);
+  const percent = Math.round((totalRead / totalDocs) * 100);
+  const completionCount = docsProgress?.completionCount ?? 0;
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -674,23 +787,52 @@ export default function IntegraScreen() {
           </View>
         </View>
 
-        {/* Progress bar */}
+        {/* Progress card com gráfico circular */}
         <View style={styles.progressCard}>
-          <View style={styles.progressTop}>
-            <Text style={styles.progressLabel}>Termos assinados</Text>
-            <Text style={styles.progressCount}>{signedCount}/{TERMS.length}</Text>
+          <View style={styles.progressLeft}>
+            <View style={{ position: "relative", width: 110, height: 110, alignItems: "center", justifyContent: "center" }}>
+              <CircularProgress percent={percent} size={110} />
+              <View style={styles.progressCenter}>
+                <Text style={[styles.progressPercent, percent >= 100 && { color: "#059669" }]}>
+                  {percent}%
+                </Text>
+                <Text style={styles.progressSmall}>lido</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${TERMS.length > 0 ? (signedCount / TERMS.length) * 100 : 0}%` },
-              ]}
-            />
+
+          <View style={styles.progressRight}>
+            <Text style={styles.progressTitle}>Meu Progresso</Text>
+            <View style={styles.progressStat}>
+              <Feather name="file-text" size={14} color={C.tint} />
+              <Text style={styles.progressStatText}>
+                <Text style={styles.progressStatBold}>{totalRead}</Text>/{totalDocs} documentos lidos
+              </Text>
+            </View>
+            <View style={styles.progressStat}>
+              <Feather name="edit-3" size={14} color={C.tint} />
+              <Text style={styles.progressStatText}>
+                <Text style={styles.progressStatBold}>{signedCount}</Text>/{TERMS.length} termos assinados
+              </Text>
+            </View>
+            {completionCount > 0 && (
+              <View style={[styles.progressStat, { marginTop: 4 }]}>
+                <Feather name="award" size={14} color="#D97706" />
+                <Text style={[styles.progressStatText, { color: "#D97706" }]}>
+                  <Text style={styles.progressStatBold}>{completionCount}×</Text> completou 100%
+                </Text>
+              </View>
+            )}
+            {percent >= 100 && (
+              <View style={styles.progressDoneBadge}>
+                <Feather name="check-circle" size={12} color="#059669" />
+                <Text style={styles.progressDoneText}>Tudo lido!</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* ── Seção: Termos (com assinatura) ── */}
+        {/* ── Seção: Termos ── */}
         <View style={styles.sectionHeader}>
           <View style={[styles.sectionIconWrap, { backgroundColor: "#EFF6FF" }]}>
             <Feather name="edit-3" size={14} color={C.tint} />
@@ -699,7 +841,7 @@ export default function IntegraScreen() {
         </View>
 
         <View style={styles.groupCard}>
-          {isLoading
+          {termsLoading
             ? <ActivityIndicator size="small" color={C.tint} style={{ margin: 16 }} />
             : TERMS.map((term, i) => (
               <React.Fragment key={term.key}>
@@ -707,8 +849,10 @@ export default function IntegraScreen() {
                 <TermCard
                   term={term}
                   acceptance={getAcceptance(term.key)}
+                  isRead={readKeysSet.has(term.key)}
+                  onMarkRead={() => markRead(term.key)}
                   onAccept={() => {
-                    refetch();
+                    refetchTerms();
                     qc.invalidateQueries({ queryKey: ["my-terms"] });
                   }}
                 />
@@ -717,7 +861,7 @@ export default function IntegraScreen() {
           }
         </View>
 
-        {/* ── Seções de Políticas ── */}
+        {/* ── Políticas ── */}
         {POLICY_SECTIONS.map((section) => (
           <View key={section.section}>
             <View style={styles.sectionHeader}>
@@ -735,6 +879,9 @@ export default function IntegraScreen() {
                     item={item}
                     sectionColor={section.color}
                     sectionColorBg={section.colorBg}
+                    isRead={readKeysSet.has(item.key)}
+                    onMarkRead={() => markRead(item.key)}
+                    markLoading={markingKey === item.key}
                   />
                 </React.Fragment>
               ))}
@@ -742,7 +889,7 @@ export default function IntegraScreen() {
           </View>
         ))}
 
-        {/* ── Seção: Nossos Valores ── */}
+        {/* ── Nossos Valores ── */}
         <View style={styles.sectionHeader}>
           <View style={[styles.sectionIconWrap, { backgroundColor: "#FEF2F2" }]}>
             <Feather name="heart" size={14} color="#DC2626" />
@@ -750,7 +897,6 @@ export default function IntegraScreen() {
           <Text style={styles.sectionTitle}>Nossos Valores</Text>
         </View>
 
-        {/* Quote banner */}
         <View style={styles.valueBanner}>
           <Feather name="zap" size={22} color="rgba(255,255,255,0.7)" />
           <Text style={styles.valueBannerText}>
@@ -759,7 +905,13 @@ export default function IntegraScreen() {
         </View>
 
         {VALUES_DATA.map((value) => (
-          <ValueCard key={value.key} value={value} />
+          <ValueCard
+            key={value.key}
+            value={value}
+            isRead={readKeysSet.has(value.key)}
+            onMarkRead={() => markRead(value.key)}
+            markLoading={markingKey === value.key}
+          />
         ))}
       </ScrollView>
     </View>
@@ -770,7 +922,6 @@ export default function IntegraScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
 
-  /* Header */
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 12,
@@ -786,7 +937,6 @@ const styles = StyleSheet.create({
 
   content: { padding: 16, gap: 10 },
 
-  /* Banner */
   banner: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: C.tint, borderRadius: 16, padding: 16, marginBottom: 4,
@@ -795,16 +945,36 @@ const styles = StyleSheet.create({
   bannerTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 2 },
   bannerDesc: { fontSize: 13, color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular" },
 
-  /* Progress */
+  /* Progress card */
   progressCard: {
-    backgroundColor: C.surface, borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: C.border, marginBottom: 4,
+    backgroundColor: C.surface, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: C.border,
+    flexDirection: "row", alignItems: "center", gap: 16,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
-  progressTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  progressLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
-  progressCount: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.tint },
-  progressBar: { height: 6, backgroundColor: C.surfaceAlt, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: 6, backgroundColor: C.tint, borderRadius: 3 },
+  progressLeft: { alignItems: "center" },
+  progressCenter: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  progressPercent: {
+    fontSize: 22, fontFamily: "Inter_700Bold", color: C.tint, lineHeight: 26,
+  },
+  progressSmall: { fontSize: 10, fontFamily: "Inter_500Medium", color: C.textMuted },
+  progressRight: { flex: 1, gap: 6 },
+  progressTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 2 },
+  progressStat: { flexDirection: "row", alignItems: "center", gap: 6 },
+  progressStatText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  progressStatBold: { fontFamily: "Inter_700Bold", color: C.text },
+  progressDoneBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "#F0FDF4", borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4,
+    alignSelf: "flex-start", marginTop: 2,
+    borderWidth: 1, borderColor: "#BBF7D0",
+  },
+  progressDoneText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#059669" },
 
   /* Section header */
   sectionHeader: {
@@ -817,7 +987,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text },
 
-  /* Group card (contains list items) */
+  /* Group card */
   groupCard: {
     backgroundColor: C.surface, borderRadius: 14,
     borderWidth: 1, borderColor: C.border,
@@ -827,7 +997,7 @@ const styles = StyleSheet.create({
   },
   itemDivider: { height: 1, backgroundColor: C.borderLight, marginHorizontal: 14 },
 
-  /* Policy card (inside group) */
+  /* Policy card */
   policyCard: { overflow: "hidden" },
   termCard: { overflow: "hidden" },
   termCardSigned: {},
@@ -852,6 +1022,30 @@ const styles = StyleSheet.create({
   },
   requiredText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#EF4444" },
   signedBadge: { backgroundColor: "#F0FDF4" },
+  readBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "#F0FDF4", paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, flexShrink: 0, borderWidth: 1, borderColor: "#BBF7D0",
+  },
+  readBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#059669" },
+
+  /* Read checkbox row */
+  readCheckRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    backgroundColor: C.surfaceAlt, borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: C.border,
+  },
+  readCheckRowDone: {
+    backgroundColor: "#F0FDF4", borderColor: "#BBF7D0",
+  },
+  readCheck: {
+    width: 22, height: 22, borderRadius: 6,
+    borderWidth: 2, borderColor: C.border,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  readCheckDone: { backgroundColor: "#059669", borderColor: "#059669" },
+  readCheckLabel: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
+  readCheckLabelDone: { color: "#059669" },
 
   /* Policy content */
   policyContent: { paddingHorizontal: 14, paddingBottom: 14 },
