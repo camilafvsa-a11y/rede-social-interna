@@ -133,7 +133,7 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Aniversários do Time</Text>
         <TouchableOpacity
           style={styles.birthdayCard}
-          onPress={() => router.push("/birthdays" as any)}
+          onPress={() => router.push("/(tabs)/birthdays")}
           activeOpacity={0.85}
         >
           {/* Card header */}

@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -121,7 +120,7 @@ export default function FeedScreen() {
       {todayBirthdays.length > 0 && !birthdayBannerDismissed && (
         <TouchableOpacity
           style={styles.birthdayBanner}
-          onPress={() => router.push("/birthdays" as any)}
+          onPress={() => router.push("/(tabs)/birthdays")}
           activeOpacity={0.88}
         >
           <Text style={styles.birthdayBannerEmoji}>🎂</Text>
