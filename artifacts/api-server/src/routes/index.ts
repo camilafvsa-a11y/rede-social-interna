@@ -10,6 +10,7 @@ import termsRouter from "./terms.js";
 import docsRouter from "./docs.js";
 import exportRouter from "./export.js";
 import notificationsRouter from "./notifications.js";
+import integraItemsRouter from "./integra-items.js";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/terms", termsRouter);
 router.use("/docs", docsRouter);
 router.use("/data", exportRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/integra-items", integraItemsRouter);
 
 export default router;

@@ -1,11 +1,24 @@
 import { Router } from "express";
-import { db, documentReadsTable, docReadCompletionsTable, usersTable } from "@workspace/db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { db, documentReadsTable, docReadCompletionsTable, usersTable, integraItemsTable } from "@workspace/db";
+import { eq, and, count } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
 const router = Router();
 
-const TOTAL_DOCS = 15;
+const FALLBACK_TOTAL = 15;
+
+async function getDynamicTotal(): Promise<number> {
+  try {
+    const [{ value }] = await db
+      .select({ value: count() })
+      .from(integraItemsTable)
+      .where(eq(integraItemsTable.isActive, true));
+    const n = Number(value);
+    return n > 0 ? n : FALLBACK_TOTAL;
+  } catch {
+    return FALLBACK_TOTAL;
+  }
+}
 
 router.get("/my", requireAuth, async (req, res) => {
   const user = (req as any).user;
