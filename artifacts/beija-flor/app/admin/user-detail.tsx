@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform, TextInput, Switch,
@@ -97,6 +97,19 @@ export default function UserDetailScreen() {
     appBanned: boolean; birthDate: string; cpf: string; admissionDate: string;
   } | null>(null);
 
+  // Undo: snapshot of state BEFORE the last save
+  const [prevSavedData, setPrevSavedData] = useState<typeof origData | null>(null);
+
+  // In-screen toast feedback
+  const [showToast, setShowToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function triggerToast() {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setShowToast(true);
+    toastTimer.current = setTimeout(() => setShowToast(false), 2800);
+  }
+
   // Calendar picker state for post ban
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedBanDate, setSelectedBanDate] = useState<Date | null>(null);
@@ -158,13 +171,58 @@ export default function UserDetailScreen() {
       });
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
       await qc.invalidateQueries({ queryKey: ["admin-user", id] });
+      setPrevSavedData(origData); // snapshot of state before this save
       setOrigData({ role, tag, extraTags, appBanned, birthDate, cpf, admissionDate });
-      Alert.alert("Salvo!", "Alterações aplicadas com sucesso.");
+      triggerToast();
     } catch (e: any) {
       Alert.alert("Erro", e.message || "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleUndo() {
+    if (!prevSavedData) return;
+    Alert.alert(
+      "Desfazer alterações",
+      "Voltar ao estado anterior ao último salvamento?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Desfazer",
+          style: "destructive",
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await api.patch(`/users/${id}`, {
+                role: prevSavedData.role,
+                tag: prevSavedData.tag || null,
+                extraTags: prevSavedData.extraTags,
+                appBanned: prevSavedData.appBanned,
+                birthDate: prevSavedData.birthDate || null,
+                cpf: prevSavedData.cpf || null,
+                admissionDate: prevSavedData.admissionDate || null,
+              });
+              await qc.invalidateQueries({ queryKey: ["admin-users"] });
+              await qc.invalidateQueries({ queryKey: ["admin-user", id] });
+              setRole(prevSavedData.role);
+              setTag(prevSavedData.tag);
+              setExtraTags(prevSavedData.extraTags);
+              setAppBanned(prevSavedData.appBanned);
+              setBirthDate(prevSavedData.birthDate);
+              setCpf(prevSavedData.cpf);
+              setAdmissionDate(prevSavedData.admissionDate);
+              setOrigData(prevSavedData);
+              setPrevSavedData(null);
+            } catch (e: any) {
+              Alert.alert("Erro", e.message || "Não foi possível desfazer.");
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function applyBan(until: Date | "permanent") {
@@ -271,6 +329,16 @@ export default function UserDetailScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           Editar colaborador
         </Text>
+        {prevSavedData && (
+          <TouchableOpacity
+            style={styles.undoBtn}
+            onPress={handleUndo}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            <Feather name="rotate-ccw" size={15} color="#D97706" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[styles.saveBtn, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
           onPress={handleSave}
@@ -644,6 +712,14 @@ export default function UserDetailScreen() {
             </>}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* ── Toast: Alterações salvas ── */}
+      {showToast && (
+        <View style={styles.toast} pointerEvents="none">
+          <Feather name="check-circle" size={16} color="#fff" />
+          <Text style={styles.toastText}>Alterações salvas</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -837,4 +913,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   saveBtnFullText: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
+
+  /* Undo button (header) */
+  undoBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A",
+    alignItems: "center", justifyContent: "center", marginRight: 4,
+  },
+
+  /* Toast */
+  toast: {
+    position: "absolute",
+    bottom: 36,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#059669",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  toastText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
   ActivityIndicator, Platform, Modal, TextInput, ScrollView, Switch, Image, KeyboardAvoidingView,
@@ -56,6 +56,14 @@ export default function AdminChannelsScreen() {
     name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "",
   });
   const [origForm, setOrigForm] = useState<Form | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function triggerToast() {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setShowToast(true);
+    toastTimer.current = setTimeout(() => setShowToast(false), 2800);
+  }
 
   const { data: channels = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["admin-channels"],
@@ -145,6 +153,7 @@ export default function AdminChannelsScreen() {
       }
       await refetch();
       setShowModal(false);
+      triggerToast();
     } catch (e: any) {
       Alert.alert("Erro", e.message);
     } finally {
@@ -371,6 +380,14 @@ export default function AdminChannelsScreen() {
         </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Toast */}
+      {showToast && (
+        <View style={styles.toast} pointerEvents="none">
+          <Feather name="check-circle" size={16} color="#fff" />
+          <Text style={styles.toastText}>Canal salvo</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -471,4 +488,13 @@ const styles = StyleSheet.create({
 
   submitBtn: { backgroundColor: C.tint, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 16 },
   submitText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  toast: {
+    position: "absolute", bottom: 36, alignSelf: "center",
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#059669", paddingHorizontal: 20, paddingVertical: 12,
+    borderRadius: 24, shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 8,
+  },
+  toastText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
 });
