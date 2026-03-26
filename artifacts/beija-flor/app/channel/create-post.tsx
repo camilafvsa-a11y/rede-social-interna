@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Image,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  ActivityIndicator, Image, FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -16,14 +17,26 @@ const C = Colors.light;
 export default function CreatePostScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const inputRef = useRef<TextInput>(null);
+
   const [content, setContent] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [channelId, setChannelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // @mention state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number>(-1);
+
   const { data: channels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
+  });
+
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ["users-brief"],
+    queryFn: () => api.get("/users"),
+    staleTime: 60_000,
   });
 
   const { data: canPostData } = useQuery({
@@ -33,6 +46,46 @@ export default function CreatePostScreen() {
   });
 
   const canPost = !channelId || canPostData?.canPost;
+
+  // Filter users matching the query after @
+  const mentionSuggestions = mentionQuery !== null
+    ? allUsers.filter((u: any) =>
+        u.name?.toLowerCase().includes(mentionQuery.toLowerCase())
+      ).slice(0, 6)
+    : [];
+
+  function handleContentChange(text: string) {
+    setContent(text);
+
+    // Detect @mention trigger: find the last @ before cursor
+    const lastAt = text.lastIndexOf("@");
+    if (lastAt === -1) {
+      setMentionQuery(null);
+      setMentionStart(-1);
+      return;
+    }
+
+    const afterAt = text.slice(lastAt + 1);
+    // If afterAt contains a space, we've left the mention context
+    if (afterAt.includes(" ") || afterAt.includes("\n")) {
+      setMentionQuery(null);
+      setMentionStart(-1);
+    } else {
+      setMentionQuery(afterAt);
+      setMentionStart(lastAt);
+    }
+  }
+
+  function insertMention(user: any) {
+    if (mentionStart < 0) return;
+    const before = content.slice(0, mentionStart);
+    const after = content.slice(mentionStart + 1 + (mentionQuery?.length ?? 0));
+    const newContent = `${before}@${user.name} ${after}`;
+    setContent(newContent);
+    setMentionQuery(null);
+    setMentionStart(-1);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -82,11 +135,51 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}>
+      {/* @mention suggestions dropdown */}
+      {mentionSuggestions.length > 0 && (
+        <View style={styles.mentionDropdown}>
+          <FlatList
+            data={mentionSuggestions}
+            keyExtractor={(u: any) => String(u.id)}
+            keyboardShouldPersistTaps="always"
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.mentionItem}
+                onPress={() => insertMention(item)}
+                activeOpacity={0.75}
+              >
+                {item.avatarUrl ? (
+                  <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
+                ) : (
+                  <View style={[styles.mentionAvatar, styles.mentionAvatarFallback]}>
+                    <Text style={styles.mentionAvatarInitial}>{item.name?.[0]?.toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.mentionName}>{item.name}</Text>
+                  {item.tag && <Text style={styles.mentionTag}>{item.tag}</Text>}
+                </View>
+                <Feather name="corner-down-left" size={14} color={C.textMuted} />
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.inputHint}>
+          <Feather name="at-sign" size={12} color={C.textMuted} />
+          <Text style={styles.inputHintText}>Digite @ para mencionar alguém</Text>
+        </View>
         <TextInput
+          ref={inputRef}
           style={styles.textInput}
           value={content}
-          onChangeText={setContent}
+          onChangeText={handleContentChange}
           placeholder="O que você está pensando?"
           placeholderTextColor={C.placeholder}
           multiline
@@ -148,6 +241,26 @@ const styles = StyleSheet.create({
   postBtn: { backgroundColor: C.tint, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, minWidth: 70, alignItems: "center" },
   postBtnDisabled: { opacity: 0.5 },
   postBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
+  mentionDropdown: {
+    backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    maxHeight: 240,
+  },
+  mentionItem: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: C.borderLight,
+  },
+  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.tint },
+  mentionAvatarFallback: { alignItems: "center", justifyContent: "center" },
+  mentionAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 },
+  mentionName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  mentionTag: { fontSize: 11, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+
+  inputHint: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: -6 },
+  inputHintText: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
+
   content: { padding: 16, gap: 12 },
   textInput: {
     fontSize: 17, color: C.text, fontFamily: "Inter_400Regular",
@@ -177,5 +290,5 @@ const styles = StyleSheet.create({
   channelChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
   channelChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
   noPermission: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEF3C7", borderRadius: 10, padding: 12 },
-  noPermissionText: { fontSize: 13, color: "#92400E", fontFamily: "Inter_500Medium", flex: 1 },
+  noPermissionText: { fontSize: 13, color: "#92400E", fontFamily: "Inter_400Regular", flex: 1 },
 });

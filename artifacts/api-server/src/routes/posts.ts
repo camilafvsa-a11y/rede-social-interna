@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db, postsTable, postLikesTable, commentsTable, commentReportsTable, usersTable, channelsTable, channelAllowedPostersTable } from "@workspace/db";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, ne } from "drizzle-orm";
 import { requireAuth, formatUserBasic } from "../lib/auth.js";
+import { sendPushToUsers, parseMentions } from "../lib/push.js";
 
 const router = Router();
 
@@ -83,6 +84,50 @@ router.post("/", requireAuth, async (req, res) => {
   const [post] = await db.insert(postsTable).values({ content, imageUrl, authorId: user.id, channelId }).returning();
   const enriched = await enrichPost(post, user.id);
   res.json(enriched);
+
+  // Fire-and-forget: send notifications after response
+  setImmediate(async () => {
+    try {
+      const authorName = user.name || "Alguém";
+      const preview = content.length > 80 ? content.slice(0, 77) + "…" : content;
+
+      // 1. Comunicação Interna → notify all other users
+      if (ch.isInternalComm) {
+        const allUsers = await db.select({ id: usersTable.id }).from(usersTable)
+          .where(ne(usersTable.id, user.id));
+        const targetIds = allUsers.map((u) => u.id);
+        if (targetIds.length > 0) {
+          await sendPushToUsers(targetIds, {
+            type: "comunicacao_interna",
+            title: `📢 ${ch.name}`,
+            body: `${authorName}: ${preview}`,
+            data: { postId: post.id, channelId },
+          });
+        }
+      }
+
+      // 2. @mentions → notify mentioned users (anyone, any channel)
+      const mentionedNames = parseMentions(content);
+      if (mentionedNames.length > 0) {
+        const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
+          .where(ne(usersTable.id, user.id));
+        const mentionedIds = allUsers
+          .filter((u) => mentionedNames.some((m) => u.name?.toLowerCase() === m.toLowerCase()))
+          .map((u) => u.id)
+          .filter((id) => !ch.isInternalComm); // avoid double-notifying comunicação interna
+        if (mentionedIds.length > 0) {
+          await sendPushToUsers(mentionedIds, {
+            type: "mention",
+            title: `🔔 ${authorName} mencionou você`,
+            body: preview,
+            data: { postId: post.id, channelId },
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[Notify post]", e);
+    }
+  });
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
@@ -142,7 +187,8 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
   const user = (req as any).user;
   const { id } = req.params;
   const { content } = req.body;
-  const [comment] = await db.insert(commentsTable).values({ content, postId: parseInt(id), authorId: user.id }).returning();
+  const postId = parseInt(id);
+  const [comment] = await db.insert(commentsTable).values({ content, postId, authorId: user.id }).returning();
   res.json({
     id: comment.id,
     content: comment.content,
@@ -150,6 +196,30 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     author: formatUserBasic(user),
     postId: comment.postId,
     createdAt: comment.createdAt?.toISOString?.() ?? comment.createdAt,
+  });
+
+  setImmediate(async () => {
+    try {
+      const mentionedNames = parseMentions(content);
+      if (mentionedNames.length === 0) return;
+      const authorName = user.name || "Alguém";
+      const preview = content.length > 80 ? content.slice(0, 77) + "…" : content;
+      const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
+        .where(ne(usersTable.id, user.id));
+      const mentionedIds = allUsers
+        .filter((u) => mentionedNames.some((m) => u.name?.toLowerCase() === m.toLowerCase()))
+        .map((u) => u.id);
+      if (mentionedIds.length > 0) {
+        await sendPushToUsers(mentionedIds, {
+          type: "mention",
+          title: `💬 ${authorName} mencionou você`,
+          body: preview,
+          data: { postId, commentId: comment.id },
+        });
+      }
+    } catch (e) {
+      console.error("[Notify comment]", e);
+    }
   });
 });
 

@@ -11,6 +11,21 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
+function MentionText({ text, style, numberOfLines }: { text: string; style?: any; numberOfLines?: number }) {
+  const parts = text.split(/(@[A-Za-zÀ-ÿ0-9 ._-]+?)(?=[\s,!?.@]|$)/g);
+  return (
+    <Text style={style} numberOfLines={numberOfLines}>
+      {parts.map((part, i) =>
+        part.startsWith("@") ? (
+          <Text key={i} style={{ color: C.tint, fontFamily: "Inter_600SemiBold" }}>{part}</Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </Text>
+  );
+}
+
 function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -155,7 +170,7 @@ export default function PostCard({ post, onLikeChange, onDelete, compact }: Post
           )}
         </View>
 
-        <Text style={styles.content} numberOfLines={compact ? 4 : undefined}>{post.content}</Text>
+        <MentionText text={post.content} style={styles.content} numberOfLines={compact ? 4 : undefined} />
 
         {post.imageUrl && (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} resizeMode="cover" />

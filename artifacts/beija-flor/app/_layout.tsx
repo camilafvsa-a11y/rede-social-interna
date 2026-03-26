@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function RootLayoutNav() {
       <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="profile/[id]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="channel/create-post" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="notifications" options={{ headerShown: false, presentation: "card" }} />
     </Stack>
   );
 }
@@ -69,11 +71,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <NotificationProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </NotificationProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

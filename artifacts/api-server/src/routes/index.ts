@@ -9,6 +9,7 @@ import birthdaysRouter from "./birthdays.js";
 import termsRouter from "./terms.js";
 import docsRouter from "./docs.js";
 import exportRouter from "./export.js";
+import notificationsRouter from "./notifications.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/birthdays", birthdaysRouter);
 router.use("/terms", termsRouter);
 router.use("/docs", docsRouter);
 router.use("/data", exportRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

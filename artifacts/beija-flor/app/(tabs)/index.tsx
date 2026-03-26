@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { api } from "@/lib/api";
 import PostCard from "@/components/PostCard";
 import Colors from "@/constants/colors";
@@ -114,6 +115,7 @@ type BdSubTab = "today" | "upcoming";
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const [mainTab, setMainTab] = useState<MainTab>("feed");
 
   // Per-tab channel filters
@@ -362,6 +364,21 @@ export default function FeedScreen() {
           <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
         </View>
 
+        {/* Bell icon */}
+        <TouchableOpacity
+          onPress={() => router.push("/notifications" as any)}
+          style={styles.bellBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Feather name="bell" size={22} color={C.text} />
+          {unreadCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
       </View>
 
       {/* ── Main 3-tab bar ── */}
@@ -605,6 +622,14 @@ const styles = StyleSheet.create({
   headerGreeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 14 },
   headerDate: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
+  bellBtn: { position: "relative", width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  bellBadge: {
+    position: "absolute", top: 0, right: 0,
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 3, borderWidth: 1.5, borderColor: C.surface,
+  },
+  bellBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
   /* Main 3-tab bar */
   mainTabBar: {
     flexDirection: "row", backgroundColor: C.surface,

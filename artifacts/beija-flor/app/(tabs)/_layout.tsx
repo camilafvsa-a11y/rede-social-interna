@@ -5,9 +5,10 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, Text } from "react-native";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
 
 const C = Colors.light;
 
@@ -41,6 +42,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { unreadCount } = useNotifications();
 
   return (
     <Tabs
@@ -69,8 +71,16 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Feed",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="house" tintColor={color} size={24} /> : <Feather name="home" size={22} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <View style={{ position: "relative" }}>
+              {isIOS ? <SymbolView name="house" tintColor={color} size={24} /> : <Feather name="home" size={22} color={color} />}
+              {unreadCount > 0 && (
+                <View style={styles.tabBadge}>
+                  <Text style={styles.tabBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                </View>
+              )}
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -115,3 +125,13 @@ export default function TabLayout() {
   if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }
+
+const styles = StyleSheet.create({
+  tabBadge: {
+    position: "absolute", top: -4, right: -8,
+    minWidth: 15, height: 15, borderRadius: 8,
+    backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 2, borderWidth: 1.5, borderColor: "#fff",
+  },
+  tabBadgeText: { color: "#fff", fontSize: 8, fontFamily: "Inter_700Bold" },
+});
