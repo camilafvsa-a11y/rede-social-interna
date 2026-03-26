@@ -362,12 +362,6 @@ export default function FeedScreen() {
           <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
         </View>
 
-        {/* Create post action */}
-        {mainTab === "feed" && (
-          <TouchableOpacity style={styles.newPostBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
-            <Feather name="edit-3" size={18} color="#fff" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* ── Main 3-tab bar ── */}
@@ -611,11 +605,6 @@ const styles = StyleSheet.create({
   headerGreeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 14 },
   headerDate: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
-  newPostBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-  },
-
   /* Main 3-tab bar */
   mainTabBar: {
     flexDirection: "row", backgroundColor: C.surface,
