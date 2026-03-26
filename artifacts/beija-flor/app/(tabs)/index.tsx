@@ -489,26 +489,12 @@ export default function FeedScreen() {
               <Text style={styles.internoHeaderSub}>Comunicados e avisos oficiais da empresa</Text>
             </View>
           </View>
-          <ChannelFilterBar chList={internalChannels} selected={internoChannelId} onSelect={setInternoChannelId} />
-          {/* Channel cover banner */}
-          {internoChannelId && (() => {
-            const ch = internalChannels.find((c: any) => c.id === internoChannelId);
-            return ch?.coverImageUrl ? (
-              <View style={styles.coverBanner}>
-                <Image source={{ uri: ch.coverImageUrl }} style={styles.coverBannerImg} resizeMode="cover" />
-                <View style={styles.coverBannerOverlay}>
-                  <Text style={styles.coverBannerName}>{ch.name}</Text>
-                  {ch.description ? <Text style={styles.coverBannerDesc}>{ch.description}</Text> : null}
-                </View>
-              </View>
-            ) : null;
-          })()}
           <PostsList
             posts={internoPosts}
             loading={internoLoading}
             refreshing={internoRefreshing}
             onRefresh={async () => { setInternoRefreshing(true); await internoRefetch(); setInternoRefreshing(false); }}
-            channelId={internoChannelId}
+            channelId={null}
             channelList={internalChannels}
             onSelectChannel={setInternoChannelId}
             isFeed={false}
