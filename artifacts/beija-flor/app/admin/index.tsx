@@ -18,6 +18,7 @@ const ADMIN_SECTIONS = [
   { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },
   { icon: "book-open", title: "Progresso de Leitura", desc: "Ver % de documentos lidos por colaborador e resetar progresso", route: "/admin/doc-progress" },
   { icon: "database", title: "Exportar / Importar", desc: "Baixar planilha CSV de colaboradores ou importar em lote", route: "/admin/export-import" },
+  { icon: "terminal", title: "Laboratório de Testes", desc: "Visualizar telas do app sem alterar dados (primeiro acesso, onboarding)", route: "/admin/test-lab" },
 ];
 
 export default function AdminScreen() {

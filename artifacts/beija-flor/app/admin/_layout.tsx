@@ -10,6 +10,11 @@ export default function AdminLayout() {
       <Stack.Screen name="reports" />
       <Stack.Screen name="ticket-handlers" />
       <Stack.Screen name="terms" />
+      <Stack.Screen name="user-detail" />
+      <Stack.Screen name="doc-progress" />
+      <Stack.Screen name="export-import" />
+      <Stack.Screen name="test-lab" />
+      <Stack.Screen name="preview-onboarding" />
     </Stack>
   );
 }
