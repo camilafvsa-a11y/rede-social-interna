@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
@@ -45,7 +45,6 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
   const tagStyle = (C.tagColors as any)[item.tag] || null;
   const isToday = item.daysUntil === 0;
   const age = item.birthDate ? getAge(item.birthDate) : null;
-
   return (
     <View style={[styles.bdCard, isToday && styles.bdCardToday]}>
       <View style={styles.bdAvatarWrap}>
@@ -92,27 +91,76 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
   );
 }
 
-// ─── Main screen ─────────────────────────────────────────────────────────────
-type MainTab = "feed" | "aniversarios";
-type BdTab = "today" | "upcoming";
+// ─── Types ───────────────────────────────────────────────────────────────────
+type MainTab = "feed" | "interno" | "aniversarios";
+type BdSubTab = "today" | "upcoming";
 
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [mainTab, setMainTab] = useState<MainTab>("feed");
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
-  const todayKey = new Date().toDateString();
-  const [birthdayBannerDismissedOn, setBirthdayBannerDismissedOn] = useState<string | null>(null);
-  const birthdayBannerDismissed = birthdayBannerDismissedOn === todayKey;
-  const [bdTab, setBdTab] = useState<BdTab>("today");
+
+  // Per-tab channel filters
+  const [feedChannelId, setFeedChannelId] = useState<number | null>(null);
+  const [internoChannelId, setInternoChannelId] = useState<number | null>(null);
+
+  // Birthday sub-tab
+  const [bdSubTab, setBdSubTab] = useState<BdSubTab>("today");
   const [bdRefreshing, setBdRefreshing] = useState(false);
 
+  // Birthday banner dismissal (per-day)
+  const todayKey = new Date().toDateString();
+  const [bdBannerDismissedOn, setBdBannerDismissedOn] = useState<string | null>(null);
+  const bdBannerDismissed = bdBannerDismissedOn === todayKey;
+
+  // Refresh states
+  const [feedRefreshing, setFeedRefreshing] = useState(false);
+  const [internoRefreshing, setInternoRefreshing] = useState(false);
+
+  // ── Channels ──
   const { data: channels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
   });
 
+  const regularChannels = useMemo(
+    () => channels.filter((c: any) => !c.isInternalComm),
+    [channels]
+  );
+  const internalChannels = useMemo(
+    () => channels.filter((c: any) => c.isInternalComm),
+    [channels]
+  );
+  const internalIds = useMemo(
+    () => new Set(internalChannels.map((c: any) => c.id)),
+    [internalChannels]
+  );
+
+  // ── Feed posts ──
+  const { data: feedData, isLoading: feedLoading, refetch: feedRefetch } = useQuery({
+    queryKey: ["feed", feedChannelId],
+    queryFn: () =>
+      api.get(feedChannelId ? `/posts?channelId=${feedChannelId}&limit=40` : "/posts?limit=60"),
+  });
+  const feedPosts = useMemo(() => {
+    const all = feedData?.posts || [];
+    return feedChannelId ? all : all.filter((p: any) => !internalIds.has(p.channelId));
+  }, [feedData, feedChannelId, internalIds]);
+
+  // ── Interno posts ──
+  const { data: internoData, isLoading: internoLoading, refetch: internoRefetch } = useQuery({
+    queryKey: ["interno", internoChannelId],
+    queryFn: () =>
+      api.get(internoChannelId ? `/posts?channelId=${internoChannelId}&limit=40` : "/posts?limit=60"),
+    enabled: mainTab === "interno",
+  });
+  const internoPosts = useMemo(() => {
+    const all = internoData?.posts || [];
+    return internoChannelId ? all : all.filter((p: any) => internalIds.has(p.channelId));
+  }, [internoData, internoChannelId, internalIds]);
+
+  // ── Birthdays ──
   const { data: birthdaysTodayData = [] } = useQuery<any[]>({
     queryKey: ["birthdays-today"],
     queryFn: () => api.get("/birthdays?days=1"),
@@ -127,63 +175,140 @@ export default function FeedScreen() {
   });
   const bdTodayList = birthdaysAll.filter((b: any) => b.daysUntil === 0);
   const bdUpcomingList = birthdaysAll.filter((b: any) => b.daysUntil > 0);
-  const bdDisplayList = bdTab === "today" ? bdTodayList : bdUpcomingList;
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["feed", selectedChannel],
-    queryFn: () =>
-      api.get(selectedChannel
-        ? `/posts?channelId=${selectedChannel}&limit=40`
-        : "/posts?limit=40"),
-    enabled: mainTab === "feed",
-  });
-  const posts = data?.posts || [];
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 + 84 : 100;
 
-  const FeedListHeader = (
-    <View>
-      <TouchableOpacity
-        style={styles.createBox}
-        onPress={() => router.push("/channel/create-post")}
-        activeOpacity={0.85}
-      >
-        <View style={styles.createAvatar}>
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.createAvatarImg} />
-          ) : (
-            <Text style={styles.createAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
-          )}
-        </View>
-        <View style={styles.createInputFake}>
-          <Text style={styles.createPlaceholder}>O que você está pensando?</Text>
-        </View>
-        <View style={styles.createImageBtn}>
-          <Feather name="image" size={18} color={C.tint} />
-        </View>
-      </TouchableOpacity>
-      {selectedChannel && (
-        <View style={styles.filterBanner}>
-          <Feather name="filter" size={13} color={C.tint} />
-          <Text style={styles.filterBannerText}>
-            Filtrando por: <Text style={{ fontFamily: "Inter_700Bold" }}>
-              #{channels.find((c: any) => c.id === selectedChannel)?.name}
-            </Text>
-          </Text>
-          <TouchableOpacity onPress={() => setSelectedChannel(null)}>
-            <Feather name="x" size={14} color={C.tint} />
+  // ── Shared channel filter bar renderer ──
+  function ChannelFilterBar({
+    chList,
+    selected,
+    onSelect,
+  }: { chList: any[]; selected: number | null; onSelect: (id: number | null) => void }) {
+    return (
+      <View style={styles.channelBarWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelBarContent}>
+          <TouchableOpacity
+            style={[styles.channelPill, selected === null && styles.channelPillActive]}
+            onPress={() => onSelect(null)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.channelPillText, selected === null && styles.channelPillTextActive]}>Todos</Text>
           </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+          {chList.map((ch: any) => {
+            const active = selected === ch.id;
+            return (
+              <TouchableOpacity
+                key={ch.id}
+                style={[styles.channelPill, active && styles.channelPillActive]}
+                onPress={() => onSelect(active ? null : ch.id)}
+                activeOpacity={0.8}
+              >
+                {ch.isInternalComm && (
+                  <Feather name="shield" size={11} color={active ? "#fff" : C.tint} style={{ marginRight: 3 }} />
+                )}
+                <Text style={[styles.channelPillText, active && styles.channelPillTextActive]}>{ch.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Posts list renderer (shared between feed & interno) ──
+  function PostsList({
+    posts,
+    loading,
+    refreshing,
+    onRefresh,
+    channelId,
+    channelList,
+    onSelectChannel,
+    isFeed,
+  }: {
+    posts: any[];
+    loading: boolean;
+    refreshing: boolean;
+    onRefresh: () => void;
+    channelId: number | null;
+    channelList: any[];
+    onSelectChannel: (id: number | null) => void;
+    isFeed: boolean;
+  }) {
+    const selectedChName = channelList.find((c: any) => c.id === channelId)?.name;
+    const ListHeader = (
+      <View>
+        {isFeed && (
+          <TouchableOpacity
+            style={styles.createBox}
+            onPress={() => router.push("/channel/create-post")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.createAvatar}>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.createAvatarImg} />
+              ) : (
+                <Text style={styles.createAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
+              )}
+            </View>
+            <View style={styles.createInputFake}>
+              <Text style={styles.createPlaceholder}>O que você está pensando?</Text>
+            </View>
+            <View style={styles.createImageBtn}>
+              <Feather name="image" size={18} color={C.tint} />
+            </View>
+          </TouchableOpacity>
+        )}
+        {channelId && selectedChName && (
+          <View style={styles.filterBanner}>
+            <Feather name="filter" size={13} color={C.tint} />
+            <Text style={styles.filterBannerText}>
+              Filtrando por: <Text style={{ fontFamily: "Inter_700Bold" }}>#{selectedChName}</Text>
+            </Text>
+            <TouchableOpacity onPress={() => onSelectChannel(null)}>
+              <Feather name="x" size={14} color={C.tint} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+
+    return (
+      <FlatList
+        data={posts}
+        keyExtractor={(item: any) => String(item.id)}
+        renderItem={({ item }) => (
+          <PostCard post={item} onLikeChange={isFeed ? feedRefetch : internoRefetch} onDelete={isFeed ? feedRefetch : internoRefetch} />
+        )}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />
+        }
+        contentContainerStyle={[styles.listContent, { paddingBottom: botPad }]}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.empty}>
+              <View style={styles.emptyIcon}>
+                <Feather name={isFeed ? "inbox" : "shield-off"} size={36} color={C.tint} />
+              </View>
+              <Text style={styles.emptyText}>Nenhuma publicação ainda</Text>
+              <Text style={styles.emptySubText}>
+                {channelId ? "Nenhum post neste canal." : isFeed ? "Seja o primeiro a publicar algo!" : "Sem comunicados no momento."}
+              </Text>
+              {isFeed && (
+                <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
+                  <Feather name="edit-3" size={15} color="#fff" />
+                  <Text style={styles.emptyBtnText}>Criar publicação</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
@@ -194,27 +319,37 @@ export default function FeedScreen() {
           <Text style={styles.headerTitle}>Feed</Text>
         </View>
         {mainTab === "feed" && (
-          <TouchableOpacity
-            style={styles.newPostBtn}
-            onPress={() => router.push("/channel/create-post")}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.newPostBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
             <Feather name="edit-3" size={20} color={C.tint} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ── Main tab bar: Feed | Aniversários ── */}
+      {/* ── Main 3-tab bar ── */}
       <View style={styles.mainTabBar}>
+        {/* Feed tab */}
         <TouchableOpacity
           style={[styles.mainTab, mainTab === "feed" && styles.mainTabActive]}
           onPress={() => setMainTab("feed")}
           activeOpacity={0.8}
         >
-          <Feather name="home" size={15} color={mainTab === "feed" ? C.tint : C.textMuted} />
+          <Feather name="home" size={14} color={mainTab === "feed" ? C.tint : C.textMuted} />
           <Text style={[styles.mainTabText, mainTab === "feed" && styles.mainTabTextActive]}>Feed</Text>
           {mainTab === "feed" && <View style={styles.mainTabIndicator} />}
         </TouchableOpacity>
+
+        {/* Comunicação Interna tab */}
+        <TouchableOpacity
+          style={[styles.mainTab, mainTab === "interno" && styles.mainTabActive]}
+          onPress={() => setMainTab("interno")}
+          activeOpacity={0.8}
+        >
+          <Feather name="shield" size={14} color={mainTab === "interno" ? C.tint : C.textMuted} />
+          <Text style={[styles.mainTabText, mainTab === "interno" && styles.mainTabTextActive]}>Comunicação</Text>
+          {mainTab === "interno" && <View style={styles.mainTabIndicator} />}
+        </TouchableOpacity>
+
+        {/* Aniversários tab */}
         <TouchableOpacity
           style={[styles.mainTab, mainTab === "aniversarios" && styles.mainTabActive]}
           onPress={() => setMainTab("aniversarios")}
@@ -235,7 +370,7 @@ export default function FeedScreen() {
       {mainTab === "feed" && (
         <>
           {/* Birthday notification banner */}
-          {todayBirthdays.length > 0 && !birthdayBannerDismissed && (
+          {todayBirthdays.length > 0 && !bdBannerDismissed && (
             <TouchableOpacity
               style={styles.birthdayBanner}
               onPress={() => setMainTab("aniversarios")}
@@ -248,82 +383,56 @@ export default function FeedScreen() {
                   : `${todayBirthdays.slice(0, 2).map((b: any) => b.name.split(" ")[0]).join(" e ")}${todayBirthdays.length > 2 ? ` +${todayBirthdays.length - 2}` : ""} fazem aniversário hoje!`}
               </Text>
               <TouchableOpacity
-                onPress={(e) => { e.stopPropagation(); setBirthdayBannerDismissedOn(todayKey); }}
+                onPress={(e) => { e.stopPropagation(); setBdBannerDismissedOn(todayKey); }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Feather name="x" size={15} color="#166534" />
               </TouchableOpacity>
             </TouchableOpacity>
           )}
-
-          {/* Channel filter bar */}
-          <View style={styles.channelBarWrapper}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelBarContent}>
-              <TouchableOpacity
-                style={[styles.channelPill, selectedChannel === null && styles.channelPillActive]}
-                onPress={() => setSelectedChannel(null)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.channelPillText, selectedChannel === null && styles.channelPillTextActive]}>Todos</Text>
-              </TouchableOpacity>
-              {channels.map((ch: any) => {
-                const active = selectedChannel === ch.id;
-                return (
-                  <TouchableOpacity
-                    key={ch.id}
-                    style={[styles.channelPill, active && styles.channelPillActive]}
-                    onPress={() => setSelectedChannel(active ? null : ch.id)}
-                    activeOpacity={0.8}
-                  >
-                    {ch.isInternalComm && (
-                      <Feather name="shield" size={11} color={active ? "#fff" : C.tint} style={{ marginRight: 3 }} />
-                    )}
-                    <Text style={[styles.channelPillText, active && styles.channelPillTextActive]}>{ch.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Posts list */}
-          <FlatList
-            data={posts}
-            keyExtractor={(item: any) => String(item.id)}
-            renderItem={({ item }) => (
-              <PostCard post={item} onLikeChange={refetch} onDelete={refetch} />
-            )}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />
-            }
-            contentContainerStyle={[styles.listContent, { paddingBottom: botPad }]}
-            ListHeaderComponent={FeedListHeader}
-            ListEmptyComponent={
-              !isLoading ? (
-                <View style={styles.empty}>
-                  <View style={styles.emptyIcon}>
-                    <Feather name="inbox" size={36} color={C.tint} />
-                  </View>
-                  <Text style={styles.emptyText}>Nenhuma publicação ainda</Text>
-                  <Text style={styles.emptySubText}>
-                    {selectedChannel ? "Nenhum post neste canal. Seja o primeiro!" : "Seja o primeiro a publicar algo!"}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.emptyBtn}
-                    onPress={() => router.push("/channel/create-post")}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="edit-3" size={15} color="#fff" />
-                    <Text style={styles.emptyBtnText}>Criar publicação</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null
-            }
-            showsVerticalScrollIndicator={false}
+          <ChannelFilterBar chList={regularChannels} selected={feedChannelId} onSelect={setFeedChannelId} />
+          <PostsList
+            posts={feedPosts}
+            loading={feedLoading}
+            refreshing={feedRefreshing}
+            onRefresh={async () => { setFeedRefreshing(true); await feedRefetch(); setFeedRefreshing(false); }}
+            channelId={feedChannelId}
+            channelList={regularChannels}
+            onSelectChannel={setFeedChannelId}
+            isFeed={true}
           />
-          {isLoading && !refreshing && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={C.tint} />
+          {feedLoading && !feedRefreshing && (
+            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
+          )}
+        </>
+      )}
+
+      {/* ══ COMUNICAÇÃO INTERNA TAB ══ */}
+      {mainTab === "interno" && (
+        <>
+          {/* Internal comms header card */}
+          <View style={styles.internoHeader}>
+            <View style={styles.internoHeaderIcon}>
+              <Feather name="shield" size={20} color={C.tint} />
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.internoHeaderTitle}>Comunicação Interna</Text>
+              <Text style={styles.internoHeaderSub}>Comunicados e avisos oficiais da empresa</Text>
+            </View>
+          </View>
+          <ChannelFilterBar chList={internalChannels} selected={internoChannelId} onSelect={setInternoChannelId} />
+          <PostsList
+            posts={internoPosts}
+            loading={internoLoading}
+            refreshing={internoRefreshing}
+            onRefresh={async () => { setInternoRefreshing(true); await internoRefetch(); setInternoRefreshing(false); }}
+            channelId={internoChannelId}
+            channelList={internalChannels}
+            onSelectChannel={setInternoChannelId}
+            isFeed={false}
+          />
+          {internoLoading && !internoRefreshing && (
+            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
           )}
         </>
       )}
@@ -331,42 +440,38 @@ export default function FeedScreen() {
       {/* ══ ANIVERSÁRIOS TAB ══ */}
       {mainTab === "aniversarios" && (
         <>
-          {/* Sub-tabs: Hoje / Próximos */}
           <View style={styles.bdTabBar}>
             <TouchableOpacity
-              style={[styles.bdTab, bdTab === "today" && styles.bdTabActive]}
-              onPress={() => setBdTab("today")}
+              style={[styles.bdTab, bdSubTab === "today" && styles.bdTabActive]}
+              onPress={() => setBdSubTab("today")}
               activeOpacity={0.8}
             >
-              <Text style={[styles.bdTabText, bdTab === "today" && styles.bdTabTextActive]}>
-                🎂 Hoje
-                {bdTodayList.length > 0 && (
-                  <Text style={[styles.bdTabCount, bdTab === "today" && styles.bdTabCountActive]}>
+              <Text style={[styles.bdTabText, bdSubTab === "today" && styles.bdTabTextActive]}>
+                🎂 Hoje{bdTodayList.length > 0 && (
+                  <Text style={[styles.bdTabCount, bdSubTab === "today" && styles.bdTabCountActive]}>
                     {"  "}{bdTodayList.length}
                   </Text>
                 )}
               </Text>
-              {bdTab === "today" && <View style={styles.bdTabIndicator} />}
+              {bdSubTab === "today" && <View style={styles.bdTabIndicator} />}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.bdTab, bdTab === "upcoming" && styles.bdTabActive]}
-              onPress={() => setBdTab("upcoming")}
+              style={[styles.bdTab, bdSubTab === "upcoming" && styles.bdTabActive]}
+              onPress={() => setBdSubTab("upcoming")}
               activeOpacity={0.8}
             >
-              <Text style={[styles.bdTabText, bdTab === "upcoming" && styles.bdTabTextActive]}>
-                📅 Próximos
-                {bdUpcomingList.length > 0 && (
-                  <Text style={[styles.bdTabCount, bdTab === "upcoming" && styles.bdTabCountActive]}>
+              <Text style={[styles.bdTabText, bdSubTab === "upcoming" && styles.bdTabTextActive]}>
+                📅 Próximos{bdUpcomingList.length > 0 && (
+                  <Text style={[styles.bdTabCount, bdSubTab === "upcoming" && styles.bdTabCountActive]}>
                     {"  "}{bdUpcomingList.length}
                   </Text>
                 )}
               </Text>
-              {bdTab === "upcoming" && <View style={styles.bdTabIndicator} />}
+              {bdSubTab === "upcoming" && <View style={styles.bdTabIndicator} />}
             </TouchableOpacity>
           </View>
 
-          {/* Today banner */}
-          {bdTab === "today" && bdTodayList.length > 0 && (
+          {bdSubTab === "today" && bdTodayList.length > 0 && (
             <View style={styles.bdTodayBanner}>
               <Text style={styles.bdTodayBannerEmoji}>🎊</Text>
               <Text style={styles.bdTodayBannerText}>
@@ -378,9 +483,9 @@ export default function FeedScreen() {
           )}
 
           <FlatList
-            data={bdDisplayList}
+            data={bdSubTab === "today" ? bdTodayList : bdUpcomingList}
             keyExtractor={(item: any) => String(item.id)}
-            renderItem={({ item }) => <BirthdayCard item={item} showFullDate={bdTab === "today"} />}
+            renderItem={({ item }) => <BirthdayCard item={item} showFullDate={bdSubTab === "today"} />}
             refreshControl={
               <RefreshControl
                 refreshing={bdRefreshing}
@@ -393,11 +498,11 @@ export default function FeedScreen() {
             ListEmptyComponent={
               !bdLoading ? (
                 <View style={styles.empty}>
-                  <Text style={styles.bdEmptyEmoji}>{bdTab === "today" ? "🎂" : "📅"}</Text>
+                  <Text style={styles.bdEmptyEmoji}>{bdSubTab === "today" ? "🎂" : "📅"}</Text>
                   <Text style={styles.emptyText}>
-                    {bdTab === "today" ? "Nenhum aniversariante hoje" : "Nenhum aniversário nos próximos 90 dias"}
+                    {bdSubTab === "today" ? "Nenhum aniversariante hoje" : "Nenhum aniversário nos próximos 90 dias"}
                   </Text>
-                  {bdTab === "today" && (
+                  {bdSubTab === "today" && (
                     <Text style={styles.emptySubText}>Cheque os próximos na aba ao lado</Text>
                   )}
                 </View>
@@ -406,9 +511,7 @@ export default function FeedScreen() {
             showsVerticalScrollIndicator={false}
           />
           {bdLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={C.tint} />
-            </View>
+            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
           )}
         </>
       )}
@@ -433,18 +536,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center",
   },
 
-  /* Main tab bar */
+  /* Main 3-tab bar */
   mainTabBar: {
     flexDirection: "row", backgroundColor: C.surface,
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
   mainTab: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 11, position: "relative",
+    gap: 5, paddingVertical: 11, position: "relative",
   },
   mainTabActive: {},
-  mainTabEmoji: { fontSize: 15 },
-  mainTabText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  mainTabEmoji: { fontSize: 14 },
+  mainTabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
   mainTabTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
   mainTabIndicator: {
     position: "absolute", bottom: 0, left: "10%", right: "10%",
@@ -452,27 +555,40 @@ const styles = StyleSheet.create({
   },
   mainTabBadge: {
     backgroundColor: "#EF4444", borderRadius: 8,
-    paddingHorizontal: 5, paddingVertical: 1, marginLeft: 2,
+    paddingHorizontal: 5, paddingVertical: 1, marginLeft: 1,
   },
-  mainTabBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" },
+  mainTabBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },
 
-  /* Birthday notification banner (feed tab) */
+  /* Birthday notification banner */
   birthdayBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: "#F0FDF4", paddingHorizontal: 14, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: "#BBF7D0",
   },
   birthdayBannerEmoji: { fontSize: 18 },
   birthdayBannerText: { flex: 1, fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#166534" },
+
+  /* Interno header card */
+  internoHeader: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: "#BFDBFE",
+  },
+  internoHeaderIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center",
+  },
+  internoHeaderTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#1E40AF" },
+  internoHeaderSub: { fontSize: 12, color: "#3B82F6", fontFamily: "Inter_400Regular", marginTop: 1 },
 
   /* Channel filter bar */
   channelBarWrapper: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
   channelBarContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: "row" },
   channelPill: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 20, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border,
   },
   channelPillActive: { backgroundColor: C.tint, borderColor: C.tint },
   channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
@@ -509,7 +625,7 @@ const styles = StyleSheet.create({
 
   listContent: { paddingTop: 4 },
 
-  /* Birthdays sub-tab bar */
+  /* Birthday sub-tab bar */
   bdTabBar: {
     flexDirection: "row", backgroundColor: C.surface,
     borderBottomWidth: 1, borderBottomColor: C.border,
