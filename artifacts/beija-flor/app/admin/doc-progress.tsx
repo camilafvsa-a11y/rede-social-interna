@@ -47,7 +47,7 @@ function UserRow({
   return (
     <View style={styles.row}>
       <View style={[styles.avatar, done && styles.avatarDone]}>
-        <Text style={styles.avatarText}>{getInitials(item.user.name)}</Text>
+        <Text style={[styles.avatarText, done && { color: "#fff" }]}>{getInitials(item.user.name)}</Text>
       </View>
 
       <View style={{ flex: 1, gap: 4 }}>
@@ -277,11 +277,12 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A",
+    alignItems: "center", justifyContent: "center",
     flexShrink: 0, marginTop: 2,
   },
-  avatarDone: { backgroundColor: "#059669" },
-  avatarText: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" },
+  avatarDone: { backgroundColor: "#059669", borderColor: "#059669" },
+  avatarText: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#1E3A8A" },
 
   userName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text, flex: 1 },
   userEmail: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted },

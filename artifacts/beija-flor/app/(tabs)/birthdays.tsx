@@ -57,7 +57,7 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
           <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatarFallback, isToday && styles.avatarFallbackToday]}>
-            <Text style={styles.avatarInitial}>{item.name?.[0]?.toUpperCase()}</Text>
+            <Text style={[styles.avatarInitial, isToday && { color: "#fff" }]}>{item.name?.[0]?.toUpperCase()}</Text>
           </View>
         )}
         {isToday && <Text style={styles.cakeEmoji}>🎂</Text>}
@@ -298,10 +298,10 @@ const styles = StyleSheet.create({
   avatar: { width: 52, height: 52, borderRadius: 26 },
   avatarFallback: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A", alignItems: "center", justifyContent: "center",
   },
-  avatarFallbackToday: { backgroundColor: "#059669" },
-  avatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 20 },
+  avatarFallbackToday: { backgroundColor: "#059669", borderColor: "#059669" },
+  avatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 20 },
   cakeEmoji: { position: "absolute", bottom: -4, right: -4, fontSize: 18 },
 
   info: { flex: 1, gap: 3 },

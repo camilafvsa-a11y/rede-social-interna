@@ -614,10 +614,10 @@ const styles = StyleSheet.create({
   headerAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.tint },
   headerAvatarFallback: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: "#93C5FD",
+    backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
+    borderWidth: 2.5, borderColor: "#1E3A8A",
   },
-  headerAvatarInitial: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" },
+  headerAvatarInitial: { color: "#1E3A8A", fontSize: 18, fontFamily: "Inter_700Bold" },
   headerGreetingBlock: { flex: 1 },
   headerGreeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 14 },

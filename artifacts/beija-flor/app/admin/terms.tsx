@@ -270,11 +270,11 @@ const styles = StyleSheet.create({
   },
   userAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-    overflow: "hidden",
+    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
-  avatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
+  avatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 15 },
   exportBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 6,

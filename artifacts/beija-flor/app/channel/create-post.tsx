@@ -252,9 +252,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: C.borderLight,
   },
-  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.tint },
+  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#1E3A8A" },
   mentionAvatarFallback: { alignItems: "center", justifyContent: "center" },
-  mentionAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 },
+  mentionAvatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 13 },
   mentionName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   mentionTag: { fontSize: 11, color: C.textSecondary, fontFamily: "Inter_400Regular" },
 

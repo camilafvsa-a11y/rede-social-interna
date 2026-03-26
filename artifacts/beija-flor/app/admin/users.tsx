@@ -101,8 +101,8 @@ export default function AdminUsersScreen() {
                 {u.avatarUrl ? (
                   <Image source={{ uri: u.avatarUrl }} style={styles.avatar} />
                 ) : (
-                  <View style={[styles.avatarFallback, { backgroundColor: appBanned ? "#EF4444" : C.tint }]}>
-                    <Text style={styles.avatarInitial}>{getInitials(u.name)}</Text>
+                  <View style={[styles.avatarFallback, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A" }]}>
+                    <Text style={[styles.avatarInitial, !appBanned && { color: "#1E3A8A" }]}>{getInitials(u.name)}</Text>
                   </View>
                 )}
                 {(appBanned || postBanned) && (
@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
   },
   avatarWrap: { position: "relative" },
   avatar: { width: 48, height: 48, borderRadius: 24 },
+  avatarFallbackBlue: { backgroundColor: C.tint },
   avatarFallback: {
     width: 48, height: 48, borderRadius: 24,
     alignItems: "center", justifyContent: "center",
