@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
@@ -34,6 +34,7 @@ function formatDayMonth(dateStr: string): string {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, updateUser } = useAuth();
+  const qc = useQueryClient();
   const [updating, setUpdating] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -64,6 +65,16 @@ export default function ProfileScreen() {
       try {
         const updated = await api.post(`/users/${user?.id}/avatar`, { avatarUrl: result.assets[0].uri });
         updateUser(updated);
+        // Invalidate all caches that embed the author's avatar so every
+        // post, comment, and feed card immediately shows the new photo.
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["feed"] }),
+          qc.invalidateQueries({ queryKey: ["posts"] }),
+          qc.invalidateQueries({ queryKey: ["post"] }),
+          qc.invalidateQueries({ queryKey: ["comments"] }),
+          qc.invalidateQueries({ queryKey: ["users"] }),
+          qc.invalidateQueries({ queryKey: ["birthdays"] }),
+        ]);
       } catch (e: any) {
         Alert.alert("Erro", e.message);
       } finally {
