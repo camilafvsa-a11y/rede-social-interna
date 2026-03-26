@@ -585,7 +585,7 @@ function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <View style={[styles.valueCard, { borderLeftColor: value.color }]}>
+    <View style={[styles.valueCard, { borderLeftColor: value.color, backgroundColor: C.surface }]}>
       <TouchableOpacity
         style={styles.valueCardHeader}
         onPress={() => setExpanded(!expanded)}
@@ -609,12 +609,12 @@ function ValueCard({ value }: { value: typeof VALUES_DATA[0] }) {
       </TouchableOpacity>
 
       {expanded && (
-        <View style={styles.valueContent}>
+        <View style={[styles.valueContent, { backgroundColor: value.colorBg }]}>
           <View style={styles.valueDivider} />
           <Text style={styles.practicesLabel}>Como praticamos:</Text>
           {value.practices.map((practice, i) => (
             <View key={i} style={styles.practiceRow}>
-              <View style={[styles.practiceCheck, { backgroundColor: value.color }]}>
+              <View style={[styles.practiceCheck, { backgroundColor: C.tint }]}>
                 <Feather name="check" size={10} color="#fff" />
               </View>
               <Text style={styles.practiceText}>{practice}</Text>
