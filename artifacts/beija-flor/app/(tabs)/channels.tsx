@@ -49,21 +49,27 @@ export default function ChannelsScreen() {
             {item.coverImageUrl ? (
               <View style={styles.coverWrap}>
                 <Image source={{ uri: item.coverImageUrl }} style={styles.coverImg} resizeMode="cover" />
-                {/* Icon overlay */}
-                <View style={[styles.iconOverlay, item.isInternalComm && styles.iconOverlayComm]}>
+                <View style={[styles.iconOverlay, (item.color || item.isInternalComm) && { backgroundColor: item.color || C.tint }]}>
                   <Feather
                     name={(ICON_MAP[item.icon] as any) || "hash"}
                     size={14}
-                    color={item.isInternalComm ? "#fff" : C.tint}
+                    color={item.color || item.isInternalComm ? "#fff" : C.tint}
                   />
                 </View>
               </View>
             ) : (
-              <View style={[styles.iconContainer, item.isInternalComm && styles.iconContainerComm]}>
+              <View style={[
+                styles.iconContainer,
+                item.color
+                  ? { backgroundColor: `${item.color}22` }
+                  : item.isInternalComm
+                  ? styles.iconContainerComm
+                  : null,
+              ]}>
                 <Feather
                   name={(ICON_MAP[item.icon] as any) || "hash"}
                   size={22}
-                  color={item.isInternalComm ? "#fff" : C.tint}
+                  color={item.color || (item.isInternalComm ? "#fff" : C.tint)}
                 />
               </View>
             )}

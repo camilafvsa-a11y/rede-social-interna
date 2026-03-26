@@ -20,6 +20,23 @@ const TAG_LABELS: Record<string, string> = {
 };
 const ICON_OPTIONS = ["hash", "globe", "megaphone", "briefcase", "users", "star", "award", "trending-up", "coffee", "droplet"];
 
+const COLOR_PALETTE = [
+  "#2563EB", // blue (default)
+  "#16A34A", // green
+  "#DC2626", // red
+  "#9333EA", // purple
+  "#EC4899", // pink
+  "#EA580C", // orange
+  "#CA8A04", // yellow
+  "#0D9488", // teal
+  "#4F46E5", // indigo
+  "#E11D48", // rose
+  "#0891B2", // cyan
+  "#65A30D", // lime
+  "#78716C", // stone
+  "#0F172A", // slate
+];
+
 type Form = {
   name: string;
   description: string;
@@ -27,6 +44,7 @@ type Form = {
   allowedTags: string[];
   isInternalComm: boolean;
   coverImageUrl: string;
+  color: string;
 };
 
 export default function AdminChannelsScreen() {
@@ -34,7 +52,7 @@ export default function AdminChannelsScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<Form>({
-    name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "",
+    name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "",
   });
 
   const { data: channels = [], isLoading, refetch } = useQuery<any[]>({
@@ -44,7 +62,7 @@ export default function AdminChannelsScreen() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "" });
+    setForm({ name: "", description: "", icon: "hash", allowedTags: [], isInternalComm: false, coverImageUrl: "", color: "" });
     setShowModal(true);
   }
 
@@ -57,6 +75,7 @@ export default function AdminChannelsScreen() {
       allowedTags: ch.allowedTags || [],
       isInternalComm: ch.isInternalComm,
       coverImageUrl: ch.coverImageUrl || "",
+      color: ch.color || "",
     });
     setShowModal(true);
   }
@@ -141,13 +160,17 @@ export default function AdminChannelsScreen() {
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item: ch }) => (
           <View style={styles.channelCard}>
-            {/* Cover image thumbnail */}
+            {/* Cover image thumbnail or icon */}
             {ch.coverImageUrl ? (
               <Image source={{ uri: ch.coverImageUrl }} style={styles.coverThumb} />
             ) : (
-              <View style={[styles.iconWrap, ch.isInternalComm && { backgroundColor: C.tint }]}>
-                <Feather name={(ch.icon || "hash") as any} size={18} color={ch.isInternalComm ? "#fff" : C.tint} />
+              <View style={[styles.iconWrap, { backgroundColor: ch.color ? `${ch.color}22` : ch.isInternalComm ? C.tint : "#f0fdf4" }]}>
+                <Feather name={(ch.icon || "hash") as any} size={18} color={ch.color || (ch.isInternalComm ? "#fff" : C.tint)} />
               </View>
+            )}
+            {/* Color dot */}
+            {ch.color && (
+              <View style={[styles.colorDot, { backgroundColor: ch.color }]} />
             )}
             <View style={styles.chInfo}>
               <View style={styles.chNameRow}>
@@ -250,6 +273,34 @@ export default function AdminChannelsScreen() {
                 ))}
               </View>
 
+              <Text style={styles.fieldLabel}>Cor do Canal</Text>
+              <View style={styles.colorGrid}>
+                {/* "Sem cor" option */}
+                <TouchableOpacity
+                  style={[styles.colorSwatch, styles.colorSwatchNone, form.color === "" && styles.colorSwatchSelected]}
+                  onPress={() => setForm({ ...form, color: "" })}
+                >
+                  <Feather name="slash" size={14} color={form.color === "" ? C.tint : C.textMuted} />
+                </TouchableOpacity>
+                {COLOR_PALETTE.map((hex) => (
+                  <TouchableOpacity
+                    key={hex}
+                    style={[styles.colorSwatch, { backgroundColor: hex }, form.color === hex && styles.colorSwatchSelectedColored]}
+                    onPress={() => setForm({ ...form, color: hex })}
+                  >
+                    {form.color === hex && <Feather name="check" size={14} color="#fff" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {form.color !== "" && (
+                <View style={styles.colorPreviewRow}>
+                  <View style={[styles.colorPreviewPill, { backgroundColor: form.color }]}>
+                    <Text style={styles.colorPreviewText}>{form.name || "Canal"}</Text>
+                  </View>
+                  <Text style={styles.colorPreviewHint}>Prévia da pílula</Text>
+                </View>
+              )}
+
               <Text style={styles.fieldLabel}>Tags permitidas (vazio = todos)</Text>
               <View style={styles.tagRow}>
                 {TAG_OPTIONS.map((tag) => (
@@ -311,6 +362,7 @@ const styles = StyleSheet.create({
   chDesc: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   chTags: { fontSize: 11, color: C.tint, fontFamily: "Inter_500Medium", marginTop: 2 },
   editBtn: { padding: 6 },
+  colorDot: { width: 10, height: 10, borderRadius: 5, marginLeft: -6, marginTop: -20, alignSelf: "flex-start" },
   empty: { alignItems: "center", paddingTop: 60 },
   emptyText: { fontSize: 15, color: C.textSecondary, fontFamily: "Inter_500Medium" },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.6)" },
@@ -342,6 +394,26 @@ const styles = StyleSheet.create({
   coverOverlayText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
   removeCoverBtn: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6, alignSelf: "flex-end" },
   removeCoverText: { fontSize: 12, color: C.danger, fontFamily: "Inter_500Medium" },
+
+  /* Color picker */
+  colorGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  colorSwatch: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: "center", justifyContent: "center",
+  },
+  colorSwatchNone: {
+    backgroundColor: C.surfaceAlt,
+    borderWidth: 1, borderColor: C.border,
+  },
+  colorSwatchSelected: { borderWidth: 2, borderColor: C.tint },
+  colorSwatchSelectedColored: {
+    borderWidth: 3, borderColor: "#fff",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 3,
+  },
+  colorPreviewRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 },
+  colorPreviewPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  colorPreviewText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  colorPreviewHint: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" },
 
   /* Icon grid */
   iconGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

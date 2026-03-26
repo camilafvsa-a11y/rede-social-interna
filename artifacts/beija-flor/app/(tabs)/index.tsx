@@ -212,17 +212,31 @@ export default function FeedScreen() {
           </TouchableOpacity>
           {chList.map((ch: any) => {
             const active = selected === ch.id;
+            const chColor = ch.color || C.tint;
             return (
               <TouchableOpacity
                 key={ch.id}
-                style={[styles.channelPill, active && styles.channelPillActive]}
+                style={[
+                  styles.channelPill,
+                  active
+                    ? { backgroundColor: chColor, borderColor: chColor }
+                    : ch.color
+                    ? { borderColor: ch.color, borderWidth: 1.5 }
+                    : null,
+                ]}
                 onPress={() => onSelect(active ? null : ch.id)}
                 activeOpacity={0.8}
               >
-                {ch.isInternalComm && (
-                  <Feather name="shield" size={11} color={active ? "#fff" : C.tint} style={{ marginRight: 3 }} />
+                {/* Color dot for inactive colored pills */}
+                {!active && ch.color && (
+                  <View style={[styles.chPillDot, { backgroundColor: ch.color }]} />
                 )}
-                <Text style={[styles.channelPillText, active && styles.channelPillTextActive]}>{ch.name}</Text>
+                {ch.isInternalComm && (
+                  <Feather name="shield" size={11} color={active ? "#fff" : chColor} style={{ marginRight: 3 }} />
+                )}
+                <Text style={[styles.channelPillText, active && styles.channelPillTextActive, !active && ch.color && { color: ch.color }]}>
+                  {ch.name}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -669,6 +683,7 @@ const styles = StyleSheet.create({
   channelPillActive: { backgroundColor: C.tint, borderColor: C.tint },
   channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
   channelPillTextActive: { color: "#fff" },
+  chPillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
 
   /* Create post */
   createBox: {

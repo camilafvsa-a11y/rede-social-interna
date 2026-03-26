@@ -14,6 +14,7 @@ function formatChannel(ch: any, postCount = 0) {
     allowedTags: JSON.parse(ch.allowedTags || "[]"),
     isInternalComm: ch.isInternalComm,
     coverImageUrl: ch.coverImageUrl || null,
+    color: ch.color || null,
     postCount,
     createdAt: ch.createdAt?.toISOString?.() ?? ch.createdAt,
   };
@@ -34,7 +35,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 router.post("/", requireAdmin, async (req, res) => {
-  const { name, description, icon, allowedTags, isInternalComm, coverImageUrl } = req.body;
+  const { name, description, icon, allowedTags, isInternalComm, coverImageUrl, color } = req.body;
   const [ch] = await db.insert(channelsTable).values({
     name,
     description,
@@ -42,6 +43,7 @@ router.post("/", requireAdmin, async (req, res) => {
     allowedTags: JSON.stringify(allowedTags || []),
     isInternalComm: isInternalComm || false,
     coverImageUrl: coverImageUrl || null,
+    color: color || null,
   }).returning();
   res.json(formatChannel(ch));
 });
@@ -55,7 +57,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 router.patch("/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, description, icon, allowedTags, isInternalComm, coverImageUrl } = req.body;
+  const { name, description, icon, allowedTags, isInternalComm, coverImageUrl, color } = req.body;
   const updates: any = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
@@ -63,6 +65,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (allowedTags !== undefined) updates.allowedTags = JSON.stringify(allowedTags);
   if (isInternalComm !== undefined) updates.isInternalComm = isInternalComm;
   if (coverImageUrl !== undefined) updates.coverImageUrl = coverImageUrl || null;
+  if (color !== undefined) updates.color = color || null;
   const [ch] = await db.update(channelsTable).set(updates).where(eq(channelsTable.id, parseInt(id))).returning();
   res.json(formatChannel(ch));
 });
