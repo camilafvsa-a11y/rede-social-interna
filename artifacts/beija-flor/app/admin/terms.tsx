@@ -24,15 +24,54 @@ function formatDateTime(isoStr: string): string {
   });
 }
 
+function formatCpf(cpf: string | null | undefined): string {
+  if (!cpf) return "—";
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11) return cpf;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
 export default function AdminTermsScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { data: acceptances = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["admin-terms"],
     queryFn: () => api.get("/terms/admin/all"),
   });
+
+  function handleExport() {
+    if (acceptances.length === 0) return;
+    setExporting(true);
+    try {
+      const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const header = ["Nome", "CPF", "E-mail", "Documento", "Data de Assinatura"].map(h => `"${h}"`).join(",");
+      const rows = acceptances.map((a: any) => [
+        esc(a.user?.name || ""),
+        esc(a.user?.cpf || ""),
+        esc(a.user?.email || ""),
+        esc(a.termTitle || ""),
+        esc(formatDateTime(a.acceptedAt)),
+      ].join(","));
+      const csv = "\uFEFF" + [header, ...rows].join("\n");
+
+      if (Platform.OS === "web" && typeof document !== "undefined") {
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "termos-assinados.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error("Export error", e);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const filtered = acceptances.filter((a: any) =>
     search === "" ||
@@ -56,7 +95,17 @@ export default function AdminTermsScreen() {
           <Feather name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Termos Assinados</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={handleExport}
+          disabled={exporting || acceptances.length === 0}
+          style={[styles.exportBtn, (exporting || acceptances.length === 0) && { opacity: 0.4 }]}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {exporting
+            ? <ActivityIndicator size="small" color={C.tint} />
+            : <><Feather name="download" size={16} color={C.tint} /><Text style={styles.exportBtnText}>CSV</Text></>
+          }
+        </TouchableOpacity>
       </View>
 
       {/* Summary */}
@@ -129,6 +178,9 @@ export default function AdminTermsScreen() {
                 <View style={styles.userInfo}>
                   <Text style={styles.userName}>{item.user?.name}</Text>
                   <Text style={styles.userEmail}>{item.user?.email}</Text>
+                  {item.user?.cpf && (
+                    <Text style={styles.userCpf}>CPF: {formatCpf(item.user.cpf)}</Text>
+                  )}
                 </View>
                 <View style={styles.dateBadge}>
                   <Feather name="check-circle" size={12} color="#059669" />
@@ -223,9 +275,17 @@ const styles = StyleSheet.create({
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
   avatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
+  exportBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 8, borderWidth: 1, borderColor: C.tint,
+  },
+  exportBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.tint },
+
   userInfo: { flex: 1 },
   userName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   userEmail: { fontSize: 11, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  userCpf: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
   dateBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
   dateText: { fontSize: 10, color: "#059669", fontFamily: "Inter_500Medium" },
 

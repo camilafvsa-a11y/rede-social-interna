@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Platform,
+  Alert, ActivityIndicator, Platform, Modal,
 } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -513,19 +513,29 @@ function PolicyCard({
   );
 }
 
+function formatCpf(cpf: string | null | undefined): string {
+  if (!cpf) return "Não informado";
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 // ─── Card de termo ─────────────────────────────────────────────────────────
 function TermCard({
-  term, acceptance, onAccept, isRead, onMarkRead,
+  term, acceptance, onAccept, isRead, onMarkRead, userName, userCpf,
 }: {
   term: typeof TERMS[0];
   acceptance: any;
   onAccept: () => void;
   isRead: boolean;
   onMarkRead: () => void;
+  userName?: string;
+  userCpf?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const isSigned = !!acceptance;
 
   useEffect(() => {
@@ -539,27 +549,21 @@ function TermCard({
       Alert.alert("Atenção", "Marque a caixa de confirmação para aceitar o termo.");
       return;
     }
-    Alert.alert(
-      "Confirmar aceitação",
-      "Você confirma que leu e aceita este termo?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Confirmar", onPress: async () => {
-            setAccepting(true);
-            try {
-              await api.post("/terms/accept", { termKey: term.key, termTitle: term.title });
-              onMarkRead();
-              onAccept();
-            } catch (e: any) {
-              Alert.alert("Erro", e.message);
-            } finally {
-              setAccepting(false);
-            }
-          },
-        },
-      ]
-    );
+    setShowConfirmModal(true);
+  }
+
+  async function confirmSign() {
+    setShowConfirmModal(false);
+    setAccepting(true);
+    try {
+      await api.post("/terms/accept", { termKey: term.key, termTitle: term.title });
+      onMarkRead();
+      onAccept();
+    } catch (e: any) {
+      Alert.alert("Erro", e.message);
+    } finally {
+      setAccepting(false);
+    }
   }
 
   return (
@@ -643,6 +647,59 @@ function TermCard({
           )}
         </View>
       )}
+
+      {/* ── Confirmation Modal ── */}
+      <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
+        <View style={styles.termModalOverlay}>
+          <View style={styles.termModalSheet}>
+            {/* Header */}
+            <View style={styles.termModalHeader}>
+              <View style={styles.termModalIconWrap}>
+                <Feather name="alert-triangle" size={20} color="#B45309" />
+              </View>
+              <Text style={styles.termModalTitle}>Confirmar Assinatura</Text>
+            </View>
+
+            {/* Warning */}
+            <View style={styles.termModalWarningBox}>
+              <Text style={styles.termModalWarningText}>
+                Ao assinar este termo, você autoriza o uso da sua imagem e voz pelo Grupo Beija-flor. Essa autorização{" "}
+                <Text style={{ fontFamily: "Inter_700Bold" }}>não garante remuneração extra</Text>
+                {" "}e poderá ser utilizada em materiais institucionais, publicitários e redes sociais do grupo.
+              </Text>
+            </View>
+
+            {/* User info */}
+            <View style={styles.termModalUserCard}>
+              <View style={styles.termModalUserRow}>
+                <Feather name="user" size={14} color={C.textSecondary} />
+                <Text style={styles.termModalUserLabel}>Nome:</Text>
+                <Text style={styles.termModalUserValue}>{userName || "—"}</Text>
+              </View>
+              <View style={styles.termModalUserRow}>
+                <Feather name="credit-card" size={14} color={C.textSecondary} />
+                <Text style={styles.termModalUserLabel}>CPF:</Text>
+                <Text style={styles.termModalUserValue}>{formatCpf(userCpf)}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.termModalConsentText}>
+              Ao confirmar, você declara que leu, compreendeu e aceita todos os termos acima em seu nome.
+            </Text>
+
+            {/* Buttons */}
+            <View style={styles.termModalBtnRow}>
+              <TouchableOpacity style={styles.termModalCancelBtn} onPress={() => setShowConfirmModal(false)} activeOpacity={0.8}>
+                <Text style={styles.termModalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.termModalConfirmBtn} onPress={confirmSign} activeOpacity={0.8}>
+                <Feather name="check" size={15} color="#fff" />
+                <Text style={styles.termModalConfirmText}>Assinar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -719,6 +776,12 @@ export default function IntegraScreen() {
   const botPad = Platform.OS === "web" ? 34 + 84 : 100;
 
   const [markingKey, setMarkingKey] = useState<string | null>(null);
+
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["me"],
+    queryFn: () => api.get("/auth/me"),
+    staleTime: 60_000,
+  });
 
   const { data: acceptances = [], isLoading: termsLoading, refetch: refetchTerms } = useQuery<any[]>({
     queryKey: ["my-terms"],
@@ -855,6 +918,8 @@ export default function IntegraScreen() {
                     refetchTerms();
                     qc.invalidateQueries({ queryKey: ["my-terms"] });
                   }}
+                  userName={currentUser?.name}
+                  userCpf={currentUser?.cpf}
                 />
               </React.Fragment>
             ))
@@ -1133,4 +1198,49 @@ const styles = StyleSheet.create({
     flex: 1, fontSize: 13, color: C.text,
     fontFamily: "Inter_400Regular", lineHeight: 19,
   },
+
+  /* ── Term Confirmation Modal ── */
+  termModalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center", justifyContent: "center", padding: 24,
+  },
+  termModalSheet: {
+    backgroundColor: C.surface, borderRadius: 20, padding: 20,
+    width: "100%", maxWidth: 400,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 20, elevation: 12,
+  },
+  termModalHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
+  termModalIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center",
+  },
+  termModalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text, flex: 1 },
+  termModalWarningBox: {
+    backgroundColor: "#FFFBEB", borderRadius: 10, padding: 12, marginBottom: 14,
+    borderWidth: 1, borderColor: "#FDE68A",
+  },
+  termModalWarningText: { fontSize: 13, color: "#92400E", fontFamily: "Inter_400Regular", lineHeight: 19 },
+  termModalUserCard: {
+    backgroundColor: C.surfaceAlt, borderRadius: 10, padding: 12, gap: 8, marginBottom: 14,
+    borderWidth: 1, borderColor: C.border,
+  },
+  termModalUserRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  termModalUserLabel: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_500Medium", width: 40 },
+  termModalUserValue: { fontSize: 13, color: C.text, fontFamily: "Inter_600SemiBold", flex: 1 },
+  termModalConsentText: {
+    fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular",
+    lineHeight: 15, marginBottom: 16, textAlign: "center",
+  },
+  termModalBtnRow: { flexDirection: "row", gap: 10 },
+  termModalCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: C.border, alignItems: "center",
+  },
+  termModalCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  termModalConfirmBtn: {
+    flex: 1.5, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    flexDirection: "row", gap: 6,
+  },
+  termModalConfirmText: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" },
 });

@@ -92,12 +92,43 @@ router.get("/admin/all", requireAdmin, async (req, res) => {
         termKey: a.termKey,
         termTitle: a.termTitle,
         acceptedAt: a.acceptedAt?.toISOString?.() ?? a.acceptedAt,
-        user: user ? formatUserBasic(user) : { id: a.userId, name: "Usuário removido", role: "user" },
+        user: user
+          ? { ...formatUserBasic(user), email: user.email, cpf: user.cpf || null }
+          : { id: a.userId, name: "Usuário removido", email: "", cpf: null, role: "user" },
       };
     })
   );
 
   res.json(enriched);
+});
+
+router.get("/admin/export", requireAdmin, async (req, res) => {
+  const acceptances = await db
+    .select()
+    .from(termAcceptancesTable)
+    .orderBy(desc(termAcceptancesTable.acceptedAt));
+
+  const rows = await Promise.all(
+    acceptances.map(async (a) => {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, a.userId)).limit(1);
+      const name = user?.name || "Usuário removido";
+      const email = user?.email || "";
+      const cpf = user?.cpf || "";
+      const date = new Date(a.acceptedAt).toLocaleString("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+      const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+      return [esc(name), esc(cpf), esc(email), esc(a.termTitle), esc(date)].join(",");
+    })
+  );
+
+  const header = ["Nome", "CPF", "E-mail", "Documento", "Data de Assinatura"].map(h => `"${h}"`).join(",");
+  const csv = [header, ...rows].join("\n");
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="termos-assinados.csv"');
+  res.send("\uFEFF" + csv); // BOM for Excel UTF-8 compatibility
 });
 
 export default router;
