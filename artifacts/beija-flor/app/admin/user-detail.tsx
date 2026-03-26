@@ -232,7 +232,7 @@ export default function UserDetailScreen() {
       >
         {/* User profile header */}
         <View style={styles.profileCard}>
-          <View style={[styles.avatar, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff", borderWidth: 2.5, borderColor: "#1E3A8A" }]}>
+          <View style={[styles.avatar, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff" }]}>
             <Text style={[styles.avatarText, !appBanned && { color: "#1E3A8A" }]}>{getInitials(user.name)}</Text>
           </View>
           <View style={{ flex: 1 }}>
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: "row", gap: 14, alignItems: "center",
     backgroundColor: C.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
@@ -538,21 +538,21 @@ const styles = StyleSheet.create({
   banPill: {
     flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: "#FEF2F2", paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, borderWidth: 1, borderColor: "#FECACA",
+    borderRadius: 6, borderColor: "#FECACA",
   },
   banPillText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#EF4444" },
 
   masterWarning: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#FFFBEB", borderRadius: 10, padding: 12,
-    borderWidth: 1, borderColor: "#FDE68A",
+    borderColor: "#FDE68A",
   },
   masterWarningText: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#B45309", flex: 1 },
 
   /* Card */
   card: {
     backgroundColor: C.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
     gap: 10,
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   roleOption: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1.5, borderColor: C.border,
+    borderRadius: 10, borderColor: C.border,
     backgroundColor: C.surfaceAlt,
   },
   roleOptionText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textMuted },
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: "row", alignItems: "flex-start", gap: 8,
     backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10,
-    borderWidth: 1, borderColor: "#FDE68A",
+    borderColor: "#FDE68A",
   },
   warningBannerText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium", color: "#92400E" },
 
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   tagChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: C.border,
+    borderRadius: 20, borderColor: C.border,
     backgroundColor: C.surfaceAlt,
   },
   tagChipText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
@@ -605,14 +605,14 @@ const styles = StyleSheet.create({
   unbanBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#F0FDF4", borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: "#BBF7D0",
+    borderColor: "#BBF7D0",
   },
   unbanBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#059669" },
   banGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   banChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1.5, borderColor: "#FDE68A",
+    borderRadius: 10, borderColor: "#FDE68A",
     backgroundColor: "#FFFBEB",
   },
   banChipPermanent: { borderColor: "#FECACA", backgroundColor: "#FEF2F2" },
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   /* Input */
   input: {
     backgroundColor: C.surfaceAlt, borderRadius: 10,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 14, fontFamily: "Inter_400Regular", color: C.text,
   },

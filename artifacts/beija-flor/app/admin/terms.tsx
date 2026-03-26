@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     margin: 12, backgroundColor: C.surface,
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
   },
   searchInput: { flex: 1, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
 
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#f0fdf4",
     borderRadius: 10, padding: 10, marginTop: 4, marginBottom: 2,
-    borderWidth: 1, borderColor: "#bbf7d0",
+    borderColor: "#bbf7d0",
   },
   groupIconWrap: {
     width: 28, height: 28, borderRadius: 8,
@@ -266,11 +266,11 @@ const styles = StyleSheet.create({
   acceptanceCard: {
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: C.surface, borderRadius: 12, padding: 12,
-    borderWidth: 1, borderColor: C.borderLight,
+    borderColor: C.borderLight,
   },
   userAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A",
+    backgroundColor: "#fff",
     alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
   avatarImg: { width: 40, height: 40, borderRadius: 20 },
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   exportBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 8, borderWidth: 1, borderColor: C.tint,
+    borderRadius: 8, borderColor: C.tint,
   },
   exportBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.tint },
 

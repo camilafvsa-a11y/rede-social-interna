@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   statsBanner: {
     flexDirection: "row", backgroundColor: C.surface,
     marginHorizontal: 16, marginTop: 14, marginBottom: 10,
-    borderRadius: 14, borderWidth: 1, borderColor: C.border,
+    borderRadius: 14, borderColor: C.border,
     overflow: "hidden",
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: C.surface, borderRadius: 12,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     paddingHorizontal: 12, paddingVertical: 10,
     marginHorizontal: 16, marginBottom: 10,
   },
@@ -271,13 +271,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row", alignItems: "flex-start", gap: 12,
     backgroundColor: C.surface, borderRadius: 14,
-    padding: 14, borderWidth: 1, borderColor: C.border,
+    padding: 14, borderColor: C.border,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A",
+    backgroundColor: "#fff",
     alignItems: "center", justifyContent: "center",
     flexShrink: 0, marginTop: 2,
   },
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: "#F0FDF4", borderRadius: 4,
     paddingHorizontal: 6, paddingVertical: 2,
-    borderWidth: 1, borderColor: "#BBF7D0",
+    borderColor: "#BBF7D0",
   },
   doneBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#059669" },
 
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   resetBtn: {
     width: 34, height: 34, borderRadius: 8,
     backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center",
-    flexShrink: 0, marginTop: 2, borderWidth: 1, borderColor: "#FECACA",
+    flexShrink: 0, marginTop: 2, borderColor: "#FECACA",
   },
 
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },

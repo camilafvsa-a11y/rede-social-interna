@@ -101,7 +101,7 @@ export default function AdminUsersScreen() {
                 {u.avatarUrl ? (
                   <Image source={{ uri: u.avatarUrl }} style={styles.avatar} />
                 ) : (
-                  <View style={[styles.avatarFallback, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A" }]}>
+                  <View style={[styles.avatarFallback, appBanned ? { backgroundColor: "#EF4444" } : { backgroundColor: "#fff" }]}>
                     <Text style={[styles.avatarInitial, !appBanned && { color: "#1E3A8A" }]}>{getInitials(u.name)}</Text>
                   </View>
                 )}
@@ -193,14 +193,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     margin: 12, backgroundColor: C.surface, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
   },
   searchInput: { flex: 1, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
   listContent: { paddingHorizontal: 12, gap: 8 },
   userCard: {
     flexDirection: "row", gap: 12, alignItems: "center",
     backgroundColor: C.surface, borderRadius: 14, padding: 12,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     position: "absolute", bottom: -1, right: -1,
     width: 16, height: 16, borderRadius: 8,
     backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
-    borderWidth: 1.5, borderColor: C.surface,
+    borderColor: C.surface,
   },
   userInfo: { flex: 1, gap: 2 },
   userNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -232,13 +232,13 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   appBanBadge: {
     backgroundColor: "#FEF2F2", paddingHorizontal: 6, paddingVertical: 2,
-    borderRadius: 4, borderWidth: 1, borderColor: "#FECACA",
+    borderRadius: 4, borderColor: "#FECACA",
   },
   appBanText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#EF4444" },
   postBanBadge: {
     flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: "#FFFBEB", paddingHorizontal: 6, paddingVertical: 2,
-    borderRadius: 4, borderWidth: 1, borderColor: "#FDE68A",
+    borderRadius: 4, borderColor: "#FDE68A",
   },
   postBanText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#D97706" },
   empty: { alignItems: "center", paddingTop: 60 },

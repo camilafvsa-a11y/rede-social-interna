@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdf4",
     marginHorizontal: 14, marginTop: 10, marginBottom: 2,
     borderRadius: 12, padding: 12,
-    borderWidth: 1, borderColor: "#bbf7d0",
+    borderColor: "#bbf7d0",
   },
   todayBannerEmoji: { fontSize: 22 },
   todayBannerText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: "#166534" },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, padding: 14,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-    borderWidth: 1, borderColor: C.borderLight,
+    borderColor: C.borderLight,
   },
   cardToday: {
     borderColor: C.tint, borderWidth: 1.5,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   avatar: { width: 52, height: 52, borderRadius: 26 },
   avatarFallback: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
   },
   avatarFallbackToday: { backgroundColor: "#059669", borderColor: "#059669" },
   avatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 20 },

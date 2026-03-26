@@ -615,7 +615,6 @@ const styles = StyleSheet.create({
   headerAvatarFallback: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
-    borderWidth: 2.5, borderColor: "#1E3A8A",
   },
   headerAvatarInitial: { color: "#1E3A8A", fontSize: 18, fontFamily: "Inter_700Bold" },
   headerGreetingBlock: { flex: 1 },
@@ -627,7 +626,7 @@ const styles = StyleSheet.create({
     position: "absolute", top: 0, right: 0,
     minWidth: 16, height: 16, borderRadius: 8,
     backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
-    paddingHorizontal: 3, borderWidth: 1.5, borderColor: C.surface,
+    paddingHorizontal: 3, borderColor: C.surface,
   },
   bellBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
   /* Main 3-tab bar */
@@ -692,7 +691,7 @@ const styles = StyleSheet.create({
   channelPill: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-    backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border,
+    backgroundColor: C.surfaceAlt, borderColor: C.border,
   },
   channelPillActive: { backgroundColor: C.tint, borderColor: C.tint },
   channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
@@ -703,7 +702,7 @@ const styles = StyleSheet.create({
   createBox: {
     flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.surface,
     marginHorizontal: 14, marginTop: 12, marginBottom: 4, padding: 12, borderRadius: 16,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   createAvatar: {
@@ -714,7 +713,7 @@ const styles = StyleSheet.create({
   createAvatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
   createInputFake: {
     flex: 1, backgroundColor: C.inputBg, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: C.borderLight,
+    paddingHorizontal: 14, paddingVertical: 9, borderColor: C.borderLight,
   },
   createPlaceholder: { color: C.placeholder, fontFamily: "Inter_400Regular", fontSize: 14 },
   createImageBtn: {
@@ -753,7 +752,7 @@ const styles = StyleSheet.create({
   bdTodayBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#f0fdf4", marginHorizontal: 14, marginTop: 10, marginBottom: 2,
-    borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#bbf7d0",
+    borderRadius: 12, padding: 12, borderColor: "#bbf7d0",
   },
   bdTodayBannerEmoji: { fontSize: 22 },
   bdTodayBannerText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: "#166534" },
@@ -766,9 +765,9 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface, borderRadius: 16, padding: 14,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-    borderWidth: 1, borderColor: C.borderLight,
+    borderColor: C.borderLight,
   },
-  bdCardToday: { borderColor: C.tint, borderWidth: 1.5, backgroundColor: "#f0fdf4" },
+  bdCardToday: { borderColor: C.tint, backgroundColor: "#f0fdf4" },
   bdAvatarWrap: { position: "relative" },
   bdAvatar: { width: 52, height: 52, borderRadius: 26 },
   bdAvatarFallback: {

@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
   avatar: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#1E3A8A",
+    backgroundColor: "#fff",
     alignItems: "center", justifyContent: "center",
     overflow: "hidden",
   },
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
     minWidth: 160,
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
     overflow: "hidden",
   },
   menuItem: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1, paddingVertical: 13, borderRadius: 12,
     backgroundColor: C.surfaceAlt, alignItems: "center",
-    borderWidth: 1, borderColor: C.border,
+    borderColor: C.border,
   },
   cancelBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   deleteBtn: {

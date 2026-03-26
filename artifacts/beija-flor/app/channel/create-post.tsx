@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: C.borderLight,
   },
-  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#1E3A8A" },
+  mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#fff" },
   mentionAvatarFallback: { alignItems: "center", justifyContent: "center" },
   mentionAvatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 13 },
   mentionName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   addImageBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#f0fdf4", borderRadius: 10, padding: 12,
-    borderWidth: 1, borderColor: "#bbf7d0",
+    borderColor: "#bbf7d0",
   },
   addImageText: { fontSize: 14, color: C.tint, fontFamily: "Inter_500Medium" },
   sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   channelChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface,
+    borderRadius: 20, borderColor: C.border, backgroundColor: C.surface,
   },
   channelChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
   channelChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
