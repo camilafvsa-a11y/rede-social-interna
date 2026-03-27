@@ -183,7 +183,7 @@ export default function CreatePostScreen() {
       )}
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 118 : insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inputHint}>

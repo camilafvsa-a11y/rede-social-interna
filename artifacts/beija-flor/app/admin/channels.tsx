@@ -237,7 +237,7 @@ export default function AdminChannelsScreen() {
             </TouchableOpacity>
           </View>
         )}
-        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 34 : 20 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 118 : 20 }]}
         ListEmptyComponent={!isLoading ? <View style={styles.empty}><Text style={styles.emptyText}>Nenhum canal criado</Text></View> : null}
         showsVerticalScrollIndicator={false}
       />

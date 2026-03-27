@@ -55,7 +55,7 @@ export default function NewTicketScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 118 : insets.bottom + 20 }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.label}>Título *</Text>
         <TextInput
           style={styles.input}

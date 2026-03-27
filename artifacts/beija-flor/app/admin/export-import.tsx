@@ -122,7 +122,7 @@ export default function ExportImportScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 60 : 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
       >
         {/* ── Export ── */}
         <View style={styles.card}>

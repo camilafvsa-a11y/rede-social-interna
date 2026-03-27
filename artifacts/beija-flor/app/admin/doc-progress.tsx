@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
 
   /* List */
-  list: { paddingHorizontal: 16, paddingBottom: 40 },
+  list: { paddingHorizontal: 16, paddingBottom: Platform.OS === "web" ? 118 : 40 },
   separator: { height: 8 },
 
   /* Row */

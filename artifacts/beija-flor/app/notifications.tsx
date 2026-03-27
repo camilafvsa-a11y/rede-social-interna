@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.text },
   emptyDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 19 },
 
-  listContent: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 24, gap: 6 },
+  listContent: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: Platform.OS === "web" ? 118 : 24, gap: 6 },
   card: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: C.surface, borderRadius: 14, padding: 14,

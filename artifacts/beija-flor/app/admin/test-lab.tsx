@@ -60,7 +60,7 @@ export default function TestLabScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 60 : 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
       >
         {/* Banner info */}
         <View style={styles.infoBanner}>

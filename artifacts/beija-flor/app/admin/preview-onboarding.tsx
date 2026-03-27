@@ -251,7 +251,7 @@ export default function PreviewOnboardingScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + 16 }]}>
+      <View style={[styles.footer, { paddingBottom: (Platform.OS === "web" ? 118 : insets.bottom) + 16 }]}>
         {/* Step navigation in test mode */}
         <View style={styles.footerRow}>
           {currentStep > 0 && (

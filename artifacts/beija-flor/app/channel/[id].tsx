@@ -104,7 +104,7 @@ export default function ChannelScreen() {
       )}
 
       {canPost && (
-        <View style={[styles.composer, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[styles.composer, { paddingBottom: Platform.OS === "web" ? 92 : insets.bottom + 8 }]}>
           <TextInput
             style={styles.input}
             value={postContent}

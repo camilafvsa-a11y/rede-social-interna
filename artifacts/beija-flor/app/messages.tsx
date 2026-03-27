@@ -201,6 +201,7 @@ export default function MessagesScreen() {
         <FlatList
           data={conversations}
           keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 118 : 20 }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => (
             <TouchableOpacity

@@ -157,7 +157,7 @@ function UsuariosTab() {
             tintColor={C.tint}
           />
         }
-        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 34 : 100 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
         ListEmptyComponent={
           !isLoading
             ? <View style={styles.empty}><Text style={styles.emptyText}>Nenhum usuário encontrado</Text></View>
@@ -251,7 +251,7 @@ function EmailsTab() {
             </TouchableOpacity>
           </View>
         )}
-        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 34 : 100 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
         ListHeaderComponent={
           <TouchableOpacity style={styles.addEmailBtn} onPress={() => setShowModal(true)} activeOpacity={0.8}>
             <Feather name="plus-circle" size={18} color={C.tint} />

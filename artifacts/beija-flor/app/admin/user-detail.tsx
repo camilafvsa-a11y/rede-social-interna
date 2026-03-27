@@ -450,7 +450,7 @@ export default function UserDetailScreen() {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 80 : 120 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 118 : 120 }]}>
 
         {/* ── Profile card ── */}
         <View style={styles.profileCard}>

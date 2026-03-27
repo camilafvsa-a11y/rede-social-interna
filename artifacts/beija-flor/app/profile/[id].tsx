@@ -39,7 +39,7 @@ export default function ProfileViewScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const botPad = Platform.OS === "web" ? 118 : insets.bottom;
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["user", id],

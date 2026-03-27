@@ -23,7 +23,7 @@ const ADMIN_SECTIONS = [
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const botPad = Platform.OS === "web" ? 118 : insets.bottom;
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>

@@ -334,7 +334,7 @@ export default function TicketScreen() {
         </View>
       )}
 
-      <View style={[styles.composer, { paddingBottom: insets.bottom + 8 }]}>
+      <View style={[styles.composer, { paddingBottom: Platform.OS === "web" ? 92 : insets.bottom + 8 }]}>
         <TouchableOpacity
           style={styles.attachBtn}
           onPress={() => setShowAttachMenu(!showAttachMenu)}

@@ -73,7 +73,7 @@ export default function ConversationScreen() {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const flatRef = useRef<FlatList>(null);
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const botPad = Platform.OS === "web" ? 92 : insets.bottom;
 
   const { data: messages = [], isLoading: msgsLoading, refetch } = useQuery<any[]>({
     queryKey: ["dm-messages", convId],
