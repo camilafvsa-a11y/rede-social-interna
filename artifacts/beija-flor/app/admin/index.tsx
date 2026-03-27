@@ -13,6 +13,7 @@ const ADMIN_SECTIONS = [
   { icon: "users", title: "Usuários", desc: "Gerenciar usuários e permissões", route: "/admin/users" },
   { icon: "mail", title: "E-mails Autorizados", desc: "Controlar quem pode acessar o app", route: "/admin/emails" },
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
+  { icon: "inbox", title: "Chamados", desc: "Gerenciar e delegar chamados de suporte", route: "/admin/tickets" },
   { icon: "help-circle", title: "Responsáveis por Chamados", desc: "Gerenciar equipe de suporte", route: "/admin/ticket-handlers" },
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
   { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },

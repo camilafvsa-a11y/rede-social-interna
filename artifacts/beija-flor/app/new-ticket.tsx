@@ -12,9 +12,13 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-const CATEGORIES = [
-  "TI / Tecnologia", "RH / Recursos Humanos", "Financeiro",
-  "Operacional", "Manutenção", "Outros",
+export const TICKET_CATEGORIES = [
+  { label: "Sistemas e Tecnologia",    icon: "monitor",      color: "#2563EB", bg: "#EFF6FF" },
+  { label: "Estrutura e Equipamentos", icon: "tool",         color: "#7C3AED", bg: "#F5F3FF" },
+  { label: "Materiais e Compras",      icon: "shopping-bag", color: "#D97706", bg: "#FFFBEB" },
+  { label: "Pessoas (RH)",             icon: "users",        color: "#059669", bg: "#ECFDF5" },
+  { label: "Pessoas (Financeiro)",     icon: "dollar-sign",  color: "#DC2626", bg: "#FEF2F2" },
+  { label: "Comunicação e Solicitações", icon: "message-circle", color: "#0891B2", bg: "#ECFEFF" },
 ];
 
 export default function NewTicketScreen() {
@@ -54,7 +58,7 @@ export default function NewTicketScreen() {
           <Feather name="x" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Novo Chamado</Text>
-        <TouchableOpacity onPress={submit} disabled={loading} style={styles.submitBtn}>
+        <TouchableOpacity onPress={submit} disabled={loading} style={[styles.submitBtn, loading && { opacity: 0.6 }]}>
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitText}>Enviar</Text>}
         </TouchableOpacity>
       </View>
@@ -72,16 +76,26 @@ export default function NewTicketScreen() {
 
         <Text style={styles.label}>Categoria *</Text>
         <View style={styles.categoriesGrid}>
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.categoryChip, category === cat && styles.categoryChipSelected]}
-              onPress={() => setCategory(cat)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.categoryText, category === cat && styles.categoryTextSelected]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
+          {TICKET_CATEGORIES.map((cat) => {
+            const selected = category === cat.label;
+            return (
+              <TouchableOpacity
+                key={cat.label}
+                style={[
+                  styles.categoryChip,
+                  selected && { backgroundColor: cat.color, borderColor: cat.color },
+                  !selected && { borderColor: C.border },
+                ]}
+                onPress={() => setCategory(cat.label)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.categoryIconWrap, { backgroundColor: selected ? "rgba(255,255,255,0.25)" : cat.bg }]}>
+                  <Feather name={cat.icon as any} size={14} color={selected ? "#fff" : cat.color} />
+                </View>
+                <Text style={[styles.categoryText, selected && styles.categoryTextSelected]}>{cat.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Text style={styles.label}>Descrição *</Text>
@@ -123,10 +137,11 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "right" },
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   categoryChip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 12, borderWidth: 1, backgroundColor: C.surface,
   },
-  categoryChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
-  categoryText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  categoryTextSelected: { color: "#fff" },
+  categoryIconWrap: { width: 24, height: 24, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  categoryText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
+  categoryTextSelected: { color: "#fff", fontFamily: "Inter_600SemiBold" },
 });

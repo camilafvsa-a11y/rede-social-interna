@@ -1,6 +1,7 @@
 import { pgTable, serial, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./users";
 
 export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "closed"]);
 
@@ -11,6 +12,8 @@ export const ticketsTable = pgTable("tickets", {
   status: ticketStatusEnum("status").notNull().default("open"),
   category: text("category").notNull(),
   authorId: integer("author_id").notNull(),
+  assignedToId: integer("assigned_to_id").references(() => usersTable.id, { onDelete: "set null" }),
+  assignedAt: timestamp("assigned_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
