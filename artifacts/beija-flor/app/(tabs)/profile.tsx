@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Alert, Platform,
+  Image, Alert, Platform, Modal, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -37,6 +37,8 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const qc = useQueryClient();
   const [updating, setUpdating] = useState(false);
+  const [pendingUri, setPendingUri] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 + 84 : 100;
@@ -54,37 +56,37 @@ export default function ProfileScreen() {
   const upcomingBirthdays = birthdays.filter((b: any) => b.daysUntil > 0).slice(0, 3);
   const previewList = todayBirthdays.length > 0 ? todayBirthdays.slice(0, 3) : upcomingBirthdays;
 
-  async function changeAvatar() {
+  async function pickAvatar() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.85,
       base64: false,
     });
     if (!result.canceled && result.assets[0]) {
-      setUpdating(true);
-      try {
-        const asset = result.assets[0];
-        const filename = asset.fileName || `avatar_${Date.now()}.jpg`;
-        const uploaded = await uploadMedia(asset.uri, filename);
-        const updated = await api.post(`/users/${user?.id}/avatar`, { avatarUrl: uploaded.url });
-        updateUser(updated);
-        // Invalidate all caches that embed the author's avatar so every
-        // post, comment, and feed card immediately shows the new photo.
-        await Promise.all([
-          qc.invalidateQueries({ queryKey: ["feed"] }),
-          qc.invalidateQueries({ queryKey: ["posts"] }),
-          qc.invalidateQueries({ queryKey: ["post"] }),
-          qc.invalidateQueries({ queryKey: ["comments"] }),
-          qc.invalidateQueries({ queryKey: ["users"] }),
-          qc.invalidateQueries({ queryKey: ["birthdays"] }),
-        ]);
-      } catch (e: any) {
-        Alert.alert("Erro", e.message);
-      } finally {
-        setUpdating(false);
-      }
+      setPendingUri(result.assets[0].uri);
+      setShowPreview(true);
+    }
+  }
+
+  async function confirmAvatar() {
+    if (!pendingUri) return;
+    setUpdating(true);
+    try {
+      const filename = `avatar_${Date.now()}.jpg`;
+      const uploaded = await uploadMedia(pendingUri, filename);
+      const updated = await api.post(`/users/${user?.id}/avatar`, { avatarUrl: uploaded.url });
+      updateUser(updated);
+      // Invalidate every query so the new avatar appears in ALL screens
+      // immediately (feed, messages, admin panel, channels, etc.)
+      await qc.invalidateQueries();
+      setShowPreview(false);
+      setPendingUri(null);
+    } catch (e: any) {
+      Alert.alert("Erro ao salvar foto", e.message);
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -96,8 +98,8 @@ export default function ProfileScreen() {
   }
 
   return (
+    <View style={[styles.container, { paddingTop: topPad }]}>
     <ScrollView
-      style={[styles.container, { paddingTop: topPad }]}
       contentContainerStyle={{ paddingBottom: botPad }}
       showsVerticalScrollIndicator={false}
     >
@@ -116,7 +118,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.profileCard}>
-        <TouchableOpacity onPress={changeAvatar} activeOpacity={0.8} style={styles.avatarContainer}>
+        <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8} style={styles.avatarContainer}>
           {user?.avatarUrl ? (
             <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
           ) : (
@@ -218,7 +220,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Conta</Text>
         <View style={styles.infoCard}>
-          <TouchableOpacity style={styles.actionRow} onPress={changeAvatar} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.actionRow} onPress={pickAvatar} activeOpacity={0.8}>
             <Feather name="camera" size={18} color={C.tint} />
             <Text style={styles.actionText}>Alterar foto de perfil</Text>
             <Feather name="chevron-right" size={16} color={C.textMuted} />
@@ -240,6 +242,62 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+
+    {/* ── Avatar preview & confirm modal ── */}
+    <Modal
+      visible={showPreview}
+      animationType="slide"
+      transparent
+      onRequestClose={() => { if (!updating) { setShowPreview(false); setPendingUri(null); } }}
+    >
+      <View style={styles.previewOverlay}>
+        <View style={[styles.previewSheet, { paddingBottom: insets.bottom + 24 }]}>
+          <Text style={styles.previewTitle}>Prévia da foto de perfil</Text>
+          <Text style={styles.previewSubtitle}>Confirme ou ajuste o recorte antes de salvar</Text>
+
+          {pendingUri && (
+            <Image source={{ uri: pendingUri }} style={styles.previewImage} />
+          )}
+
+          <TouchableOpacity
+            style={styles.recropBtn}
+            onPress={pickAvatar}
+            disabled={updating}
+            activeOpacity={0.8}
+          >
+            <Feather name="crop" size={16} color={C.tint} />
+            <Text style={styles.recropBtnText}>Alterar recorte</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, updating && { opacity: 0.7 }]}
+            onPress={confirmAvatar}
+            disabled={updating}
+            activeOpacity={0.85}
+          >
+            {updating ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Feather name="check" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Salvar foto de perfil</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {!updating && (
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => { setShowPreview(false); setPendingUri(null); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelBtnText}>Cancelar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+    </View>
   );
 }
 
@@ -331,4 +389,46 @@ const styles = StyleSheet.create({
 
   birthdayEmptyRow: { padding: 14, alignItems: "center" },
   birthdayEmptyText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular" },
+
+  /* Avatar preview modal */
+  previewOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  previewSheet: {
+    backgroundColor: C.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingTop: 24,
+    alignItems: "center",
+    gap: 14,
+  },
+  previewTitle: {
+    fontSize: 18, fontFamily: "Inter_700Bold", color: C.text,
+    textAlign: "center",
+  },
+  previewSubtitle: {
+    fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary,
+    textAlign: "center", marginTop: -6,
+  },
+  previewImage: {
+    width: 180, height: 180, borderRadius: 90,
+    borderWidth: 3, borderColor: C.tint,
+    backgroundColor: "#F3F4F6",
+    marginVertical: 8,
+  },
+  recropBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 20, paddingVertical: 11,
+    borderRadius: 12, borderWidth: 1.5, borderColor: C.tint,
+    backgroundColor: "#EFF6FF", width: "100%", justifyContent: "center",
+  },
+  recropBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.tint },
+  saveBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: C.tint, borderRadius: 12,
+    paddingVertical: 14, width: "100%", justifyContent: "center",
+  },
+  saveBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  cancelBtn: { paddingVertical: 10 },
+  cancelBtnText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.textMuted },
 });
