@@ -156,23 +156,12 @@ export default function AdminTicketsScreen() {
   }
 
   async function removeHandler(handlerId: number, name: string, category: string) {
-    Alert.alert(
-      "Remover responsável",
-      `Remover ${name} de "${category}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Remover", style: "destructive", onPress: async () => {
-            try {
-              await api.delete(`/tickets/admin/handlers/${handlerId}`);
-              await qc.invalidateQueries({ queryKey: ["ticket-handlers"] });
-            } catch (e: any) {
-              Alert.alert("Erro", e.message);
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await api.delete(`/tickets/admin/handlers/${handlerId}`);
+      await qc.invalidateQueries({ queryKey: ["ticket-handlers"] });
+    } catch (e: any) {
+      Alert.alert("Erro ao remover", e.message);
+    }
   }
 
   const categoryHandlers = assignModalTicket
