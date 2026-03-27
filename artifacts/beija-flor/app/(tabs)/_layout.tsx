@@ -42,7 +42,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-  const { unreadCount } = useNotifications();
+  const { unreadCount, ticketUnreadCount, dmUnreadCount } = useNotifications();
 
   return (
     <Tabs
@@ -103,8 +103,16 @@ function ClassicTabLayout() {
         name="tickets"
         options={{
           title: "Chamados",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="questionmark.bubble" tintColor={color} size={24} /> : <Feather name="help-circle" size={22} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <View style={{ position: "relative" }}>
+              {isIOS ? <SymbolView name="questionmark.bubble" tintColor={color} size={24} /> : <Feather name="help-circle" size={22} color={color} />}
+              {ticketUnreadCount > 0 && (
+                <View style={styles.tabBadge}>
+                  <Text style={styles.tabBadgeText}>{ticketUnreadCount > 99 ? "99+" : ticketUnreadCount}</Text>
+                </View>
+              )}
+            </View>
+          ),
         }}
       />
       <Tabs.Screen

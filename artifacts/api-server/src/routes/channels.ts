@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, channelsTable, channelAllowedPostersTable, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, channelsTable, channelAllowedPostersTable, channelReadsTable, postsTable, usersTable } from "@workspace/db";
+import { eq, and, gt, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
 const router = Router();
@@ -47,6 +47,42 @@ router.post("/", requireAdmin, async (req, res) => {
     color: color || null,
   }).returning();
   res.json(formatChannel(ch));
+});
+
+// ── Unread channel tracking (must be before /:id) ────────────────────────────
+
+router.get("/unread-ids", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+
+  const allChannels = await db.select().from(channelsTable);
+  const accessible = allChannels.filter((ch) => {
+    if (user.role === "admin" || user.role === "master_admin") return true;
+    const tags = JSON.parse(ch.allowedTags || "[]");
+    if (tags.length === 0) return true;
+    const userTags: string[] = [
+      ...(user.tag ? [user.tag] : []),
+      ...(Array.isArray(user.workTags) ? user.workTags : []),
+    ];
+    return tags.some((t: string) => userTags.includes(t));
+  });
+
+  const reads = await db.select().from(channelReadsTable).where(eq(channelReadsTable.userId, user.id));
+  const readMap = new Map(reads.map((r) => [r.channelId, r.lastReadAt]));
+
+  const unreadIds: number[] = [];
+  for (const ch of accessible) {
+    const lastRead = readMap.get(ch.id);
+    if (!lastRead) {
+      const [post] = await db.select().from(postsTable).where(eq(postsTable.channelId, ch.id)).limit(1);
+      if (post) unreadIds.push(ch.id);
+    } else {
+      const [newPost] = await db.select().from(postsTable)
+        .where(and(eq(postsTable.channelId, ch.id), gt(postsTable.createdAt, lastRead))).limit(1);
+      if (newPost) unreadIds.push(ch.id);
+    }
+  }
+
+  res.json({ unreadIds });
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
@@ -108,6 +144,21 @@ router.delete("/:id/allowed-posters", requireAdmin, async (req, res) => {
   await db.delete(channelAllowedPostersTable)
     .where(and(eq(channelAllowedPostersTable.channelId, parseInt(id)), eq(channelAllowedPostersTable.userId, userId)));
   res.json({ success: true, message: "Removed" });
+});
+
+router.post("/:id/read", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const { id } = req.params;
+  const channelId = parseInt(id);
+
+  await db.insert(channelReadsTable)
+    .values({ userId: user.id, channelId, lastReadAt: new Date() })
+    .onConflictDoUpdate({
+      target: [channelReadsTable.userId, channelReadsTable.channelId],
+      set: { lastReadAt: new Date() },
+    });
+
+  res.json({ success: true });
 });
 
 export default router;

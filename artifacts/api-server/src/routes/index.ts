@@ -12,6 +12,7 @@ import exportRouter from "./export.js";
 import notificationsRouter from "./notifications.js";
 import integraItemsRouter from "./integra-items.js";
 import workTagsRouter from "./work-tags.js";
+import dmsRouter from "./dms.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/data", exportRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/integra-items", integraItemsRouter);
 router.use("/work-tags", workTagsRouter);
+router.use("/dms", dmsRouter);
 
 export default router;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image,
@@ -54,6 +54,13 @@ export default function TicketScreen() {
     queryFn: () => api.get(`/tickets/${id}/messages`),
     enabled: !!id,
   });
+
+  // Mark ticket as read when opened
+  useEffect(() => {
+    if (id) {
+      api.post(`/tickets/${id}/read`, {}).catch(() => {});
+    }
+  }, [id]);
 
   const canManage = user?.role === "admin" || user?.role === "master_admin";
 

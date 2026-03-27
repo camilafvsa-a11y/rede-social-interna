@@ -141,16 +141,18 @@ export default function PostCard({ post, onLikeChange, onDelete, compact }: Post
           </TouchableOpacity>
 
           <View style={styles.authorInfo}>
-            <View style={styles.authorRow}>
-              <Text style={styles.authorName}>{post.author?.name || "Usuário"}</Text>
-              {tagStyle && (
-                <View style={[styles.tagBadge, { backgroundColor: tagStyle.bg }]}>
-                  <Text style={[styles.tagText, { color: tagStyle.text }]}>
-                    {TAG_LABELS[post.author?.tag] || post.author?.tag}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <TouchableOpacity onPress={() => router.push(`/profile/${post.authorId}`)} activeOpacity={0.7}>
+              <View style={styles.authorRow}>
+                <Text style={styles.authorName}>{post.author?.name || "Usuário"}</Text>
+                {tagStyle && (
+                  <View style={[styles.tagBadge, { backgroundColor: tagStyle.bg }]}>
+                    <Text style={[styles.tagText, { color: tagStyle.text }]}>
+                      {TAG_LABELS[post.author?.tag] || post.author?.tag}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
             <View style={styles.metaRow}>
               <Text style={styles.channelName}>#{post.channel?.name}</Text>
               <Text style={styles.timeDot}>·</Text>

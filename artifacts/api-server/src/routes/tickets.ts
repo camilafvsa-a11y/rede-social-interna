@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, ticketsTable, ticketMessagesTable, ticketHandlersTable, usersTable, type Ticket } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { db, ticketsTable, ticketMessagesTable, ticketHandlersTable, ticketReadsTable, usersTable, type Ticket } from "@workspace/db";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
 const router = Router();
@@ -72,6 +72,44 @@ router.post("/", requireAuth, async (req, res) => {
   const { title, description, category } = req.body;
   const [ticket] = await db.insert(ticketsTable).values({ title, description, category, authorId: user.id }).returning();
   res.json(await enrichTicket(ticket));
+});
+
+// ── Unread tracking (must be before /:id) ────────────────────────────────────
+
+router.get("/unread-count", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+
+  let tickets = await db.select().from(ticketsTable);
+  const handlerEntries = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id));
+  const handlerCategories = handlerEntries.map((h) => h.category);
+
+  if (user.role !== "admin" && user.role !== "master_admin") {
+    if (handlerCategories.length > 0) {
+      tickets = tickets.filter((t) => handlerCategories.includes(t.category));
+    } else {
+      tickets = tickets.filter((t) => t.authorId === user.id);
+    }
+  }
+
+  const reads = await db.select().from(ticketReadsTable).where(eq(ticketReadsTable.userId, user.id));
+  const readMap = new Map(reads.map((r) => [r.ticketId, r.lastReadAt]));
+
+  let unread = 0;
+  for (const ticket of tickets) {
+    const lastRead = readMap.get(ticket.id);
+    if (!lastRead) {
+      const [msg] = await db.select().from(ticketMessagesTable)
+        .where(eq(ticketMessagesTable.ticketId, ticket.id)).limit(1);
+      if (msg) unread++;
+    } else {
+      const [newMsg] = await db.select().from(ticketMessagesTable)
+        .where(and(eq(ticketMessagesTable.ticketId, ticket.id), gt(ticketMessagesTable.createdAt, lastRead)))
+        .limit(1);
+      if (newMsg) unread++;
+    }
+  }
+
+  res.json({ count: unread });
 });
 
 router.get("/handler/me", requireAuth, async (req, res) => {
@@ -212,6 +250,21 @@ router.delete("/admin/handlers/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   await db.delete(ticketHandlersTable).where(eq(ticketHandlersTable.id, parseInt(id)));
   res.json({ success: true, message: "Removed" });
+});
+
+router.post("/:id/read", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const { id } = req.params;
+  const ticketId = parseInt(id);
+
+  await db.insert(ticketReadsTable)
+    .values({ userId: user.id, ticketId, lastReadAt: new Date() })
+    .onConflictDoUpdate({
+      target: [ticketReadsTable.userId, ticketReadsTable.ticketId],
+      set: { lastReadAt: new Date() },
+    });
+
+  res.json({ success: true });
 });
 
 export default router;

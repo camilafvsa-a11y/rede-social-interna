@@ -115,7 +115,7 @@ type BdSubTab = "today" | "upcoming";
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, dmUnreadCount, refreshUnread } = useNotifications();
   const [mainTab, setMainTab] = useState<MainTab>("feed");
 
   // Per-tab channel filters
@@ -140,6 +140,19 @@ export default function FeedScreen() {
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
   });
+
+  const { data: unreadChannelData } = useQuery<{ unreadIds: number[] }>({
+    queryKey: ["channels-unread"],
+    queryFn: () => api.get("/channels/unread-ids"),
+    refetchInterval: 30_000,
+  });
+  const unreadChannelIds = new Set(unreadChannelData?.unreadIds ?? []);
+
+  function markChannelRead(channelId: number) {
+    api.post(`/channels/${channelId}/read`, {}).then(() => {
+      refreshUnread();
+    }).catch(() => {});
+  }
 
   const regularChannels = useMemo(
     () => channels.filter((c: any) => !c.isInternalComm),
@@ -215,6 +228,7 @@ export default function FeedScreen() {
           {chList.map((ch: any) => {
             const active = selected === ch.id;
             const chColor = ch.color || C.tint;
+            const hasUnread = unreadChannelIds.has(ch.id);
             return (
               <TouchableOpacity
                 key={ch.id}
@@ -226,7 +240,11 @@ export default function FeedScreen() {
                     ? { borderColor: ch.color, borderWidth: 1.5 }
                     : null,
                 ]}
-                onPress={() => onSelect(active ? null : ch.id)}
+                onPress={() => {
+                  const nextId = active ? null : ch.id;
+                  onSelect(nextId);
+                  if (!active && hasUnread) markChannelRead(ch.id);
+                }}
                 activeOpacity={0.8}
               >
                 {/* Color dot for inactive colored pills */}
@@ -239,6 +257,10 @@ export default function FeedScreen() {
                 <Text style={[styles.channelPillText, active && styles.channelPillTextActive, !active && ch.color && { color: ch.color }]}>
                   {ch.name}
                 </Text>
+                {/* Unread dot */}
+                {hasUnread && !active && (
+                  <View style={styles.chUnreadDot} />
+                )}
               </TouchableOpacity>
             );
           })}
@@ -364,20 +386,38 @@ export default function FeedScreen() {
           <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
         </View>
 
-        {/* Bell icon */}
-        <TouchableOpacity
-          onPress={() => router.push("/notifications" as any)}
-          style={styles.bellBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.7}
-        >
-          <Feather name="bell" size={22} color={C.text} />
-          {unreadCount > 0 && (
-            <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Header right icons */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {/* DM icon */}
+          <TouchableOpacity
+            onPress={() => router.push("/messages" as any)}
+            style={styles.bellBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            <Feather name="send" size={20} color={C.text} />
+            {dmUnreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Bell icon */}
+          <TouchableOpacity
+            onPress={() => router.push("/notifications" as any)}
+            style={styles.bellBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            <Feather name="bell" size={22} color={C.text} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
       </View>
 
@@ -683,6 +723,7 @@ const styles = StyleSheet.create({
   channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
   channelPillTextActive: { color: "#fff" },
   chPillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  chUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#EF4444", marginLeft: 4 },
 
   /* Create post */
   createBox: {

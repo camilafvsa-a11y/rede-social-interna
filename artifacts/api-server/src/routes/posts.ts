@@ -21,6 +21,7 @@ async function enrichPost(post: any, userId: number) {
     author: author ? formatUserBasic(author) : { id: post.authorId, name: "Usuário", role: "user" },
     channelId: post.channelId,
     channel: channel ? { id: channel.id, name: channel.name, icon: channel.icon } : { id: post.channelId, name: "Canal" },
+    targetUserId: post.targetUserId ?? null,
     likeCount: Number(likeCountResult?.count ?? 0),
     commentCount: Number(commentCountResult?.count ?? 0),
     likedByMe: !!liked,
@@ -81,7 +82,8 @@ router.post("/", requireAuth, async (req, res) => {
     }
   }
 
-  const [post] = await db.insert(postsTable).values({ content, imageUrl, authorId: user.id, channelId }).returning();
+  const { targetUserId } = req.body;
+  const [post] = await db.insert(postsTable).values({ content, imageUrl, authorId: user.id, channelId, targetUserId: targetUserId ?? null }).returning();
   const enriched = await enrichPost(post, user.id);
   res.json(enriched);
 
@@ -268,6 +270,24 @@ router.get("/reports/all", requireAuth, async (req, res) => {
     };
   }));
   res.json(enriched);
+});
+
+// ── Timeline: posts by or on the wall of a user ──────────────────────────────
+router.get("/timeline/:userId", requireAuth, async (req, res) => {
+  const me = (req as any).user;
+  const targetId = parseInt(req.params.userId);
+
+  const allPosts = await db.select().from(postsTable)
+    .orderBy(desc(postsTable.createdAt))
+    .limit(80);
+
+  // posts authored by user OR posted on their wall (targetUserId)
+  const filtered = allPosts.filter((p) =>
+    p.authorId === targetId || p.targetUserId === targetId
+  );
+
+  const enriched = await Promise.all(filtered.map((p) => enrichPost(p, me.id)));
+  res.json({ posts: enriched });
 });
 
 export default router;

@@ -8,6 +8,7 @@ export const postsTable = pgTable("posts", {
   imageUrl: text("image_url"),
   authorId: integer("author_id").notNull(),
   channelId: integer("channel_id").notNull(),
+  targetUserId: integer("target_user_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

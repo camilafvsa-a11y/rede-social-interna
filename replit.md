@@ -60,17 +60,20 @@ Internal social network for Grupo Beija-flor employees.
 ### App Screens
 - `app/login.tsx` – login screen
 - `app/onboarding.tsx` – 3-step onboarding
-- `app/(tabs)/index.tsx` – feed
+- `app/(tabs)/index.tsx` – feed with DM icon, channel unread dots, notification bell
 - `app/(tabs)/channels.tsx` – channel list
 - `app/(tabs)/birthdays.tsx` – birthday list
-- `app/(tabs)/tickets.tsx` – ticket list
+- `app/(tabs)/tickets.tsx` – ticket list (badge shows unread count)
 - `app/(tabs)/profile.tsx` – own profile
 - `app/channel/[id].tsx` – channel detail + post
 - `app/channel/create-post.tsx` – new post modal
 - `app/post/[id].tsx` – post detail + comments
-- `app/ticket/[id].tsx` – ticket chat
+- `app/ticket/[id].tsx` – ticket chat (marks read on open)
 - `app/new-ticket.tsx` – new ticket modal
-- `app/profile/[id].tsx` – view other user profile
+- `app/profile/[id].tsx` – personal timeline + DM button + posts list
+- `app/messages.tsx` – DM conversations list
+- `app/messages/[convId].tsx` – DM chat screen
+- `app/messages/with/[userId].tsx` – open/create DM with a user (redirect to convId)
 - `app/admin/index.tsx` – admin panel home
 - `app/admin/users.tsx` – user management
 - `app/admin/emails.tsx` – email allowlist
@@ -111,8 +114,11 @@ Base URL: `/api` (proxied from Expo to port 8080)
 - `PATCH /channels/:id` – update channel (admin)
 - `DELETE /channels/:id` – delete channel (admin)
 - `GET /channels/:id/can-post` – check if user can post
+- `GET /channels/unread-ids` – channels with unread posts for current user
+- `POST /channels/:id/read` – mark channel as read
 - `GET /posts` – list posts (with channelId filter)
-- `POST /posts` – create post
+- `POST /posts` – create post (accepts optional targetUserId for wall posts)
+- `GET /posts/timeline/:userId` – posts authored by or about a user
 - `GET /posts/:id` – post detail
 - `DELETE /posts/:id` – delete post
 - `POST /posts/:id/like` – toggle like
@@ -127,13 +133,21 @@ Base URL: `/api` (proxied from Expo to port 8080)
 - `PATCH /tickets/:id` – update ticket status
 - `GET /tickets/:id/messages` – ticket messages
 - `POST /tickets/:id/messages` – send message
+- `GET /tickets/unread-count` – unread ticket count for current user
+- `POST /tickets/:id/read` – mark ticket as read
 - `GET /tickets/admin/handlers` – list ticket handlers
 - `POST /tickets/admin/handlers` – add handler
 - `DELETE /tickets/admin/handlers/:userId` – remove handler
+- `GET /dms` – list DM conversations
+- `GET /dms/unread-count` – unread DM message count
+- `GET /dms/with/:userId` – get or create conversation with user
+- `GET /dms/:convId/messages` – messages in a conversation
+- `POST /dms/:convId/messages` – send a DM
+- `POST /dms/:convId/read` – mark DMs as read
 - `GET /birthdays` – upcoming birthdays
 
 ## Database (PostgreSQL + Drizzle)
 
-Tables: `users`, `allowed_emails`, `channels`, `channel_allowed_posters`, `posts`, `post_likes`, `comments`, `comment_reports`, `tickets`, `ticket_messages`, `ticket_handlers`
+Tables: `users`, `allowed_emails`, `channels`, `channel_allowed_posters`, `posts` (with `target_user_id` for wall posts), `post_likes`, `comments`, `comment_reports`, `tickets`, `ticket_messages`, `ticket_handlers`, `ticket_reads`, `channel_reads`, `dm_conversations`, `dm_messages`
 
 Seeded channels: Geral, Comunicação Interna, Marketing, Administrativo, Posto, Churrascaria, Gerência

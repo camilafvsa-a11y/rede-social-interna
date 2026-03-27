@@ -5,11 +5,15 @@ import { api } from "@/lib/api";
 
 interface NotificationContextType {
   unreadCount: number;
+  ticketUnreadCount: number;
+  dmUnreadCount: number;
   refreshUnread: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
   unreadCount: 0,
+  ticketUnreadCount: 0,
+  dmUnreadCount: 0,
   refreshUnread: async () => {},
 });
 
@@ -19,12 +23,20 @@ export function useNotifications() {
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [ticketUnreadCount, setTicketUnreadCount] = useState(0);
+  const [dmUnreadCount, setDmUnreadCount] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function refreshUnread() {
     try {
-      const data = await api.get("/notifications/unread-count");
-      setUnreadCount(data?.count ?? 0);
+      const [notifData, ticketData, dmData] = await Promise.all([
+        api.get("/notifications/unread-count").catch(() => ({ count: 0 })),
+        api.get("/tickets/unread-count").catch(() => ({ count: 0 })),
+        api.get("/dms/unread-count").catch(() => ({ count: 0 })),
+      ]);
+      setUnreadCount(notifData?.count ?? 0);
+      setTicketUnreadCount(ticketData?.count ?? 0);
+      setDmUnreadCount(dmData?.count ?? 0);
     } catch {
       // silent
     }
@@ -78,7 +90,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ unreadCount, refreshUnread }}>
+    <NotificationContext.Provider value={{ unreadCount, ticketUnreadCount, dmUnreadCount, refreshUnread }}>
       {children}
     </NotificationContext.Provider>
   );
