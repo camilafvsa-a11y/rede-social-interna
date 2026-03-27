@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 const C = Colors.light;
 
 const FAMILY_TAGS = [
-  { key: "sem_filhos", label: "Sem filhos", icon: "minus-circle" as const, color: "#6B7280", bg: "#F3F4F6" },
+  { key: "sem_filhos", label: "Sem filhos", icon: "minus-circle" as const, color: "#4B5563", bg: "#E5E7EB" },
   { key: "mae", label: "Mãe", icon: "heart" as const, color: "#EC4899", bg: "#FDF2F8" },
   { key: "pai", label: "Pai", icon: "star" as const, color: "#6366F1", bg: "#EEF2FF" },
 ];
@@ -31,6 +31,13 @@ const TAG_COLORS = [
   "#2563EB", "#DC2626", "#7C3AED", "#D97706", "#059669",
   "#0891B2", "#EC4899", "#EA580C", "#65A30D", "#0F172A",
 ];
+
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 155;
+}
 
 function getInitials(name: string) {
   return name?.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() ?? "?";
@@ -557,12 +564,21 @@ export default function UserDetailScreen() {
             {FAMILY_TAGS.map((t) => (
               <TouchableOpacity
                 key={t.key}
-                style={[styles.tagChip, extraTags.includes(t.key) && { backgroundColor: t.bg, borderColor: t.color }]}
+                style={[
+                  styles.tagChip,
+                  { backgroundColor: C.surface },
+                  extraTags.includes(t.key) && { backgroundColor: t.bg, borderColor: t.color },
+                ]}
                 onPress={() => !isMaster && toggleFamilyTag(t.key)}
                 activeOpacity={0.8}
               >
-                {extraTags.includes(t.key) && <Feather name="check" size={11} color={t.color} />}
-                <Text style={[styles.tagChipText, extraTags.includes(t.key) && { color: t.color }]}>{t.label}</Text>
+                {extraTags.includes(t.key)
+                  ? <Feather name="check" size={12} color={t.color} />
+                  : <Feather name={t.icon} size={12} color={C.textMuted} />
+                }
+                <Text style={[styles.tagChipText, extraTags.includes(t.key) ? { color: t.color } : { color: C.textSecondary }]}>
+                  {t.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -801,13 +817,17 @@ export default function UserDetailScreen() {
               <Text style={[styles.modalLabel, { marginTop: 14 }]}>Cor</Text>
               <View style={styles.colorGrid}>
                 {TAG_COLORS.map((hex) => (
-                  <TouchableOpacity
-                    key={hex}
-                    style={[styles.colorSwatch, { backgroundColor: hex }, newTagColor === hex && styles.colorSwatchSelected]}
-                    onPress={() => setNewTagColor(hex)}
-                  >
-                    {newTagColor === hex && <Feather name="check" size={14} color="#fff" />}
-                  </TouchableOpacity>
+                  <View key={hex} style={[styles.swatchRing, newTagColor === hex && { borderColor: hex }]}>
+                    <TouchableOpacity
+                      style={[styles.colorSwatch, { backgroundColor: hex }]}
+                      onPress={() => setNewTagColor(hex)}
+                      activeOpacity={0.8}
+                    >
+                      {newTagColor === hex && (
+                        <Feather name="check" size={14} color={isLightColor(hex) ? "#374151" : "#fff"} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </View>
               {newTagLabel.trim().length > 0 && (
@@ -850,13 +870,17 @@ export default function UserDetailScreen() {
               <Text style={[styles.modalLabel, { marginTop: 14 }]}>Cor</Text>
               <View style={styles.colorGrid}>
                 {TAG_COLORS.map((hex) => (
-                  <TouchableOpacity
-                    key={hex}
-                    style={[styles.colorSwatch, { backgroundColor: hex }, editTagData?.color === hex && styles.colorSwatchSelected]}
-                    onPress={() => setEditTagData((prev) => prev ? { ...prev, color: hex } : null)}
-                  >
-                    {editTagData?.color === hex && <Feather name="check" size={14} color="#fff" />}
-                  </TouchableOpacity>
+                  <View key={hex} style={[styles.swatchRing, editTagData?.color === hex && { borderColor: hex }]}>
+                    <TouchableOpacity
+                      style={[styles.colorSwatch, { backgroundColor: hex }]}
+                      onPress={() => setEditTagData((prev) => prev ? { ...prev, color: hex } : null)}
+                      activeOpacity={0.8}
+                    >
+                      {editTagData?.color === hex && (
+                        <Feather name="check" size={14} color={isLightColor(hex) ? "#374151" : "#fff"} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </View>
               {editTagData && editTagData.label.trim().length > 0 && (
@@ -1202,9 +1226,13 @@ const styles = StyleSheet.create({
     borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 15, fontFamily: "Inter_400Regular", color: C.text,
   },
-  colorGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  colorGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  swatchRing: {
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 2, borderColor: "transparent",
+    padding: 3, alignItems: "center", justifyContent: "center",
+  },
   colorSwatch: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  colorSwatchSelected: { borderWidth: 3, borderColor: "#fff", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 3 },
   tagPreview: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 14, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   tagPreviewText: { fontSize: 14, fontFamily: "Inter_700Bold" },
   modalBtn: { backgroundColor: C.tint, paddingVertical: 14, alignItems: "center", margin: 20, marginTop: 0, borderRadius: 12 },
