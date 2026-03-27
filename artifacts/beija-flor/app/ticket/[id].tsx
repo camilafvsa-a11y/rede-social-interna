@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { Video, ResizeMode } from "expo-av";
 import { api } from "@/lib/api";
+import { uploadMedia } from "@/lib/upload";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 
@@ -35,14 +40,46 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString("pt-BR");
 }
 
+function MediaBubble({ url, type }: { url: string; type: string }) {
+  if (type === "image") {
+    return <Image source={{ uri: url }} style={styles.bubbleMedia} resizeMode="cover" />;
+  }
+  if (type === "video") {
+    return (
+      <Video
+        source={{ uri: url }}
+        style={styles.bubbleMedia}
+        resizeMode={ResizeMode.COVER}
+        useNativeControls
+        shouldPlay={false}
+      />
+    );
+  }
+  if (type === "pdf") {
+    return (
+      <TouchableOpacity style={styles.pdfBubble} onPress={() => Linking.openURL(url)} activeOpacity={0.8}>
+        <Feather name="file-text" size={20} color="#DC2626" />
+        <Text style={styles.pdfLabel}>Ver PDF</Text>
+        <Feather name="external-link" size={14} color="#9CA3AF" />
+      </TouchableOpacity>
+    );
+  }
+  return null;
+}
+
 export default function TicketScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const flatRef = useRef<FlatList>(null);
+
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [pendingMedia, setPendingMedia] = useState<{ uri: string; type: string; filename: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
 
   const { data: ticket, isLoading, refetch: refetchTicket } = useQuery({
     queryKey: ["ticket", id],
@@ -55,7 +92,6 @@ export default function TicketScreen() {
     enabled: !!id,
   });
 
-  // Mark ticket as read when opened
   useEffect(() => {
     if (id) {
       api.post(`/tickets/${id}/read`, {}).catch(() => {});
@@ -64,17 +100,73 @@ export default function TicketScreen() {
 
   const canManage = user?.role === "admin" || user?.role === "master_admin";
 
+  async function pickImage() {
+    setShowAttachMenu(false);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setPendingMedia({ uri: asset.uri, type: "image", filename: asset.fileName || `image_${Date.now()}.jpg` });
+    }
+  }
+
+  async function pickVideo() {
+    setShowAttachMenu(false);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: false,
+    });
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setPendingMedia({ uri: asset.uri, type: "video", filename: asset.fileName || `video_${Date.now()}.mp4` });
+    }
+  }
+
+  async function pickPDF() {
+    setShowAttachMenu(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        setPendingMedia({ uri: asset.uri, type: "pdf", filename: asset.name || `doc_${Date.now()}.pdf` });
+      }
+    } catch {
+      Alert.alert("Erro", "Não foi possível selecionar o arquivo.");
+    }
+  }
+
   async function sendMessage() {
-    if (!message.trim()) return;
+    if (!message.trim() && !pendingMedia) return;
     setSending(true);
     try {
-      await api.post(`/tickets/${id}/messages`, { content: message.trim() });
+      let mediaUrl: string | null = null;
+      let mediaType: string | null = null;
+
+      if (pendingMedia) {
+        setUploading(true);
+        const uploaded = await uploadMedia(pendingMedia.uri, pendingMedia.filename);
+        mediaUrl = uploaded.url;
+        mediaType = pendingMedia.type;
+        setUploading(false);
+      }
+
+      await api.post(`/tickets/${id}/messages`, {
+        content: message.trim() || null,
+        mediaUrl,
+        mediaType,
+      });
       setMessage("");
+      setPendingMedia(null);
       await refetchMessages();
+      setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e: any) {
       Alert.alert("Erro", e.message);
     } finally {
       setSending(false);
+      setUploading(false);
     }
   }
 
@@ -97,6 +189,7 @@ export default function TicketScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const sc = ticket ? (STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open) : STATUS_CONFIG.open;
   const flow = ticket ? STATUS_FLOW[ticket.status] : null;
+  const canSend = (message.trim().length > 0 || !!pendingMedia) && !sending;
 
   return (
     <KeyboardAvoidingView
@@ -112,8 +205,10 @@ export default function TicketScreen() {
       </View>
 
       <FlatList
+        ref={flatRef}
         data={messages}
         keyExtractor={(item: any) => String(item.id)}
+        onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
         ListHeaderComponent={
           ticket ? (
             <View style={styles.ticketInfo}>
@@ -178,7 +273,12 @@ export default function TicketScreen() {
               )}
               <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
                 {!isMe && <Text style={styles.msgAuthor}>{item.author?.name}</Text>}
-                <Text style={[styles.msgContent, isMe && { color: "#fff" }]}>{item.content}</Text>
+                {item.mediaUrl && item.mediaType && (
+                  <MediaBubble url={item.mediaUrl} type={item.mediaType} />
+                )}
+                {item.content ? (
+                  <Text style={[styles.msgContent, isMe && { color: "#fff" }]}>{item.content}</Text>
+                ) : null}
                 <Text style={[styles.msgTime, isMe && { color: "rgba(255,255,255,0.7)" }]}>{timeAgo(item.createdAt)}</Text>
               </View>
             </View>
@@ -195,22 +295,68 @@ export default function TicketScreen() {
 
       {isLoading && <ActivityIndicator style={{ margin: 20 }} color={C.tint} />}
 
+      {showAttachMenu && (
+        <View style={styles.attachMenu}>
+          <TouchableOpacity style={styles.attachOption} onPress={pickImage} activeOpacity={0.8}>
+            <Feather name="image" size={20} color={C.tint} />
+            <Text style={styles.attachOptionText}>Foto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.attachOption} onPress={pickVideo} activeOpacity={0.8}>
+            <Feather name="video" size={20} color="#7C3AED" />
+            <Text style={[styles.attachOptionText, { color: "#7C3AED" }]}>Vídeo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.attachOption} onPress={pickPDF} activeOpacity={0.8}>
+            <Feather name="file-text" size={20} color="#DC2626" />
+            <Text style={[styles.attachOptionText, { color: "#DC2626" }]}>PDF</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {pendingMedia && (
+        <View style={styles.pendingMedia}>
+          {pendingMedia.type === "image" && (
+            <Image source={{ uri: pendingMedia.uri }} style={styles.pendingThumb} />
+          )}
+          {pendingMedia.type === "video" && (
+            <View style={[styles.pendingThumb, styles.pendingVideoThumb]}>
+              <Feather name="video" size={20} color="#7C3AED" />
+            </View>
+          )}
+          {pendingMedia.type === "pdf" && (
+            <View style={[styles.pendingThumb, styles.pendingPdfThumb]}>
+              <Feather name="file-text" size={20} color="#DC2626" />
+            </View>
+          )}
+          <Text style={styles.pendingLabel} numberOfLines={1}>{pendingMedia.filename}</Text>
+          <TouchableOpacity onPress={() => setPendingMedia(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={18} color={C.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={[styles.composer, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity
+          style={styles.attachBtn}
+          onPress={() => setShowAttachMenu(!showAttachMenu)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="paperclip" size={20} color={showAttachMenu ? C.tint : C.textMuted} />
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           value={message}
           onChangeText={setMessage}
-          placeholder="Escreva uma mensagem..."
+          placeholder={pendingMedia ? "Legenda (opcional)..." : "Escreva uma mensagem..."}
           placeholderTextColor={C.placeholder}
           multiline
           maxLength={500}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!message.trim() || sending) && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
           onPress={sendMessage}
-          disabled={!message.trim() || sending}
+          disabled={!canSend}
         >
-          {sending ? <ActivityIndicator size="small" color="#fff" /> : <Feather name="send" size={18} color="#fff" />}
+          {sending || uploading ? <ActivityIndicator size="small" color="#fff" /> : <Feather name="send" size={18} color="#fff" />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -235,20 +381,16 @@ const styles = StyleSheet.create({
   ticketMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
   metaText: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" },
   metaDot: { fontSize: 12, color: C.textMuted },
-
   delegatedRow: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#ECFDF5", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-    marginBottom: 10,
+    backgroundColor: "#ECFDF5", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10,
   },
   delegatedText: { fontSize: 13, color: "#059669", fontFamily: "Inter_400Regular" },
-
   statusActionBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     borderRadius: 10, paddingVertical: 10, marginBottom: 4,
   },
   statusActionText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-
   divider: { height: 1, backgroundColor: C.border, marginVertical: 12 },
   messagesLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   listContent: { paddingBottom: 20 },
@@ -262,13 +404,33 @@ const styles = StyleSheet.create({
   msgAuthor: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textSecondary, marginBottom: 2 },
   msgContent: { fontSize: 14, color: C.text, fontFamily: "Inter_400Regular", lineHeight: 20 },
   msgTime: { fontSize: 10, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 4, alignSelf: "flex-end" },
+  bubbleMedia: { width: 200, height: 150, borderRadius: 8, marginBottom: 6 },
+  pdfBubble: { flexDirection: "row", alignItems: "center", gap: 8, padding: 8, backgroundColor: "#FEF2F2", borderRadius: 8, marginBottom: 6 },
+  pdfLabel: { flex: 1, fontSize: 13, color: "#DC2626", fontFamily: "Inter_500Medium" },
   noMessages: { padding: 20, alignItems: "center" },
   noMessagesText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
-  composer: {
-    flexDirection: "row", alignItems: "flex-end", gap: 10,
-    paddingHorizontal: 16, paddingTop: 10,
+  attachMenu: {
+    flexDirection: "row", gap: 0,
+    paddingHorizontal: 16, paddingVertical: 10,
     backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border,
   },
+  attachOption: { flex: 1, alignItems: "center", gap: 4, paddingVertical: 8 },
+  attachOptionText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  pendingMedia: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: "#F9FAFB", borderTopWidth: 1, borderTopColor: C.border,
+  },
+  pendingThumb: { width: 40, height: 40, borderRadius: 6, overflow: "hidden" },
+  pendingVideoThumb: { backgroundColor: "#F5F3FF", alignItems: "center", justifyContent: "center" },
+  pendingPdfThumb: { backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center" },
+  pendingLabel: { flex: 1, fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  composer: {
+    flexDirection: "row", alignItems: "flex-end", gap: 8,
+    paddingHorizontal: 12, paddingTop: 10,
+    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border,
+  },
+  attachBtn: { paddingBottom: 10, paddingRight: 4 },
   input: {
     flex: 1, backgroundColor: C.inputBg, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 10,

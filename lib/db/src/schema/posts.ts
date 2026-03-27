@@ -6,6 +6,7 @@ export const postsTable = pgTable("posts", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
   authorId: integer("author_id").notNull(),
   channelId: integer("channel_id").notNull(),
   targetUserId: integer("target_user_id"),

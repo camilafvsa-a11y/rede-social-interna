@@ -1,7 +1,12 @@
 import { Router } from "express";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
 import { db, usersTable, allowedEmailsTable } from "@workspace/db";
 import { eq, ilike, or } from "drizzle-orm";
 import { requireAuth, requireAdmin, simpleHash, formatUser, formatUserBasic } from "../lib/auth.js";
+
+const UPLOADS_DIR = join(process.cwd(), "uploads");
+if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const router = Router();
 
@@ -83,13 +88,38 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
 router.post("/:id/avatar", requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { avatarUrl } = req.body;
+  const { avatarUrl, base64, filename } = req.body;
   const currentUser = (req as any).user;
   if (currentUser.id !== parseInt(id) && currentUser.role !== "admin" && currentUser.role !== "master_admin") {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
-  const [updated] = await db.update(usersTable).set({ avatarUrl }).where(eq(usersTable.id, parseInt(id))).returning();
+
+  let finalUrl: string | undefined = avatarUrl;
+
+  if (base64 && filename) {
+    try {
+      const raw = base64.includes(",") ? base64.split(",")[1] : base64;
+      const buffer = Buffer.from(raw, "base64");
+      if (buffer.length > 8 * 1024 * 1024) {
+        res.status(413).json({ error: "Imagem muito grande (máx 8 MB)" });
+        return;
+      }
+      const safeName = `avatar_${id}_${Date.now()}_${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      writeFileSync(join(UPLOADS_DIR, safeName), buffer);
+      finalUrl = `/api/uploads/${safeName}`;
+    } catch {
+      res.status(400).json({ error: "Falha ao processar imagem" });
+      return;
+    }
+  }
+
+  if (!finalUrl) {
+    res.status(400).json({ error: "avatarUrl ou base64+filename são obrigatórios" });
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set({ avatarUrl: finalUrl }).where(eq(usersTable.id, parseInt(id))).returning();
   res.json(formatUser(updated));
 });
 

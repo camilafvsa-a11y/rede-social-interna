@@ -9,7 +9,9 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
+import { Video, ResizeMode } from "expo-av";
 import { api } from "@/lib/api";
+import { uploadMedia } from "@/lib/upload";
 import Colors from "@/constants/colors";
 
 const C = Colors.light;
@@ -20,11 +22,11 @@ export default function CreatePostScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [content, setContent] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [mediaUri, setMediaUri] = useState<string | null>(null);
+  const [mediaIsVideo, setMediaIsVideo] = useState(false);
   const [channelId, setChannelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // @mention state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState<number>(-1);
 
@@ -47,7 +49,6 @@ export default function CreatePostScreen() {
 
   const canPost = !channelId || canPostData?.canPost;
 
-  // Filter users matching the query after @
   const mentionSuggestions = mentionQuery !== null
     ? allUsers.filter((u: any) =>
         u.name?.toLowerCase().includes(mentionQuery.toLowerCase())
@@ -56,23 +57,13 @@ export default function CreatePostScreen() {
 
   function handleContentChange(text: string) {
     setContent(text);
-
-    // Detect @mention trigger: find the last @ before cursor
     const lastAt = text.lastIndexOf("@");
-    if (lastAt === -1) {
-      setMentionQuery(null);
-      setMentionStart(-1);
-      return;
-    }
-
+    if (lastAt === -1) { setMentionQuery(null); setMentionStart(-1); return; }
     const afterAt = text.slice(lastAt + 1);
-    // If afterAt contains a space, we've left the mention context
     if (afterAt.includes(" ") || afterAt.includes("\n")) {
-      setMentionQuery(null);
-      setMentionStart(-1);
+      setMentionQuery(null); setMentionStart(-1);
     } else {
-      setMentionQuery(afterAt);
-      setMentionStart(lastAt);
+      setMentionQuery(afterAt); setMentionStart(lastAt);
     }
   }
 
@@ -80,8 +71,7 @@ export default function CreatePostScreen() {
     if (mentionStart < 0) return;
     const before = content.slice(0, mentionStart);
     const after = content.slice(mentionStart + 1 + (mentionQuery?.length ?? 0));
-    const newContent = `${before}@${user.name} ${after}`;
-    setContent(newContent);
+    setContent(`${before}@${user.name} ${after}`);
     setMentionQuery(null);
     setMentionStart(-1);
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -94,8 +84,26 @@ export default function CreatePostScreen() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      setMediaUri(result.assets[0].uri);
+      setMediaIsVideo(false);
     }
+  }
+
+  async function pickVideo() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: false,
+      videoMaxDuration: 120,
+    });
+    if (!result.canceled) {
+      setMediaUri(result.assets[0].uri);
+      setMediaIsVideo(true);
+    }
+  }
+
+  function clearMedia() {
+    setMediaUri(null);
+    setMediaIsVideo(false);
   }
 
   async function submit() {
@@ -103,7 +111,19 @@ export default function CreatePostScreen() {
     if (!channelId) { Alert.alert("Atenção", "Selecione um canal."); return; }
     setLoading(true);
     try {
-      await api.post("/posts", { content: content.trim(), imageUrl: imageUri, channelId });
+      let imageUrl: string | null = null;
+      let videoUrl: string | null = null;
+
+      if (mediaUri) {
+        const filename = mediaIsVideo
+          ? `post_video_${Date.now()}.mp4`
+          : `post_image_${Date.now()}.jpg`;
+        const uploaded = await uploadMedia(mediaUri, filename);
+        if (mediaIsVideo) videoUrl = uploaded.url;
+        else imageUrl = uploaded.url;
+      }
+
+      await api.post("/posts", { content: content.trim(), imageUrl, videoUrl, channelId });
       qc.invalidateQueries({ queryKey: ["feed"] });
       qc.invalidateQueries({ queryKey: ["posts", String(channelId)] });
       router.back();
@@ -135,7 +155,6 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* @mention suggestions dropdown */}
       {mentionSuggestions.length > 0 && (
         <View style={styles.mentionDropdown}>
           <FlatList
@@ -144,11 +163,7 @@ export default function CreatePostScreen() {
             keyboardShouldPersistTaps="always"
             scrollEnabled={false}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.mentionItem}
-                onPress={() => insertMention(item)}
-                activeOpacity={0.75}
-              >
+              <TouchableOpacity style={styles.mentionItem} onPress={() => insertMention(item)} activeOpacity={0.75}>
                 {item.avatarUrl ? (
                   <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
                 ) : (
@@ -188,19 +203,37 @@ export default function CreatePostScreen() {
         />
         <Text style={styles.charCount}>{content.length}/1000</Text>
 
-        {imageUri && (
-          <View style={styles.imagePreview}>
-            <Image source={{ uri: imageUri }} style={styles.previewImg} resizeMode="cover" />
-            <TouchableOpacity style={styles.removeImg} onPress={() => setImageUri(null)}>
+        {mediaUri && (
+          <View style={styles.mediaPreview}>
+            {mediaIsVideo ? (
+              <Video
+                source={{ uri: mediaUri }}
+                style={styles.previewVideo}
+                resizeMode={ResizeMode.COVER}
+                useNativeControls
+                shouldPlay={false}
+              />
+            ) : (
+              <Image source={{ uri: mediaUri }} style={styles.previewImg} resizeMode="cover" />
+            )}
+            <TouchableOpacity style={styles.removeMedia} onPress={clearMedia}>
               <Feather name="x" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
         )}
 
-        <TouchableOpacity style={styles.addImageBtn} onPress={pickImage} activeOpacity={0.8}>
-          <Feather name="image" size={18} color={C.tint} />
-          <Text style={styles.addImageText}>Adicionar imagem</Text>
-        </TouchableOpacity>
+        {!mediaUri && (
+          <View style={styles.mediaButtons}>
+            <TouchableOpacity style={styles.mediaBtn} onPress={pickImage} activeOpacity={0.8}>
+              <Feather name="image" size={18} color={C.tint} />
+              <Text style={styles.mediaBtnText}>Adicionar foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.mediaBtn, styles.mediaBtnVideo]} onPress={pickVideo} activeOpacity={0.8}>
+              <Feather name="video" size={18} color="#7C3AED" />
+              <Text style={[styles.mediaBtnText, { color: "#7C3AED" }]}>Adicionar vídeo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={styles.sectionLabel}>Selecionar canal *</Text>
         <View style={styles.channelGrid}>
@@ -212,9 +245,7 @@ export default function CreatePostScreen() {
               activeOpacity={0.8}
             >
               <Feather name={(ch.icon || "hash") as any} size={14} color={channelId === ch.id ? "#fff" : C.textSecondary} />
-              <Text style={[styles.channelChipText, channelId === ch.id && { color: "#fff" }]}>
-                {ch.name}
-              </Text>
+              <Text style={[styles.channelChipText, channelId === ch.id && { color: "#fff" }]}>{ch.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -254,7 +285,6 @@ const styles = StyleSheet.create({
   },
   mentionAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#F3F4F6" },
   mentionAvatarFallback: { alignItems: "center", justifyContent: "center" },
-  mentionAvatarInitial: { color: "#1E3A8A", fontFamily: "Inter_700Bold", fontSize: 13 },
   mentionName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   mentionTag: { fontSize: 11, color: C.textSecondary, fontFamily: "Inter_400Regular" },
 
@@ -267,25 +297,31 @@ const styles = StyleSheet.create({
     lineHeight: 24, minHeight: 120, textAlignVertical: "top",
   },
   charCount: { fontSize: 12, color: C.textMuted, textAlign: "right", fontFamily: "Inter_400Regular" },
-  imagePreview: { borderRadius: 12, overflow: "hidden", position: "relative" },
+
+  mediaPreview: { borderRadius: 12, overflow: "hidden", position: "relative" },
   previewImg: { width: "100%", height: 200, borderRadius: 12 },
-  removeImg: {
+  previewVideo: { width: "100%", height: 200, borderRadius: 12 },
+  removeMedia: {
     position: "absolute", top: 8, right: 8,
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center",
   },
-  addImageBtn: {
-    flexDirection: "row", alignItems: "center", gap: 8,
+
+  mediaButtons: { flexDirection: "row", gap: 8 },
+  mediaBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     backgroundColor: "#f0fdf4", borderRadius: 10, padding: 12,
-    borderColor: "#bbf7d0",
+    borderWidth: 1, borderColor: "#bbf7d0",
   },
-  addImageText: { fontSize: 14, color: C.tint, fontFamily: "Inter_500Medium" },
+  mediaBtnVideo: { backgroundColor: "#F5F3FF", borderColor: "#DDD6FE" },
+  mediaBtnText: { fontSize: 14, color: C.tint, fontFamily: "Inter_500Medium" },
+
   sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   channelGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   channelChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderColor: C.border, backgroundColor: C.surface,
+    borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface,
   },
   channelChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
   channelChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },

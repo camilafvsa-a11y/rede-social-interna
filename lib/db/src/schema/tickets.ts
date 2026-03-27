@@ -25,7 +25,9 @@ export type Ticket = typeof ticketsTable.$inferSelect;
 export const ticketMessagesTable = pgTable("ticket_messages", {
   id: serial("id").primaryKey(),
   ticketId: integer("ticket_id").notNull(),
-  content: text("content").notNull(),
+  content: text("content"),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
   authorId: integer("author_id").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

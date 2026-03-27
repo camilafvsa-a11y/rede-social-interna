@@ -199,7 +199,7 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
   const enriched = await Promise.all(messages.map(async (m) => {
     const [author] = await db.select().from(usersTable).where(eq(usersTable.id, m.authorId)).limit(1);
     return {
-      id: m.id, ticketId: m.ticketId, content: m.content, authorId: m.authorId,
+      id: m.id, ticketId: m.ticketId, content: m.content, mediaUrl: m.mediaUrl ?? null, mediaType: m.mediaType ?? null, authorId: m.authorId,
       author: author ? formatUserBasic(author) : { id: m.authorId, name: "Usuário", role: "user" },
       createdAt: m.createdAt?.toISOString?.() ?? m.createdAt,
     };
@@ -210,15 +210,24 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
 router.post("/:id/messages", requireAuth, async (req, res) => {
   const user = (req as any).user;
   const { id } = req.params;
-  const { content } = req.body;
+  const { content, mediaUrl, mediaType } = req.body;
+  if (!content?.trim() && !mediaUrl) {
+    res.status(400).json({ error: "Conteúdo ou anexo são obrigatórios" }); return;
+  }
   const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, parseInt(id))).limit(1);
   if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
   if (!await canViewTicket(user, ticket)) { res.status(403).json({ error: "Forbidden" }); return; }
 
-  const [msg] = await db.insert(ticketMessagesTable).values({ ticketId: parseInt(id), content, authorId: user.id }).returning();
+  const [msg] = await db.insert(ticketMessagesTable).values({
+    ticketId: parseInt(id),
+    content: content?.trim() || null,
+    mediaUrl: mediaUrl || null,
+    mediaType: mediaType || null,
+    authorId: user.id,
+  }).returning();
   await db.update(ticketsTable).set({ updatedAt: new Date() }).where(eq(ticketsTable.id, parseInt(id)));
   res.json({
-    id: msg.id, ticketId: msg.ticketId, content: msg.content, authorId: msg.authorId,
+    id: msg.id, ticketId: msg.ticketId, content: msg.content, mediaUrl: msg.mediaUrl ?? null, mediaType: msg.mediaType ?? null, authorId: msg.authorId,
     author: formatUserBasic(user),
     createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
   });

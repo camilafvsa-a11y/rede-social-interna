@@ -4,6 +4,7 @@ import {
   Modal, Pressable, Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { Video, ResizeMode } from "expo-av";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
@@ -176,6 +177,15 @@ export default function PostCard({ post, onLikeChange, onDelete, compact }: Post
 
         {post.imageUrl && (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} resizeMode="cover" />
+        )}
+        {post.videoUrl && (
+          <Video
+            source={{ uri: post.videoUrl }}
+            style={styles.postImage}
+            resizeMode={ResizeMode.COVER}
+            useNativeControls
+            shouldPlay={false}
+          />
         )}
 
         <View style={styles.actions}>

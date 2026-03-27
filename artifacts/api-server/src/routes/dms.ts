@@ -121,6 +121,8 @@ router.get("/:convId/messages", requireAuth, async (req, res) => {
     conversationId: m.conversationId,
     senderId: m.senderId,
     content: m.content,
+    mediaUrl: m.mediaUrl ?? null,
+    mediaType: m.mediaType ?? null,
     readAt: m.readAt?.toISOString?.() ?? m.readAt ?? null,
     createdAt: m.createdAt?.toISOString?.() ?? m.createdAt,
   })));
@@ -129,16 +131,22 @@ router.get("/:convId/messages", requireAuth, async (req, res) => {
 router.post("/:convId/messages", requireAuth, async (req, res) => {
   const user = (req as any).user;
   const convId = parseInt(req.params.convId);
-  const { content } = req.body;
+  const { content, mediaUrl, mediaType } = req.body;
 
-  if (!content?.trim()) { res.status(400).json({ error: "Conteúdo vazio" }); return; }
+  if (!content?.trim() && !mediaUrl) { res.status(400).json({ error: "Conteúdo ou anexo são obrigatórios" }); return; }
 
   const [conv] = await db.select().from(dmConversationsTable).where(eq(dmConversationsTable.id, convId)).limit(1);
   if (!conv) { res.status(404).json({ error: "Conversa não encontrada" }); return; }
   if (conv.user1Id !== user.id && conv.user2Id !== user.id) { res.status(403).json({ error: "Forbidden" }); return; }
 
   const [msg] = await db.insert(dmMessagesTable)
-    .values({ conversationId: convId, senderId: user.id, content: content.trim() })
+    .values({
+      conversationId: convId,
+      senderId: user.id,
+      content: content?.trim() || null,
+      mediaUrl: mediaUrl || null,
+      mediaType: mediaType || null,
+    })
     .returning();
 
   await db.update(dmConversationsTable)
@@ -150,6 +158,8 @@ router.post("/:convId/messages", requireAuth, async (req, res) => {
     conversationId: msg.conversationId,
     senderId: msg.senderId,
     content: msg.content,
+    mediaUrl: msg.mediaUrl ?? null,
+    mediaType: msg.mediaType ?? null,
     readAt: null,
     createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
   });

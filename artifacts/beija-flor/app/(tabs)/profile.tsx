@@ -10,6 +10,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { uploadMedia } from "@/lib/upload";
 import Colors from "@/constants/colors";
 
 const C = Colors.light;
@@ -59,11 +60,15 @@ export default function ProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: false,
     });
     if (!result.canceled && result.assets[0]) {
       setUpdating(true);
       try {
-        const updated = await api.post(`/users/${user?.id}/avatar`, { avatarUrl: result.assets[0].uri });
+        const asset = result.assets[0];
+        const filename = asset.fileName || `avatar_${Date.now()}.jpg`;
+        const uploaded = await uploadMedia(asset.uri, filename);
+        const updated = await api.post(`/users/${user?.id}/avatar`, { avatarUrl: uploaded.url });
         updateUser(updated);
         // Invalidate all caches that embed the author's avatar so every
         // post, comment, and feed card immediately shows the new photo.

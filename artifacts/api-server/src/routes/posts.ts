@@ -17,6 +17,7 @@ async function enrichPost(post: any, userId: number) {
     id: post.id,
     content: post.content,
     imageUrl: post.imageUrl,
+    videoUrl: post.videoUrl ?? null,
     authorId: post.authorId,
     author: author ? formatUserBasic(author) : { id: post.authorId, name: "Usuário", role: "user" },
     channelId: post.channelId,
@@ -82,8 +83,8 @@ router.post("/", requireAuth, async (req, res) => {
     }
   }
 
-  const { targetUserId } = req.body;
-  const [post] = await db.insert(postsTable).values({ content, imageUrl, authorId: user.id, channelId, targetUserId: targetUserId ?? null }).returning();
+  const { videoUrl, targetUserId } = req.body;
+  const [post] = await db.insert(postsTable).values({ content, imageUrl: imageUrl ?? null, videoUrl: videoUrl ?? null, authorId: user.id, channelId, targetUserId: targetUserId ?? null }).returning();
   const enriched = await enrichPost(post, user.id);
   res.json(enriched);
 

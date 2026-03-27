@@ -15,7 +15,9 @@ export const dmMessagesTable = pgTable("dm_messages", {
   id: serial("id").primaryKey(),
   conversationId: integer("conversation_id").notNull().references(() => dmConversationsTable.id, { onDelete: "cascade" }),
   senderId: integer("sender_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  content: text("content").notNull(),
+  content: text("content"),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   readAt: timestamp("read_at"),
 });
