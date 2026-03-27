@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, Platform,
+  Image, ActivityIndicator, Platform, Modal, TextInput,
+  KeyboardAvoidingView, Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 
 const C = Colors.light;
@@ -23,9 +25,141 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString("pt-BR");
 }
 
+function LastMessagePreview({ msg }: { msg: any }) {
+  if (!msg) return null;
+  if (msg.mediaType === "image") return <Text style={styles.convLast} numberOfLines={1}>📷 Foto</Text>;
+  if (msg.mediaType === "video") return <Text style={styles.convLast} numberOfLines={1}>🎥 Vídeo</Text>;
+  if (msg.mediaType === "pdf") return <Text style={styles.convLast} numberOfLines={1}>📄 PDF</Text>;
+  if (msg.content) return <Text style={styles.convLast} numberOfLines={1}>{msg.content}</Text>;
+  return null;
+}
+
+function NewConversationModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const { user: me } = useAuth();
+  const [search, setSearch] = useState("");
+
+  const { data: users = [], isLoading } = useQuery<any[]>({
+    queryKey: ["users-all"],
+    queryFn: () => api.get("/users"),
+    enabled: visible,
+  });
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return users
+      .filter((u: any) => u.id !== me?.id)
+      .filter((u: any) =>
+        !q ||
+        u.name?.toLowerCase().includes(q) ||
+        u.tag?.toLowerCase().includes(q)
+      );
+  }, [users, search, me?.id]);
+
+  function handleSelect(userId: number) {
+    onClose();
+    setSearch("");
+    router.push(`/messages/with/${userId}` as any);
+  }
+
+  function handleClose() {
+    setSearch("");
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalKAV}
+        >
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            {/* Handle bar */}
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nova Conversa</Text>
+              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name="x" size={22} color={C.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchBar}>
+              <Feather name="search" size={16} color={C.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar colaborador..."
+                placeholderTextColor={C.textMuted}
+                value={search}
+                onChangeText={setSearch}
+                autoFocus
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            {isLoading ? (
+              <View style={styles.modalCenter}>
+                <ActivityIndicator size="small" color={C.tint} />
+              </View>
+            ) : filtered.length === 0 ? (
+              <View style={styles.modalCenter}>
+                <Feather name="users" size={32} color={C.borderLight} />
+                <Text style={styles.noResultsText}>
+                  {search ? "Nenhum colaborador encontrado" : "Nenhum usuário disponível"}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filtered}
+                keyExtractor={(u) => String(u.id)}
+                keyboardShouldPersistTaps="handled"
+                style={styles.userList}
+                showsVerticalScrollIndicator={false}
+                ItemSeparatorComponent={() => <View style={styles.userSep} />}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.userRow}
+                    onPress={() => handleSelect(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    {item.avatarUrl ? (
+                      <Image source={{ uri: item.avatarUrl }} style={styles.userAvatar} />
+                    ) : (
+                      <View style={styles.userAvatarFallback}>
+                        <Feather name="user" size={18} color="#9CA3AF" />
+                      </View>
+                    )}
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{item.name}</Text>
+                      {item.tag ? (
+                        <Text style={styles.userTag}>@{item.tag}</Text>
+                      ) : (
+                        <Text style={styles.userTag}>{item.role === "admin" ? "Admin" : item.role === "master_admin" ? "Master Admin" : "Colaborador"}</Text>
+                      )}
+                    </View>
+                    <Feather name="chevron-right" size={16} color={C.border} />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const [showNewConv, setShowNewConv] = useState(false);
 
   const { data: conversations = [], isLoading } = useQuery<any[]>({
     queryKey: ["dms"],
@@ -40,7 +174,13 @@ export default function MessagesScreen() {
           <Feather name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Mensagens</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          style={styles.composeBtn}
+          onPress={() => setShowNewConv(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="edit-2" size={20} color={C.tint} />
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -51,7 +191,11 @@ export default function MessagesScreen() {
         <View style={styles.center}>
           <Feather name="send" size={40} color={C.textMuted} />
           <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
-          <Text style={styles.emptyText}>Toque no nome de um colega para iniciar uma conversa</Text>
+          <Text style={styles.emptyText}>Toque em ✏️ para iniciar uma nova conversa</Text>
+          <TouchableOpacity style={styles.newConvBtn} onPress={() => setShowNewConv(true)} activeOpacity={0.8}>
+            <Feather name="edit-2" size={16} color="#fff" />
+            <Text style={styles.newConvBtnText}>Nova Conversa</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -84,22 +228,22 @@ export default function MessagesScreen() {
                     <Text style={styles.convTime}>{timeAgo(item.lastMessage.createdAt)}</Text>
                   )}
                 </View>
-                {item.lastMessage && (
-                  <Text style={[styles.convLast, item.unreadCount > 0 && styles.convLastBold]} numberOfLines={1}>
-                    {item.lastMessage.content}
-                  </Text>
-                )}
+                <LastMessagePreview msg={item.lastMessage} />
               </View>
 
-              {item.unreadCount > 0 && (
+              {item.unreadCount > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.unreadCount > 99 ? "99+" : item.unreadCount}</Text>
                 </View>
+              ) : (
+                <Feather name="chevron-right" size={16} color={C.borderLight} />
               )}
             </TouchableOpacity>
           )}
         />
       )}
+
+      <NewConversationModal visible={showNewConv} onClose={() => setShowNewConv(false)} />
     </View>
   );
 }
@@ -112,9 +256,20 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
   },
   title: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
+  composeBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center", justifyContent: "center",
+  },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center" },
+  newConvBtn: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: C.tint, borderRadius: 24,
+    paddingHorizontal: 20, paddingVertical: 12, marginTop: 8,
+  },
+  newConvBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
   separator: { height: 1, backgroundColor: C.borderLight, marginLeft: 76 },
   convRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
@@ -135,11 +290,62 @@ const styles = StyleSheet.create({
   convNameBold: { fontFamily: "Inter_700Bold" },
   convTime: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
   convLast: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
-  convLastBold: { fontFamily: "Inter_600SemiBold", color: C.text },
   badge: {
-    minWidth: 20, height: 20, borderRadius: 10,
+    minWidth: 22, height: 22, borderRadius: 11,
     backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
   },
   badgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalKAV: { justifyContent: "flex-end" },
+  modalSheet: {
+    backgroundColor: C.surface,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingTop: 8,
+    maxHeight: "80%",
+    shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 16,
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: C.border,
+    alignSelf: "center", marginBottom: 12,
+  },
+  modalHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingBottom: 12,
+  },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    backgroundColor: C.inputBg, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: C.border,
+  },
+  searchInput: {
+    flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
+    color: C.text, padding: 0,
+  },
+  modalCenter: { alignItems: "center", justifyContent: "center", padding: 32, gap: 10 },
+  noResultsText: { fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" },
+  userList: { maxHeight: 400 },
+  userSep: { height: 1, backgroundColor: C.borderLight, marginLeft: 70 },
+  userRow: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingHorizontal: 16, paddingVertical: 13,
+  },
+  userAvatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.border },
+  userAvatarFallback: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center",
+  },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.text },
+  userTag: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 1 },
 });

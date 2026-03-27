@@ -31,6 +31,7 @@ async function enrichConversation(conv: any, myId: number) {
       ? {
           content: lastMsg.content,
           senderId: lastMsg.senderId,
+          mediaType: lastMsg.mediaType ?? null,
           createdAt: lastMsg.createdAt?.toISOString?.() ?? lastMsg.createdAt,
         }
       : null,
