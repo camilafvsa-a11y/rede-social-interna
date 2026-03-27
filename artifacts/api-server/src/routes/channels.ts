@@ -28,7 +28,8 @@ router.get("/", requireAuth, async (req, res) => {
     if (user.role === "admin" || user.role === "master_admin") return true;
     const tags = JSON.parse(ch.allowedTags || "[]");
     if (tags.length === 0) return true;
-    return user.tag && tags.includes(user.tag);
+    const userTags = [user.tag, ...(user.workTags || [])].filter(Boolean);
+    return userTags.some((t) => tags.includes(t));
   });
 
   res.json(accessible.map((ch) => formatChannel(ch)));

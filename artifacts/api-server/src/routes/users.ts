@@ -32,7 +32,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   const {
     name, tag, role, birthDate, admissionDate,
-    cpf, extraTags, bannedUntil, appBanned,
+    cpf, extraTags, workTags, bannedUntil, appBanned,
   } = req.body;
   const currentUser = (req as any).user;
   const [target] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(id))).limit(1);
@@ -56,11 +56,29 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (admissionDate !== undefined) updates.admissionDate = admissionDate;
   if (cpf !== undefined) updates.cpf = cpf;
   if (extraTags !== undefined) updates.extraTags = extraTags;
+  if (workTags !== undefined) updates.workTags = workTags;
   if (bannedUntil !== undefined) updates.bannedUntil = bannedUntil ? new Date(bannedUntil) : null;
   if (appBanned !== undefined) updates.appBanned = appBanned;
 
   const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, parseInt(id))).returning();
   res.json(formatUser(updated));
+});
+
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const currentUser = (req as any).user;
+  if (currentUser.role !== "master_admin") {
+    res.status(403).json({ error: "Apenas o master admin pode excluir usuários permanentemente" });
+    return;
+  }
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(id))).limit(1);
+  if (!target) { res.status(404).json({ error: "Usuário não encontrado" }); return; }
+  if (target.role === "master_admin") {
+    res.status(403).json({ error: "Não é possível excluir o master admin" });
+    return;
+  }
+  await db.delete(usersTable).where(eq(usersTable.id, parseInt(id)));
+  res.json({ success: true });
 });
 
 router.post("/:id/avatar", requireAuth, async (req, res) => {

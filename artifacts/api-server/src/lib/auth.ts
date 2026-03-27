@@ -60,6 +60,7 @@ export function formatUser(user: any) {
     avatarUrl: user.avatarUrl,
     tag: user.tag,
     extraTags: user.extraTags ?? [],
+    workTags: user.workTags ?? [],
     role: user.role,
     cpf: user.cpf,
     birthDate: user.birthDate,

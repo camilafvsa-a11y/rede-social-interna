@@ -13,11 +13,6 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-const TAG_OPTIONS = ["marketing", "adm", "socio", "posto", "churrascaria", "gerente"];
-const TAG_LABELS: Record<string, string> = {
-  marketing: "Marketing", adm: "Adm", socio: "Sócio",
-  posto: "Posto", churrascaria: "Churrascaria", gerente: "Gerente",
-};
 const ICON_OPTIONS = ["hash", "globe", "megaphone", "briefcase", "users", "star", "award", "trending-up", "coffee", "droplet"];
 
 const COLOR_PALETTE = [
@@ -64,6 +59,17 @@ export default function AdminChannelsScreen() {
     setShowToast(true);
     toastTimer.current = setTimeout(() => setShowToast(false), 2800);
   }
+
+  const { data: workTagOptions = [] } = useQuery<{id:number;key:string;label:string;color:string;bg:string}[]>({
+    queryKey: ["work-tags"],
+    queryFn: () => api.get("/work-tags"),
+  });
+
+  const tagLabelMap = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    workTagOptions.forEach((t) => { m[t.key] = t.label; });
+    return m;
+  }, [workTagOptions]);
 
   const { data: channels = [], isLoading, refetch } = useQuery<any[]>({
     queryKey: ["admin-channels"],
@@ -220,7 +226,7 @@ export default function AdminChannelsScreen() {
               </View>
               <Text style={styles.chDesc} numberOfLines={1}>{ch.description || "Sem descrição"}</Text>
               {ch.allowedTags?.length > 0 && (
-                <Text style={styles.chTags}>{ch.allowedTags.map((t: string) => TAG_LABELS[t]).join(", ")}</Text>
+                <Text style={styles.chTags}>{ch.allowedTags.map((t: string) => tagLabelMap[t] ?? t).join(", ")}</Text>
               )}
             </View>
             <TouchableOpacity onPress={() => openEdit(ch)} style={styles.editBtn}>
@@ -340,13 +346,13 @@ export default function AdminChannelsScreen() {
 
               <Text style={styles.fieldLabel}>Tags permitidas (vazio = todos)</Text>
               <View style={styles.tagRow}>
-                {TAG_OPTIONS.map((tag) => (
+                {workTagOptions.map((wt) => (
                   <TouchableOpacity
-                    key={tag}
-                    style={[styles.tagChip, form.allowedTags.includes(tag) && styles.tagChipSelected]}
-                    onPress={() => toggleTag(tag)}
+                    key={wt.key}
+                    style={[styles.tagChip, form.allowedTags.includes(wt.key) && styles.tagChipSelected]}
+                    onPress={() => toggleTag(wt.key)}
                   >
-                    <Text style={[styles.tagChipText, form.allowedTags.includes(tag) && { color: "#fff" }]}>{TAG_LABELS[tag]}</Text>
+                    <Text style={[styles.tagChipText, form.allowedTags.includes(wt.key) && { color: "#fff" }]}>{wt.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

@@ -111,30 +111,17 @@ export default function DocProgressScreen() {
     queryFn: () => api.get("/docs/admin"),
   });
 
-  async function handleReset(userId: number, userName: string) {
-    Alert.alert(
-      "Resetar progresso",
-      `Tem certeza que deseja resetar todo o progresso de leitura de ${userName}?\n\nIsso irá zerar os documentos lidos e o histórico de conclusões.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Resetar",
-          style: "destructive",
-          onPress: async () => {
-            setResettingId(userId);
-            try {
-              await api.delete(`/docs/reset/${userId}`);
-              await refetch();
-              qc.invalidateQueries({ queryKey: ["admin-doc-progress"] });
-            } catch (e: any) {
-              Alert.alert("Erro", e.message || "Não foi possível resetar o progresso.");
-            } finally {
-              setResettingId(null);
-            }
-          },
-        },
-      ]
-    );
+  async function handleReset(userId: number) {
+    setResettingId(userId);
+    try {
+      await api.delete(`/docs/reset/${userId}`);
+      await refetch();
+      qc.invalidateQueries({ queryKey: ["admin-doc-progress"] });
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível resetar o progresso.");
+    } finally {
+      setResettingId(null);
+    }
   }
 
   const filtered = progress.filter((p) =>
@@ -214,7 +201,7 @@ export default function DocProgressScreen() {
           renderItem={({ item }) => (
             <UserRow
               item={item}
-              onReset={() => handleReset(item.user.id, item.user.name)}
+              onReset={() => handleReset(item.user.id)}
               resetting={resettingId === item.user.id}
             />
           )}

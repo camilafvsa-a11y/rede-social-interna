@@ -17,6 +17,7 @@ export const usersTable = pgTable("users", {
   admissionDate: text("admission_date"),
   cpf: text("cpf"),
   extraTags: text("extra_tags").array(),
+  workTags: text("work_tags").array(),
   bannedUntil: timestamp("banned_until"),
   appBanned: boolean("app_banned").notNull().default(false),
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),

@@ -11,6 +11,7 @@ import docsRouter from "./docs.js";
 import exportRouter from "./export.js";
 import notificationsRouter from "./notifications.js";
 import integraItemsRouter from "./integra-items.js";
+import workTagsRouter from "./work-tags.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/docs", docsRouter);
 router.use("/data", exportRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/integra-items", integraItemsRouter);
+router.use("/work-tags", workTagsRouter);
 
 export default router;
