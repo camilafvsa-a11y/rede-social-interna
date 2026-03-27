@@ -172,7 +172,7 @@ export default function UserDetailScreen() {
     );
   }
 
-  async function handleSave() {
+  async function doSave() {
     setSaving(true);
     try {
       await api.patch(`/users/${id}`, {
@@ -186,7 +186,7 @@ export default function UserDetailScreen() {
       });
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
       await qc.invalidateQueries({ queryKey: ["admin-user", id] });
-      setPrevSavedData(origData); // snapshot of state before this save
+      setPrevSavedData(origData);
       setOrigData({ role, tag, extraTags, appBanned, birthDate, cpf, admissionDate });
       triggerToast();
     } catch (e: any) {
@@ -194,6 +194,17 @@ export default function UserDetailScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleSave() {
+    Alert.alert(
+      "Salvar alterações",
+      `Deseja salvar as alterações feitas no perfil de ${user?.name ?? "este colaborador"}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Salvar", onPress: doSave },
+      ]
+    );
   }
 
   async function handleUndo() {
@@ -355,15 +366,32 @@ export default function UserDetailScreen() {
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={[styles.saveBtn, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
+          style={[
+            styles.saveBtn,
+            isDirty && !saving && !isMaster && styles.saveBtnActive,
+            (saving || isMaster || !isDirty) && { opacity: 0.4 },
+          ]}
           onPress={handleSave}
           disabled={saving || isMaster || !isDirty}
         >
           {saving
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={styles.saveBtnText}>Salvar</Text>}
+            : (
+              <View style={styles.saveBtnInner}>
+                {isDirty && <View style={styles.saveDot} />}
+                <Text style={styles.saveBtnText}>Salvar</Text>
+              </View>
+            )
+          }
         </TouchableOpacity>
       </View>
+
+      {isDirty && !isMaster && (
+        <View style={styles.pendingBanner}>
+          <Feather name="edit-2" size={13} color="#92400E" />
+          <Text style={styles.pendingBannerText}>Alterações não salvas — toque em Salvar para confirmar</Text>
+        </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -716,7 +744,11 @@ export default function UserDetailScreen() {
 
         {/* Save button bottom */}
         <TouchableOpacity
-          style={[styles.saveBtnFull, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
+          style={[
+            styles.saveBtnFull,
+            isDirty && !saving && !isMaster && styles.saveBtnFullActive,
+            (saving || isMaster || !isDirty) && { opacity: 0.4 },
+          ]}
           onPress={handleSave}
           disabled={saving || isMaster || !isDirty}
           activeOpacity={0.8}
@@ -725,7 +757,9 @@ export default function UserDetailScreen() {
             ? <ActivityIndicator size="small" color="#fff" />
             : <>
               <Feather name="save" size={16} color="#fff" />
-              <Text style={styles.saveBtnFullText}>Salvar Alterações</Text>
+              <Text style={styles.saveBtnFullText}>
+                {isDirty ? "Salvar Alterações" : "Sem alterações"}
+              </Text>
             </>}
         </TouchableOpacity>
       </ScrollView>
@@ -756,7 +790,23 @@ const styles = StyleSheet.create({
     backgroundColor: C.tint, borderRadius: 8,
     paddingHorizontal: 14, paddingVertical: 8,
   },
+  saveBtnActive: {
+    backgroundColor: "#16A34A",
+    shadowColor: "#16A34A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  saveBtnInner: { flexDirection: "row", alignItems: "center", gap: 5 },
+  saveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#FDE68A" },
   saveBtnText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  pendingBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#FEF3C7", paddingHorizontal: 16, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: "#FDE68A",
+  },
+  pendingBannerText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium", color: "#92400E" },
 
   content: { padding: 14, gap: 12 },
 
@@ -928,6 +978,13 @@ const styles = StyleSheet.create({
     backgroundColor: C.tint, borderRadius: 14, paddingVertical: 14,
     shadowColor: C.tint, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+  },
+  saveBtnFullActive: {
+    backgroundColor: "#16A34A",
+    shadowColor: "#16A34A",
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 6,
   },
   saveBtnFullText: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
 
