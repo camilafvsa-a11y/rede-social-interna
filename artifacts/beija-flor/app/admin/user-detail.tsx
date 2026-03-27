@@ -129,9 +129,10 @@ export default function UserDetailScreen() {
 
   const [prevSavedData, setPrevSavedData] = useState<typeof origData | null>(null);
 
-  // Toast
+  // Toast / save error
   const [showToast, setShowToast] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function triggerToast() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -211,9 +212,9 @@ export default function UserDetailScreen() {
 
   async function doSave() {
     setSaving(true);
+    setSaveError(null);
     try {
-      await api.patch(`/users/${id}`, {
-        role,
+      const payload: any = {
         tag: null,
         workTags,
         extraTags,
@@ -221,21 +222,23 @@ export default function UserDetailScreen() {
         birthDate: birthDate || null,
         cpf: cpf || null,
         admissionDate: admissionDate || null,
-      });
+      };
+      if (!isMaster) payload.role = role;
+      await api.patch(`/users/${id}`, payload);
       await qc.invalidateQueries({ queryKey: ["admin-users"] });
       await qc.invalidateQueries({ queryKey: ["admin-user", id] });
       setPrevSavedData(origData);
       setOrigData({ role, workTags, extraTags, appBanned, birthDate, cpf, admissionDate });
       triggerToast();
     } catch (e: any) {
-      Alert.alert("Erro", e.message || "Não foi possível salvar.");
+      setSaveError(e.message || "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
   }
 
   function handleSave() {
-    if (!isDirty || isMaster) return;
+    if (!isDirty || saving) return;
     doSave();
   }
 
@@ -418,9 +421,9 @@ export default function UserDetailScreen() {
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={[styles.saveBtn, isDirty && !saving && !isMaster && styles.saveBtnActive, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
+          style={[styles.saveBtn, isDirty && !saving && styles.saveBtnActive, (saving || !isDirty) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={saving || isMaster || !isDirty}
+          disabled={saving || !isDirty}
         >
           {saving ? <ActivityIndicator size="small" color="#fff" /> : (
             <View style={styles.saveBtnInner}>
@@ -431,7 +434,16 @@ export default function UserDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {isDirty && !isMaster && (
+      {saveError && (
+        <View style={[styles.pendingBanner, { backgroundColor: "#FEE2E2", borderColor: "#FECACA" }]}>
+          <Feather name="alert-circle" size={13} color="#DC2626" />
+          <Text style={[styles.pendingBannerText, { color: "#DC2626" }]}>{saveError}</Text>
+          <TouchableOpacity onPress={() => setSaveError(null)} style={{ marginLeft: "auto" }}>
+            <Feather name="x" size={13} color="#DC2626" />
+          </TouchableOpacity>
+        </View>
+      )}
+      {isDirty && !saveError && (
         <View style={styles.pendingBanner}>
           <Feather name="edit-2" size={13} color="#92400E" />
           <Text style={styles.pendingBannerText}>Alterações não salvas — toque em Salvar para confirmar</Text>
@@ -533,7 +545,7 @@ export default function UserDetailScreen() {
               <View key={t.key} style={styles.tagChipWrap}>
                 <TouchableOpacity
                   style={[styles.tagChip, workTags.includes(t.key) && { backgroundColor: t.bg, borderColor: t.color }]}
-                  onPress={() => !isMaster && toggleWorkTag(t.key)}
+                  onPress={() => toggleWorkTag(t.key)}
                   activeOpacity={0.8}
                 >
                   {workTags.includes(t.key) && <Feather name="check" size={11} color={t.color} />}
@@ -567,16 +579,23 @@ export default function UserDetailScreen() {
                 style={[
                   styles.tagChip,
                   { backgroundColor: C.surface },
-                  extraTags.includes(t.key) && { backgroundColor: t.bg, borderColor: t.color },
+                  extraTags.includes(t.key) && {
+                    backgroundColor: t.color,
+                    borderColor: t.color,
+                    borderWidth: 2,
+                  },
                 ]}
-                onPress={() => !isMaster && toggleFamilyTag(t.key)}
-                activeOpacity={0.8}
+                onPress={() => toggleFamilyTag(t.key)}
+                activeOpacity={0.7}
               >
                 {extraTags.includes(t.key)
-                  ? <Feather name="check" size={12} color={t.color} />
+                  ? <Feather name="check" size={12} color="#fff" />
                   : <Feather name={t.icon} size={12} color={C.textMuted} />
                 }
-                <Text style={[styles.tagChipText, extraTags.includes(t.key) ? { color: t.color } : { color: C.textSecondary }]}>
+                <Text style={[
+                  styles.tagChipText,
+                  extraTags.includes(t.key) ? { color: "#fff", fontFamily: "Inter_700Bold" } : { color: C.textSecondary },
+                ]}>
                   {t.label}
                 </Text>
               </TouchableOpacity>
@@ -760,9 +779,9 @@ export default function UserDetailScreen() {
 
         {/* ── Save button ── */}
         <TouchableOpacity
-          style={[styles.saveBtnFull, isDirty && !saving && !isMaster && styles.saveBtnFullActive, (saving || isMaster || !isDirty) && { opacity: 0.4 }]}
+          style={[styles.saveBtnFull, isDirty && !saving && styles.saveBtnFullActive, (saving || !isDirty) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={saving || isMaster || !isDirty}
+          disabled={saving || !isDirty}
           activeOpacity={0.8}
         >
           {saving ? <ActivityIndicator size="small" color="#fff" /> : (
