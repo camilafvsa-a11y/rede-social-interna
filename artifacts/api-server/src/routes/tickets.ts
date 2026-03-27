@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, ticketsTable, ticketMessagesTable, ticketHandlersTable, usersTable } from "@workspace/db";
+import { db, ticketsTable, ticketMessagesTable, ticketHandlersTable, usersTable, type Ticket } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
@@ -12,7 +12,7 @@ async function canViewTicket(user: any, ticket: any) {
   return !!handler;
 }
 
-async function enrichTicket(t: any) {
+async function enrichTicket(t: Ticket) {
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, t.authorId)).limit(1);
   const msgRows = await db.select().from(ticketMessagesTable).where(eq(ticketMessagesTable.ticketId, t.id));
 
@@ -85,21 +85,32 @@ router.patch("/:id", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Forbidden" }); return;
   }
 
-  const updateData: any = { updatedAt: new Date() };
+  type TicketStatus = "open" | "in_progress" | "closed";
+  type TicketUpdatePayload = {
+    updatedAt: Date;
+    status?: TicketStatus;
+    assignedToId?: number | null;
+    assignedAt?: Date | null;
+  };
+
+  const updateData: TicketUpdatePayload = { updatedAt: new Date() };
+
   if (status !== undefined) {
-    const validStatuses = ["open", "in_progress", "closed"];
-    if (!validStatuses.includes(status)) {
+    const validStatuses: TicketStatus[] = ["open", "in_progress", "closed"];
+    if (!validStatuses.includes(status as TicketStatus)) {
       res.status(400).json({ error: "Invalid status value" }); return;
     }
-    updateData.status = status;
+    updateData.status = status as TicketStatus;
   }
   if (assignedToId !== undefined) {
     if (assignedToId === null) {
       updateData.assignedToId = null;
       updateData.assignedAt = null;
     } else {
-      const numId = parseInt(assignedToId);
-      if (isNaN(numId)) { res.status(400).json({ error: "Invalid assignedToId" }); return; }
+      if (typeof assignedToId !== "number" && !/^\d+$/.test(String(assignedToId))) {
+        res.status(400).json({ error: "Invalid assignedToId" }); return;
+      }
+      const numId = Number(assignedToId);
       const [validHandler] = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, numId)).limit(1);
       if (!validHandler) { res.status(400).json({ error: "User is not a registered ticket handler" }); return; }
       updateData.assignedToId = numId;

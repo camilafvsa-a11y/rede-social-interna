@@ -82,7 +82,7 @@ export default function NewTicketScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.categoryIconWrap, { backgroundColor: selected ? "rgba(255,255,255,0.25)" : cat.bg }]}>
-                  <Feather name={cat.icon as any} size={14} color={selected ? "#fff" : cat.color} />
+                  <Feather name={cat.icon} size={14} color={selected ? "#fff" : cat.color} />
                 </View>
                 <Text style={[styles.categoryText, selected && styles.categoryTextSelected]}>{cat.label}</Text>
               </TouchableOpacity>

@@ -19,6 +19,24 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   closed:      { label: "Resolvido",       color: "#6B7280", bg: "#F3F4F6", next: "open",        nextLabel: "Reabrir" },
 };
 
+type TicketStatus = "open" | "in_progress" | "closed";
+
+interface TicketItem {
+  id: number;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  category: string;
+  authorId: number;
+  author: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
+  assignedToId: number | null;
+  assignedTo: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
+  assignedAt: string | null;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const CAT_COLORS: Record<string, { color: string; bg: string }> = {};
 TICKET_CATEGORIES.forEach((c) => { CAT_COLORS[c.label] = { color: c.color, bg: c.bg }; });
 
@@ -33,15 +51,21 @@ export default function AdminTicketsScreen() {
 
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
-  const [assignModalTicket, setAssignModalTicket] = useState<any | null>(null);
+  const [assignModalTicket, setAssignModalTicket] = useState<TicketItem | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const { data: tickets = [], isLoading, refetch } = useQuery<any[]>({
+  const { data: tickets = [], isLoading, refetch } = useQuery<TicketItem[]>({
     queryKey: ["admin-tickets"],
     queryFn: () => api.get("/tickets"),
   });
 
-  const { data: handlers = [] } = useQuery<any[]>({
+  interface HandlerItem {
+    id: number;
+    userId: number;
+    user: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
+    addedAt: string;
+  }
+  const { data: handlers = [] } = useQuery<HandlerItem[]>({
     queryKey: ["ticket-handlers"],
     queryFn: () => api.get("/tickets/admin/handlers"),
     enabled: !!assignModalTicket,
@@ -58,7 +82,7 @@ export default function AdminTicketsScreen() {
   const inProgressCount = tickets.filter((t) => t.status === "in_progress").length;
   const closedCount = tickets.filter((t) => t.status === "closed").length;
 
-  async function changeStatus(ticket: any, newStatus: string) {
+  async function changeStatus(ticket: TicketItem, newStatus: TicketStatus) {
     setActionLoading(ticket.id);
     try {
       await api.patch(`/tickets/${ticket.id}`, { status: newStatus });
@@ -176,9 +200,9 @@ export default function AdminTicketsScreen() {
           <ActivityIndicator size="large" color={C.tint} />
         </View>
       ) : (
-        <FlatList
+        <FlatList<TicketItem>
           data={displayed}
-          keyExtractor={(item: any) => String(item.id)}
+          keyExtractor={(item) => String(item.id)}
           ListHeaderComponent={renderHeader}
           renderItem={({ item: ticket }) => {
             const sc = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
@@ -188,7 +212,7 @@ export default function AdminTicketsScreen() {
             return (
               <TouchableOpacity
                 style={styles.card}
-                onPress={() => router.push(`/ticket/${ticket.id}` as any)}
+                onPress={() => router.push(`/ticket/${ticket.id}`)}
                 activeOpacity={0.9}
               >
                 <View style={styles.cardHeader}>
@@ -288,9 +312,9 @@ export default function AdminTicketsScreen() {
 
             <Text style={styles.modalSubtitle}>Escolha um responsável:</Text>
 
-            <FlatList
+            <FlatList<HandlerItem>
               data={handlers}
-              keyExtractor={(item: any) => String(item.id)}
+              keyExtractor={(item) => String(item.id)}
               renderItem={({ item: h }) => (
                 <TouchableOpacity
                   style={[
