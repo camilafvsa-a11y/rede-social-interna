@@ -12,7 +12,7 @@ async function canViewTicket(user: any, ticket: any) {
   return !!handler;
 }
 
-async function enrichTicket(t: any, includeMessages = false) {
+async function enrichTicket(t: any) {
   const [author] = await db.select().from(usersTable).where(eq(usersTable.id, t.authorId)).limit(1);
   const msgRows = await db.select().from(ticketMessagesTable).where(eq(ticketMessagesTable.ticketId, t.id));
 
@@ -22,7 +22,7 @@ async function enrichTicket(t: any, includeMessages = false) {
     if (assignee) assignedTo = formatUserBasic(assignee);
   }
 
-  const base = {
+  return {
     id: t.id,
     title: t.title,
     description: t.description,
@@ -37,19 +37,6 @@ async function enrichTicket(t: any, includeMessages = false) {
     createdAt: t.createdAt?.toISOString?.() ?? t.createdAt,
     updatedAt: t.updatedAt?.toISOString?.() ?? t.updatedAt,
   };
-
-  if (includeMessages) {
-    (base as any).messages = await Promise.all(msgRows.map(async (m: any) => {
-      const [msgAuthor] = await db.select().from(usersTable).where(eq(usersTable.id, m.authorId)).limit(1);
-      return {
-        id: m.id, ticketId: m.ticketId, content: m.content, authorId: m.authorId,
-        author: msgAuthor ? formatUserBasic(msgAuthor) : { id: m.authorId, name: "Usuário", role: "user" },
-        createdAt: m.createdAt?.toISOString?.() ?? m.createdAt,
-      };
-    }));
-  }
-
-  return base;
 }
 
 router.get("/", requireAuth, async (req, res) => {
@@ -99,10 +86,25 @@ router.patch("/:id", requireAuth, async (req, res) => {
   }
 
   const updateData: any = { updatedAt: new Date() };
-  if (status !== undefined) updateData.status = status;
+  if (status !== undefined) {
+    const validStatuses = ["open", "in_progress", "closed"];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ error: "Invalid status value" }); return;
+    }
+    updateData.status = status;
+  }
   if (assignedToId !== undefined) {
-    updateData.assignedToId = assignedToId === null ? null : parseInt(assignedToId);
-    updateData.assignedAt = assignedToId === null ? null : new Date();
+    if (assignedToId === null) {
+      updateData.assignedToId = null;
+      updateData.assignedAt = null;
+    } else {
+      const numId = parseInt(assignedToId);
+      if (isNaN(numId)) { res.status(400).json({ error: "Invalid assignedToId" }); return; }
+      const [validHandler] = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, numId)).limit(1);
+      if (!validHandler) { res.status(400).json({ error: "User is not a registered ticket handler" }); return; }
+      updateData.assignedToId = numId;
+      updateData.assignedAt = new Date();
+    }
   }
 
   const [updated] = await db.update(ticketsTable).set(updateData).where(eq(ticketsTable.id, parseInt(id))).returning();
