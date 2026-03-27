@@ -10,8 +10,7 @@ import Colors from "@/constants/colors";
 const C = Colors.light;
 
 const ADMIN_SECTIONS = [
-  { icon: "users", title: "Usuários", desc: "Gerenciar usuários e permissões", route: "/admin/users" },
-  { icon: "mail", title: "E-mails Autorizados", desc: "Controlar quem pode acessar o app", route: "/admin/emails" },
+  { icon: "users", title: "Usuários", desc: "Gerenciar usuários, permissões e e-mails autorizados", route: "/admin/users" },
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
   { icon: "inbox", title: "Chamados", desc: "Gerenciar chamados, delegar e configurar responsáveis por área", route: "/admin/tickets" },
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
