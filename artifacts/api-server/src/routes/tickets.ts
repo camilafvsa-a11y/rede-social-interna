@@ -1,14 +1,18 @@
 import { Router } from "express";
 import { db, ticketsTable, ticketMessagesTable, ticketHandlersTable, usersTable, type Ticket } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
 
 const router = Router();
 
-async function canViewTicket(user: any, ticket: any) {
+async function canViewTicket(user: { id: number; role: string }, ticket: Ticket) {
   if (user.role === "admin" || user.role === "master_admin") return true;
   if (ticket.authorId === user.id) return true;
-  const [handler] = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id)).limit(1);
+  const [handler] = await db
+    .select()
+    .from(ticketHandlersTable)
+    .where(and(eq(ticketHandlersTable.userId, user.id), eq(ticketHandlersTable.category, ticket.category)))
+    .limit(1);
   return !!handler;
 }
 
@@ -44,10 +48,16 @@ router.get("/", requireAuth, async (req, res) => {
   const { status, category } = req.query as { status?: string; category?: string };
   let tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.createdAt));
 
-  const isHandler = (await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id)).limit(1)).length > 0;
+  const handlerEntries = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id));
+  const handlerCategories = handlerEntries.map((h) => h.category);
+  const isHandler = handlerCategories.length > 0;
 
-  if (user.role !== "admin" && user.role !== "master_admin" && !isHandler) {
-    tickets = tickets.filter((t) => t.authorId === user.id);
+  if (user.role !== "admin" && user.role !== "master_admin") {
+    if (isHandler) {
+      tickets = tickets.filter((t) => handlerCategories.includes(t.category));
+    } else {
+      tickets = tickets.filter((t) => t.authorId === user.id);
+    }
   }
 
   if (status) tickets = tickets.filter((t) => t.status === status);
@@ -62,6 +72,16 @@ router.post("/", requireAuth, async (req, res) => {
   const { title, description, category } = req.body;
   const [ticket] = await db.insert(ticketsTable).values({ title, description, category, authorId: user.id }).returning();
   res.json(await enrichTicket(ticket));
+});
+
+router.get("/handler/me", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const entries = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id));
+  res.json(entries.map((e) => ({
+    id: e.id,
+    category: e.category,
+    addedAt: e.addedAt?.toISOString?.() ?? e.addedAt,
+  })));
 });
 
 router.get("/:id", requireAuth, async (req, res) => {
@@ -80,8 +100,12 @@ router.patch("/:id", requireAuth, async (req, res) => {
   const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, parseInt(id))).limit(1);
   if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
 
-  const isHandler = (await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id)).limit(1)).length > 0;
-  if (user.role !== "admin" && user.role !== "master_admin" && !isHandler) {
+  const handlerEntry = await db.select().from(ticketHandlersTable)
+    .where(and(eq(ticketHandlersTable.userId, user.id), eq(ticketHandlersTable.category, ticket.category)))
+    .limit(1);
+  const isHandlerForCategory = handlerEntry.length > 0;
+
+  if (user.role !== "admin" && user.role !== "master_admin" && !isHandlerForCategory) {
     res.status(403).json({ error: "Forbidden" }); return;
   }
 
@@ -111,8 +135,12 @@ router.patch("/:id", requireAuth, async (req, res) => {
         res.status(400).json({ error: "Invalid assignedToId" }); return;
       }
       const numId = Number(assignedToId);
-      const [validHandler] = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, numId)).limit(1);
-      if (!validHandler) { res.status(400).json({ error: "User is not a registered ticket handler" }); return; }
+      const [validHandler] = await db.select().from(ticketHandlersTable)
+        .where(and(eq(ticketHandlersTable.userId, numId), eq(ticketHandlersTable.category, ticket.category)))
+        .limit(1);
+      if (!validHandler) {
+        res.status(400).json({ error: "User does not handle this ticket category" }); return;
+      }
       updateData.assignedToId = numId;
       updateData.assignedAt = new Date();
     }
@@ -159,11 +187,11 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
 });
 
 router.get("/admin/handlers", requireAdmin, async (req, res) => {
-  const handlers = await db.select().from(ticketHandlersTable);
+  const handlers = await db.select().from(ticketHandlersTable).orderBy(ticketHandlersTable.userId, ticketHandlersTable.category);
   const enriched = await Promise.all(handlers.map(async (h) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, h.userId)).limit(1);
     return {
-      id: h.id, userId: h.userId,
+      id: h.id, userId: h.userId, category: h.category,
       user: user ? formatUserBasic(user) : { id: h.userId, name: "Usuário", role: "user" },
       addedAt: h.addedAt?.toISOString?.() ?? h.addedAt,
     };
@@ -172,14 +200,17 @@ router.get("/admin/handlers", requireAdmin, async (req, res) => {
 });
 
 router.post("/admin/handlers", requireAdmin, async (req, res) => {
-  const { userId } = req.body;
-  await db.insert(ticketHandlersTable).values({ userId }).onConflictDoNothing();
+  const { userId, category } = req.body;
+  if (!userId || !category) {
+    res.status(400).json({ error: "userId and category are required" }); return;
+  }
+  await db.insert(ticketHandlersTable).values({ userId, category }).onConflictDoNothing();
   res.json({ success: true, message: "Added" });
 });
 
-router.delete("/admin/handlers/:userId", requireAdmin, async (req, res) => {
-  const { userId } = req.params;
-  await db.delete(ticketHandlersTable).where(eq(ticketHandlersTable.userId, parseInt(userId)));
+router.delete("/admin/handlers/:id", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  await db.delete(ticketHandlersTable).where(eq(ticketHandlersTable.id, parseInt(id)));
   res.json({ success: true, message: "Removed" });
 });
 

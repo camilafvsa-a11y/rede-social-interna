@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -34,8 +34,9 @@ export type TicketMessage = typeof ticketMessagesTable.$inferSelect;
 
 export const ticketHandlersTable = pgTable("ticket_handlers", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  category: text("category").notNull(),
   addedAt: timestamp("added_at").notNull().defaultNow(),
-});
+}, (t) => [unique().on(t.userId, t.category)]);
 
 export type TicketHandler = typeof ticketHandlersTable.$inferSelect;

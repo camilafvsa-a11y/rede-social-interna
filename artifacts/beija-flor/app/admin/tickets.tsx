@@ -62,6 +62,7 @@ export default function AdminTicketsScreen() {
   interface HandlerItem {
     id: number;
     userId: number;
+    category: string;
     user: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
     addedAt: string;
   }
@@ -70,6 +71,10 @@ export default function AdminTicketsScreen() {
     queryFn: () => api.get("/tickets/admin/handlers"),
     enabled: !!assignModalTicket,
   });
+
+  const categoryHandlers = assignModalTicket
+    ? handlers.filter((h) => h.category === assignModalTicket.category)
+    : [];
 
   const displayed = tickets.filter((t) => {
     if (filterStatus && t.status !== filterStatus) return false;
@@ -310,10 +315,20 @@ export default function AdminTicketsScreen() {
               </View>
             )}
 
-            <Text style={styles.modalSubtitle}>Escolha um responsável:</Text>
+            {assignModalTicket && (
+              <View style={styles.modalCatInfo}>
+                <Feather name="tag" size={13} color={CAT_COLORS[assignModalTicket.category]?.color ?? C.textMuted} />
+                <Text style={[styles.modalCatText, { color: CAT_COLORS[assignModalTicket.category]?.color ?? C.textMuted }]}>
+                  {assignModalTicket.category}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.modalSubtitle}>
+              Responsáveis por {assignModalTicket?.category ?? "esta categoria"}:
+            </Text>
 
             <FlatList<HandlerItem>
-              data={handlers}
+              data={categoryHandlers}
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item: h }) => (
                 <TouchableOpacity
@@ -321,7 +336,7 @@ export default function AdminTicketsScreen() {
                     styles.handlerItem,
                     assignModalTicket?.assignedToId === h.userId && styles.handlerItemActive,
                   ]}
-                  onPress={() => assignTicket(assignModalTicket.id, h.userId)}
+                  onPress={() => assignTicket(assignModalTicket!.id, h.userId)}
                   activeOpacity={0.8}
                 >
                   <View style={styles.handlerAvatar}>
@@ -342,7 +357,16 @@ export default function AdminTicketsScreen() {
               )}
               ListEmptyComponent={
                 <View style={styles.noHandlers}>
-                  <Text style={styles.noHandlersText}>Nenhum responsável cadastrado ainda.</Text>
+                  <Feather name="alert-circle" size={30} color={C.textMuted} />
+                  <Text style={styles.noHandlersText}>
+                    Nenhum responsável cadastrado para{"\n"}{assignModalTicket?.category ?? "esta categoria"}.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => { setAssignModalTicket(null); router.push("/admin/ticket-handlers" as any); }}
+                    style={styles.noHandlersCta}
+                  >
+                    <Text style={styles.noHandlersCtaText}>Gerenciar Responsáveis</Text>
+                  </TouchableOpacity>
                 </View>
               }
               style={{ flex: 1 }}
@@ -450,6 +474,16 @@ const styles = StyleSheet.create({
   handlerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   handlerRole: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
 
-  noHandlers: { alignItems: "center", paddingTop: 40 },
-  noHandlersText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
+  noHandlers: { alignItems: "center", paddingTop: 40, gap: 10, paddingHorizontal: 24 },
+  noHandlersText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
+  noHandlersCta: { backgroundColor: C.tint, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, marginTop: 4 },
+  noHandlersCtaText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
+
+  modalCatInfo: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 20, marginTop: 12, marginBottom: 2,
+    backgroundColor: "#F9FAFB", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  modalCatText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 });
