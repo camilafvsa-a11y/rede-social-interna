@@ -107,7 +107,7 @@ export default function CreatePostScreen() {
   }
 
   async function submit() {
-    if (!content.trim()) { Alert.alert("Atenção", "Escreva algo antes de postar."); return; }
+    if (!content.trim() && !mediaUri) { Alert.alert("Atenção", "Adicione um texto ou mídia antes de postar."); return; }
     if (!channelId) { Alert.alert("Atenção", "Selecione um canal."); return; }
     setLoading(true);
     try {
@@ -123,7 +123,7 @@ export default function CreatePostScreen() {
         else imageUrl = uploaded.url;
       }
 
-      await api.post("/posts", { content: content.trim(), imageUrl, videoUrl, channelId });
+      await api.post("/posts", { content: content.trim() || null, imageUrl, videoUrl, channelId });
       qc.invalidateQueries({ queryKey: ["feed"] });
       qc.invalidateQueries({ queryKey: ["posts", String(channelId)] });
       router.back();
@@ -147,9 +147,9 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>Nova publicação</Text>
         <TouchableOpacity
-          style={[styles.postBtn, (!content.trim() || !channelId || !canPost || loading) && styles.postBtnDisabled]}
+          style={[styles.postBtn, ((!content.trim() && !mediaUri) || !channelId || !canPost || loading) && styles.postBtnDisabled]}
           onPress={submit}
-          disabled={!content.trim() || !channelId || !canPost || loading}
+          disabled={(!content.trim() && !mediaUri) || !channelId || !canPost || loading}
         >
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.postBtnText}>Publicar</Text>}
         </TouchableOpacity>

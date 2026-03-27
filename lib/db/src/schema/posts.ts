@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const postsTable = pgTable("posts", {
   id: serial("id").primaryKey(),
-  content: text("content").notNull(),
+  content: text("content"),
   imageUrl: text("image_url"),
   videoUrl: text("video_url"),
   authorId: integer("author_id").notNull(),

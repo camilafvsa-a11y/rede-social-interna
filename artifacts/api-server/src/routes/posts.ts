@@ -92,7 +92,8 @@ router.post("/", requireAuth, async (req, res) => {
   setImmediate(async () => {
     try {
       const authorName = user.name || "Alguém";
-      const preview = content.length > 80 ? content.slice(0, 77) + "…" : content;
+      const safeContent = content ?? "";
+      const preview = safeContent.length > 80 ? safeContent.slice(0, 77) + "…" : safeContent || "📷 Mídia";
 
       // 1. Comunicação Interna → notify all other users
       if (ch.isInternalComm) {
@@ -110,7 +111,7 @@ router.post("/", requireAuth, async (req, res) => {
       }
 
       // 2. @mentions → notify mentioned users (anyone, any channel)
-      const mentionedNames = parseMentions(content);
+      const mentionedNames = parseMentions(safeContent);
       if (mentionedNames.length > 0) {
         const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
           .where(ne(usersTable.id, user.id));
@@ -203,10 +204,11 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
 
   setImmediate(async () => {
     try {
-      const mentionedNames = parseMentions(content);
-      if (mentionedNames.length === 0) return;
       const authorName = user.name || "Alguém";
-      const preview = content.length > 80 ? content.slice(0, 77) + "…" : content;
+      const safeContent = content ?? "";
+      const mentionedNames = parseMentions(safeContent);
+      if (mentionedNames.length === 0) return;
+      const preview = safeContent.length > 80 ? safeContent.slice(0, 77) + "…" : safeContent || "💬 Comentário";
       const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
         .where(ne(usersTable.id, user.id));
       const mentionedIds = allUsers

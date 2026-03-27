@@ -173,7 +173,9 @@ export default function PostCard({ post, onLikeChange, onDelete, compact }: Post
           )}
         </View>
 
-        <MentionText text={post.content} style={styles.content} numberOfLines={compact ? 4 : undefined} />
+        {post.content ? (
+          <MentionText text={post.content} style={styles.content} numberOfLines={compact ? 4 : undefined} />
+        ) : null}
 
         {post.imageUrl && (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} resizeMode="cover" />
