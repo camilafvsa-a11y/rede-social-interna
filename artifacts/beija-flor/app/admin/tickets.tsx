@@ -9,7 +9,7 @@ import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
-import { TICKET_CATEGORIES } from "../new-ticket";
+import { TICKET_CATEGORIES } from "@/constants/tickets";
 
 const C = Colors.light;
 
