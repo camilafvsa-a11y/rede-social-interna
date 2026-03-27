@@ -32,10 +32,11 @@ router.get("/my", requireAuth, async (req, res) => {
     .from(docReadCompletionsTable)
     .where(eq(docReadCompletionsTable.userId, user.id));
 
+  const totalDocs = await getDynamicTotal();
   res.json({
     readKeys: reads.map((r) => r.documentKey),
     completionCount: Number(completions[0]?.count ?? 0),
-    totalDocs: TOTAL_DOCS,
+    totalDocs,
   });
 });
 
@@ -64,9 +65,17 @@ router.post("/mark", requireAuth, async (req, res) => {
     .where(eq(documentReadsTable.userId, user.id));
 
   const readCount = Number(totalRead[0]?.count ?? 0);
+  const totalDocs = await getDynamicTotal();
 
-  if (readCount >= TOTAL_DOCS) {
-    await db.insert(docReadCompletionsTable).values({ userId: user.id });
+  if (readCount >= totalDocs) {
+    const already = await db
+      .select({ id: docReadCompletionsTable.id })
+      .from(docReadCompletionsTable)
+      .where(eq(docReadCompletionsTable.userId, user.id))
+      .limit(1);
+    if (already.length === 0) {
+      await db.insert(docReadCompletionsTable).values({ userId: user.id });
+    }
   }
 
   const completions = await db
@@ -74,18 +83,21 @@ router.post("/mark", requireAuth, async (req, res) => {
     .from(docReadCompletionsTable)
     .where(eq(docReadCompletionsTable.userId, user.id));
 
+  const allReads = await db
+    .select({ documentKey: documentReadsTable.documentKey })
+    .from(documentReadsTable)
+    .where(eq(documentReadsTable.userId, user.id));
+
   res.json({
-    readKeys: (await db
-      .select({ documentKey: documentReadsTable.documentKey })
-      .from(documentReadsTable)
-      .where(eq(documentReadsTable.userId, user.id))).map((r) => r.documentKey),
+    readKeys: allReads.map((r) => r.documentKey),
     completionCount: Number(completions[0]?.count ?? 0),
-    totalDocs: TOTAL_DOCS,
+    totalDocs,
   });
 });
 
 router.get("/admin", requireAdmin, async (req, res) => {
   const users = await db.select().from(usersTable).orderBy(usersTable.name);
+  const totalDocs = await getDynamicTotal();
 
   const result = await Promise.all(
     users.map(async (u) => {
@@ -101,14 +113,14 @@ router.get("/admin", requireAdmin, async (req, res) => {
 
       const readCount = Number(reads[0]?.count ?? 0);
       const completionCount = Number(completions[0]?.count ?? 0);
-      const percentage = Math.round((readCount / TOTAL_DOCS) * 100);
+      const percentage = Math.min(100, Math.round((readCount / totalDocs) * 100));
 
       return {
         user: formatUserBasic(u),
         readCount,
         completionCount,
         percentage,
-        totalDocs: TOTAL_DOCS,
+        totalDocs,
       };
     })
   );
