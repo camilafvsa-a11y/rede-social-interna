@@ -28,6 +28,19 @@ router.post("/admin", requireAdmin, async (req, res) => {
   res.json(created);
 });
 
+router.patch("/admin/:id", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { label, color, bg } = req.body;
+  const [tag] = await db.select().from(workTagsTable).where(eq(workTagsTable.id, parseInt(id))).limit(1);
+  if (!tag) { res.status(404).json({ error: "Tag não encontrada" }); return; }
+  const updates: any = {};
+  if (label !== undefined) updates.label = label.trim();
+  if (color !== undefined) updates.color = color;
+  if (bg !== undefined) updates.bg = bg;
+  const [updated] = await db.update(workTagsTable).set(updates).where(eq(workTagsTable.id, parseInt(id))).returning();
+  res.json(updated);
+});
+
 router.delete("/admin/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   const [tag] = await db.select().from(workTagsTable).where(eq(workTagsTable.id, parseInt(id))).limit(1);

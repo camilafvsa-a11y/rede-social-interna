@@ -138,6 +138,10 @@ export default function UserDetailScreen() {
   const [newTagColor, setNewTagColor] = useState("#2563EB");
   const [addingTag, setAddingTag] = useState(false);
 
+  // Edit tag modal
+  const [editTagData, setEditTagData] = useState<{id:number; label:string; color:string} | null>(null);
+  const [editingTag, setEditingTag] = useState(false);
+
   // Delete tag 2-step modal
   const [deleteTagConfirm, setDeleteTagConfirm] = useState<{step:1|2; id:number; key:string; label:string} | null>(null);
   const [deletingTag, setDeletingTag] = useState(false);
@@ -304,6 +308,25 @@ export default function UserDetailScreen() {
       Alert.alert("Erro", e.message);
     } finally {
       setAddingTag(false);
+    }
+  }
+
+  async function doEditTag() {
+    if (!editTagData?.label.trim()) return;
+    setEditingTag(true);
+    try {
+      await api.patch(`/work-tags/admin/${editTagData.id}`, {
+        label: editTagData.label.trim(),
+        color: editTagData.color,
+        bg: colorBg(editTagData.color),
+      });
+      await refetchWorkTags();
+      await qc.invalidateQueries({ queryKey: ["work-tags"] });
+      setEditTagData(null);
+    } catch (e: any) {
+      Alert.alert("Erro", e.message);
+    } finally {
+      setEditingTag(false);
     }
   }
 
@@ -508,6 +531,13 @@ export default function UserDetailScreen() {
                 >
                   {workTags.includes(t.key) && <Feather name="check" size={11} color={t.color} />}
                   <Text style={[styles.tagChipText, workTags.includes(t.key) && { color: t.color }]}>{t.label}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.tagEditBtn}
+                  onPress={() => setEditTagData({ id: t.id, label: t.label, color: t.color })}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Feather name="edit-2" size={10} color="#9CA3AF" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.tagDeleteBtn}
@@ -797,6 +827,55 @@ export default function UserDetailScreen() {
         </View>
       </Modal>
 
+      {/* ═══════════ EDIT TAG MODAL ═══════════ */}
+      <Modal visible={!!editTagData} transparent animationType="fade" onRequestClose={() => setEditTagData(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Tag</Text>
+              <TouchableOpacity onPress={() => setEditTagData(null)}>
+                <Feather name="x" size={22} color={C.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Nome da tag *</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editTagData?.label ?? ""}
+                onChangeText={(v) => setEditTagData((prev) => prev ? { ...prev, label: v } : null)}
+                placeholder="Nome da tag"
+                placeholderTextColor={C.textMuted}
+                autoFocus
+              />
+              <Text style={[styles.modalLabel, { marginTop: 14 }]}>Cor</Text>
+              <View style={styles.colorGrid}>
+                {TAG_COLORS.map((hex) => (
+                  <TouchableOpacity
+                    key={hex}
+                    style={[styles.colorSwatch, { backgroundColor: hex }, editTagData?.color === hex && styles.colorSwatchSelected]}
+                    onPress={() => setEditTagData((prev) => prev ? { ...prev, color: hex } : null)}
+                  >
+                    {editTagData?.color === hex && <Feather name="check" size={14} color="#fff" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {editTagData && editTagData.label.trim().length > 0 && (
+                <View style={[styles.tagPreview, { backgroundColor: colorBg(editTagData.color), borderColor: editTagData.color }]}>
+                  <Text style={[styles.tagPreviewText, { color: editTagData.color }]}>{editTagData.label.trim()}</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.modalBtn, (!editTagData?.label.trim() || editingTag) && { opacity: 0.4 }]}
+              onPress={doEditTag}
+              disabled={!editTagData?.label.trim() || editingTag}
+            >
+              {editingTag ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalBtnText}>Salvar Tag</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* ═══════════ DELETE TAG — STEP 1 ═══════════ */}
       <Modal visible={deleteTagConfirm?.step === 1} transparent animationType="fade" onRequestClose={() => setDeleteTagConfirm(null)}>
         <View style={styles.modalOverlay}>
@@ -1014,6 +1093,11 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceAlt,
   },
   tagChipText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  tagEditBtn: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: C.surfaceAlt, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: C.borderLight,
+  },
   tagDeleteBtn: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: C.surfaceAlt, alignItems: "center", justifyContent: "center",
