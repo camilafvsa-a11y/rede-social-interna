@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Platform, Modal, Alert, Image, ScrollView,
+  Platform, Modal, Alert, Image, ScrollView, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -37,6 +37,23 @@ interface TicketItem {
   updatedAt: string;
 }
 
+interface HandlerItem {
+  id: number;
+  userId: number;
+  category: string;
+  user: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
+  addedAt: string;
+}
+
+interface UserItem {
+  id: number;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  role: string;
+}
+
+const CAT_MAP = Object.fromEntries(TICKET_CATEGORIES.map((c) => [c.label, c]));
 const CAT_COLORS: Record<string, { color: string; bg: string }> = {};
 TICKET_CATEGORIES.forEach((c) => { CAT_COLORS[c.label] = { color: c.color, bg: c.bg }; });
 
@@ -49,33 +66,36 @@ export default function AdminTicketsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<"chamados" | "responsaveis">("chamados");
+
+  // ── Chamados tab state ──────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [assignModalTicket, setAssignModalTicket] = useState<TicketItem | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  const { data: tickets = [], isLoading, refetch } = useQuery<TicketItem[]>({
+  // ── Responsáveis tab state ──────────────────────────────────────────────
+  const [addHandlerCategory, setAddHandlerCategory] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState("");
+
+  // ── Queries ────────────────────────────────────────────────────────────
+  const { data: tickets = [], isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<TicketItem[]>({
     queryKey: ["admin-tickets"],
     queryFn: () => api.get("/tickets"),
   });
 
-  interface HandlerItem {
-    id: number;
-    userId: number;
-    category: string;
-    user: { id: number; name: string; avatarUrl?: string | null; role: string } | null;
-    addedAt: string;
-  }
-  const { data: handlers = [] } = useQuery<HandlerItem[]>({
+  const { data: handlers = [], refetch: refetchHandlers } = useQuery<HandlerItem[]>({
     queryKey: ["ticket-handlers"],
     queryFn: () => api.get("/tickets/admin/handlers"),
-    enabled: !!assignModalTicket,
   });
 
-  const categoryHandlers = assignModalTicket
-    ? handlers.filter((h) => h.category === assignModalTicket.category)
-    : [];
+  const { data: allUsers = [] } = useQuery<UserItem[]>({
+    queryKey: ["all-users-for-handlers"],
+    queryFn: () => api.get("/users"),
+    enabled: !!addHandlerCategory,
+  });
 
+  // ── Chamados helpers ───────────────────────────────────────────────────
   const displayed = tickets.filter((t) => {
     if (filterStatus && t.status !== filterStatus) return false;
     if (filterCategory && t.category !== filterCategory) return false;
@@ -122,10 +142,56 @@ export default function AdminTicketsScreen() {
     }
   }
 
+  // ── Responsáveis helpers ───────────────────────────────────────────────
+  async function addHandler(userId: number) {
+    if (!addHandlerCategory) return;
+    try {
+      await api.post("/tickets/admin/handlers", { userId, category: addHandlerCategory });
+      await qc.invalidateQueries({ queryKey: ["ticket-handlers"] });
+      setAddHandlerCategory(null);
+      setUserSearch("");
+    } catch (e: any) {
+      Alert.alert("Erro", e.message);
+    }
+  }
+
+  async function removeHandler(handlerId: number, name: string, category: string) {
+    Alert.alert(
+      "Remover responsável",
+      `Remover ${name} de "${category}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Remover", style: "destructive", onPress: async () => {
+            try {
+              await api.delete(`/tickets/admin/handlers/${handlerId}`);
+              await qc.invalidateQueries({ queryKey: ["ticket-handlers"] });
+            } catch (e: any) {
+              Alert.alert("Erro", e.message);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  const categoryHandlers = assignModalTicket
+    ? handlers.filter((h) => h.category === assignModalTicket.category)
+    : [];
+
+  const availableUsers = allUsers.filter((u) => {
+    if (!addHandlerCategory) return false;
+    const alreadyAssigned = handlers.some((h) => h.userId === u.id && h.category === addHandlerCategory);
+    if (alreadyAssigned) return false;
+    if (userSearch && !u.name.toLowerCase().includes(userSearch.toLowerCase())) return false;
+    return true;
+  });
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const renderHeader = () => (
+  // ── Render: Chamados tab ───────────────────────────────────────────────
+  const renderTicketsHeader = () => (
     <View>
       <View style={styles.counters}>
         {[
@@ -181,7 +247,7 @@ export default function AdminTicketsScreen() {
         })}
       </ScrollView>
 
-      {displayed.length === 0 && !isLoading && (
+      {displayed.length === 0 && !ticketsLoading && (
         <View style={styles.empty}>
           <Feather name="inbox" size={40} color={C.textMuted} />
           <Text style={styles.emptyText}>Nenhum chamado encontrado</Text>
@@ -190,8 +256,77 @@ export default function AdminTicketsScreen() {
     </View>
   );
 
+  // ── Render: Responsáveis tab ───────────────────────────────────────────
+  const renderHandlersTab = () => (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.handlersList, { paddingBottom: botPad + 20 }]}
+    >
+      {TICKET_CATEGORIES.map((cat) => {
+        const catHandlers = handlers.filter((h) => h.category === cat.label);
+        return (
+          <View key={cat.label} style={styles.catSection}>
+            {/* Category header */}
+            <View style={[styles.catHeader, { backgroundColor: cat.bg, borderColor: cat.color + "40" }]}>
+              <View style={[styles.catHeaderIcon, { backgroundColor: cat.color + "20" }]}>
+                <Feather name={cat.icon} size={16} color={cat.color} />
+              </View>
+              <Text style={[styles.catHeaderTitle, { color: cat.color }]}>{cat.label}</Text>
+              <View style={[styles.catCount, { backgroundColor: cat.color + "20" }]}>
+                <Text style={[styles.catCountText, { color: cat.color }]}>{catHandlers.length}</Text>
+              </View>
+            </View>
+
+            {/* Handlers list */}
+            {catHandlers.length === 0 ? (
+              <View style={styles.catEmpty}>
+                <Feather name="user-x" size={16} color={C.textMuted} />
+                <Text style={styles.catEmptyText}>Nenhum responsável</Text>
+              </View>
+            ) : (
+              catHandlers.map((h) => (
+                <View key={h.id} style={styles.handlerRow}>
+                  <View style={styles.handlerAvatar}>
+                    {h.user?.avatarUrl ? (
+                      <Image source={{ uri: h.user.avatarUrl }} style={styles.handlerAvatarImg} />
+                    ) : (
+                      <Feather name="user" size={16} color="#9CA3AF" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.handlerName}>{h.user?.name ?? "—"}</Text>
+                    <Text style={styles.handlerSubName}>{h.user?.role === "admin" ? "Admin" : h.user?.role === "moderator" ? "Moderador" : "Colaborador"}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => removeHandler(h.id, h.user?.name ?? "Usuário", h.category)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="x" size={15} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            {/* Add button */}
+            <TouchableOpacity
+              style={[styles.addHandlerBtn, { borderColor: cat.color + "60" }]}
+              onPress={() => { setAddHandlerCategory(cat.label); setUserSearch(""); }}
+              activeOpacity={0.8}
+            >
+              <Feather name="user-plus" size={14} color={cat.color} />
+              <Text style={[styles.addHandlerBtnText, { color: cat.color }]}>Adicionar responsável</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="arrow-left" size={24} color={C.text} />
@@ -200,94 +335,126 @@ export default function AdminTicketsScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={C.tint} />
-        </View>
-      ) : (
-        <FlatList<TicketItem>
-          data={displayed}
-          keyExtractor={(item) => String(item.id)}
-          ListHeaderComponent={renderHeader}
-          renderItem={({ item: ticket }) => {
-            const sc = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
-            const cc = CAT_COLORS[ticket.category] ?? { color: "#6B7280", bg: "#F3F4F6" };
-            const isActioning = actionLoading === ticket.id;
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        {(["chamados", "responsaveis"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
+            onPress={() => setActiveTab(tab)}
+            activeOpacity={0.8}
+          >
+            <Feather
+              name={tab === "chamados" ? "inbox" : "users"}
+              size={15}
+              color={activeTab === tab ? C.tint : C.textMuted}
+            />
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab === "chamados" ? "Chamados" : "Responsáveis"}
+            </Text>
+            {tab === "chamados" && openCount > 0 && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{openCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
 
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push(`/ticket/${ticket.id}`)}
-                activeOpacity={0.9}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={[styles.catBadge, { backgroundColor: cc.bg }]}>
-                    <Text style={[styles.catBadgeText, { color: cc.color }]} numberOfLines={1}>{ticket.category}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
-                    <Text style={[styles.statusText, { color: sc.color }]}>{sc.label}</Text>
-                  </View>
-                </View>
+      {/* Content */}
+      {activeTab === "chamados" ? (
+        ticketsLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={C.tint} />
+          </View>
+        ) : (
+          <FlatList<TicketItem>
+            data={displayed}
+            keyExtractor={(item) => String(item.id)}
+            ListHeaderComponent={renderTicketsHeader}
+            renderItem={({ item: ticket }) => {
+              const sc = STATUS_CONFIG[ticket.status] ?? STATUS_CONFIG.open;
+              const cc = CAT_COLORS[ticket.category] ?? { color: "#6B7280", bg: "#F3F4F6" };
+              const isActioning = actionLoading === ticket.id;
 
-                <Text style={styles.cardTitle} numberOfLines={2}>{ticket.title}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>{ticket.description}</Text>
+              return (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => router.push(`/ticket/${ticket.id}`)}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={[styles.catBadge, { backgroundColor: cc.bg }]}>
+                      <Text style={[styles.catBadgeText, { color: cc.color }]} numberOfLines={1}>{ticket.category}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+                      <Text style={[styles.statusText, { color: sc.color }]}>{sc.label}</Text>
+                    </View>
+                  </View>
 
-                <View style={styles.cardMeta}>
-                  <View style={styles.metaRow}>
-                    <Feather name="user" size={12} color={C.textMuted} />
-                    <Text style={styles.metaText}>{ticket.author?.name ?? "—"}</Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Feather name="clock" size={12} color={C.textMuted} />
-                    <Text style={styles.metaText}>{formatDate(ticket.createdAt)}</Text>
-                  </View>
-                  <View style={styles.metaRow}>
-                    <Feather name="message-square" size={12} color={C.textMuted} />
-                    <Text style={styles.metaText}>{ticket.messageCount}</Text>
-                  </View>
-                </View>
+                  <Text style={styles.cardTitle} numberOfLines={2}>{ticket.title}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>{ticket.description}</Text>
 
-                {ticket.assignedTo && (
-                  <View style={styles.assignedRow}>
-                    <Feather name="user-check" size={12} color="#059669" />
-                    <Text style={styles.assignedText}>Delegado para: {ticket.assignedTo.name}</Text>
+                  <View style={styles.cardMeta}>
+                    <View style={styles.metaRow}>
+                      <Feather name="user" size={12} color={C.textMuted} />
+                      <Text style={styles.metaText}>{ticket.author?.name ?? "—"}</Text>
+                    </View>
+                    <View style={styles.metaRow}>
+                      <Feather name="clock" size={12} color={C.textMuted} />
+                      <Text style={styles.metaText}>{formatDate(ticket.createdAt)}</Text>
+                    </View>
+                    <View style={styles.metaRow}>
+                      <Feather name="message-square" size={12} color={C.textMuted} />
+                      <Text style={styles.metaText}>{ticket.messageCount}</Text>
+                    </View>
                   </View>
-                )}
 
-                <View style={styles.cardActions}>
-                  {sc.next && (
+                  {ticket.assignedTo && (
+                    <View style={styles.assignedRow}>
+                      <Feather name="user-check" size={12} color="#059669" />
+                      <Text style={styles.assignedText}>Delegado para: {ticket.assignedTo.name}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.cardActions}>
+                    {sc.next && (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: STATUS_CONFIG[sc.next].bg }]}
+                        onPress={() => changeStatus(ticket, sc.next!)}
+                        disabled={isActioning}
+                        activeOpacity={0.8}
+                      >
+                        {isActioning ? (
+                          <ActivityIndicator size="small" color={STATUS_CONFIG[sc.next].color} />
+                        ) : (
+                          <Text style={[styles.actionBtnText, { color: STATUS_CONFIG[sc.next].color }]}>{sc.nextLabel}</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: STATUS_CONFIG[sc.next].bg }]}
-                      onPress={() => changeStatus(ticket, sc.next!)}
-                      disabled={isActioning}
+                      style={[styles.actionBtn, styles.delegateBtn]}
+                      onPress={() => setAssignModalTicket(ticket)}
                       activeOpacity={0.8}
                     >
-                      {isActioning ? (
-                        <ActivityIndicator size="small" color={STATUS_CONFIG[sc.next].color} />
-                      ) : (
-                        <Text style={[styles.actionBtnText, { color: STATUS_CONFIG[sc.next].color }]}>{sc.nextLabel}</Text>
-                      )}
+                      <Feather name="user-plus" size={13} color={C.tint} />
+                      <Text style={styles.delegateBtnText}>Delegar</Text>
                     </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.delegateBtn]}
-                    onPress={() => setAssignModalTicket(ticket)}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="user-plus" size={13} color={C.tint} />
-                    <Text style={styles.delegateBtnText}>Delegar</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-          contentContainerStyle={[styles.list, { paddingBottom: botPad + 20 }]}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isLoading}
-        />
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+            contentContainerStyle={[styles.list, { paddingBottom: botPad + 20 }]}
+            showsVerticalScrollIndicator={false}
+            onRefresh={refetchTickets}
+            refreshing={ticketsLoading}
+          />
+        )
+      ) : (
+        renderHandlersTab()
       )}
 
+      {/* ── Delegation modal ──────────────────────────────────────────── */}
       <Modal
         visible={!!assignModalTicket}
         animationType="slide"
@@ -307,7 +474,7 @@ export default function AdminTicketsScreen() {
               <View style={styles.currentAssignee}>
                 <Feather name="user-check" size={14} color="#059669" />
                 <Text style={styles.currentAssigneeText}>
-                  Atualmente delegado para: {assignModalTicket.assignedTo.name}
+                  Delegado para: {assignModalTicket.assignedTo.name}
                 </Text>
                 <TouchableOpacity onPress={() => unassignTicket(assignModalTicket.id)} style={styles.unassignBtn}>
                   <Text style={styles.unassignText}>Remover</Text>
@@ -339,16 +506,16 @@ export default function AdminTicketsScreen() {
                   onPress={() => assignTicket(assignModalTicket!.id, h.userId)}
                   activeOpacity={0.8}
                 >
-                  <View style={styles.handlerAvatar}>
+                  <View style={styles.handlerAvatarLg}>
                     {h.user?.avatarUrl ? (
-                      <Image source={{ uri: h.user.avatarUrl }} style={styles.handlerAvatarImg} />
+                      <Image source={{ uri: h.user.avatarUrl }} style={styles.handlerAvatarImgLg} />
                     ) : (
                       <Feather name="user" size={18} color="#9CA3AF" />
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.handlerName}>{h.user?.name ?? "—"}</Text>
-                    <Text style={styles.handlerRole}>{h.user?.role ?? ""}</Text>
+                    <Text style={styles.handlerSubName}>{h.user?.role ?? ""}</Text>
                   </View>
                   {assignModalTicket?.assignedToId === h.userId && (
                     <Feather name="check-circle" size={18} color={C.tint} />
@@ -359,14 +526,94 @@ export default function AdminTicketsScreen() {
                 <View style={styles.noHandlers}>
                   <Feather name="alert-circle" size={30} color={C.textMuted} />
                   <Text style={styles.noHandlersText}>
-                    Nenhum responsável cadastrado para{"\n"}{assignModalTicket?.category ?? "esta categoria"}.
+                    Nenhum responsável para{"\n"}{assignModalTicket?.category ?? "esta categoria"}.
                   </Text>
                   <TouchableOpacity
-                    onPress={() => { setAssignModalTicket(null); router.push("/admin/ticket-handlers" as any); }}
+                    onPress={() => { setAssignModalTicket(null); setActiveTab("responsaveis"); }}
                     style={styles.noHandlersCta}
                   >
-                    <Text style={styles.noHandlersCtaText}>Gerenciar Responsáveis</Text>
+                    <Text style={styles.noHandlersCtaText}>Ir para aba Responsáveis</Text>
                   </TouchableOpacity>
+                </View>
+              }
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Add handler modal ──────────────────────────────────────────── */}
+      <Modal
+        visible={!!addHandlerCategory}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setAddHandlerCategory(null); setUserSearch(""); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => { setAddHandlerCategory(null); setUserSearch(""); }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={22} color={C.text} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Adicionar Responsável</Text>
+              <View style={{ width: 22 }} />
+            </View>
+
+            {addHandlerCategory && (
+              <View style={[styles.modalCatInfo, { margin: 12 }]}>
+                <Feather
+                  name={CAT_MAP[addHandlerCategory]?.icon ?? "tag"}
+                  size={13}
+                  color={CAT_COLORS[addHandlerCategory]?.color ?? C.textMuted}
+                />
+                <Text style={[styles.modalCatText, { color: CAT_COLORS[addHandlerCategory]?.color ?? C.textMuted }]}>
+                  {addHandlerCategory}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.searchBar}>
+              <Feather name="search" size={15} color={C.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                value={userSearch}
+                onChangeText={setUserSearch}
+                placeholder="Buscar colaborador..."
+                placeholderTextColor={C.placeholder}
+              />
+            </View>
+
+            <FlatList<UserItem>
+              data={availableUsers}
+              keyExtractor={(u) => String(u.id)}
+              renderItem={({ item: u }) => (
+                <TouchableOpacity
+                  style={styles.userItem}
+                  onPress={() => addHandler(u.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.handlerAvatar}>
+                    {u.avatarUrl ? (
+                      <Image source={{ uri: u.avatarUrl }} style={styles.handlerAvatarImg} />
+                    ) : (
+                      <Feather name="user" size={16} color="#9CA3AF" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.handlerName}>{u.name}</Text>
+                    <Text style={styles.handlerSubName}>{u.email}</Text>
+                  </View>
+                  <Feather name="plus-circle" size={20} color={C.tint} />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.noHandlers}>
+                  <Text style={styles.noHandlersText}>
+                    {userSearch ? "Nenhum resultado para a busca." : "Todos os colaboradores já foram adicionados a esta categoria."}
+                  </Text>
                 </View>
               }
               style={{ flex: 1 }}
@@ -388,12 +635,31 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  counters: {
-    flexDirection: "row", gap: 8, padding: 16, paddingBottom: 8,
+  // ── Tab bar ──────────────────────────────────────────────────────────
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: C.surface,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  counterCard: {
-    flex: 1, borderRadius: 12, padding: 12, alignItems: "center",
+  tabItem: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 12,
+    borderBottomWidth: 2, borderBottomColor: "transparent",
   },
+  tabItemActive: {
+    borderBottomColor: C.tint,
+  },
+  tabText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.textMuted },
+  tabTextActive: { color: C.tint, fontFamily: "Inter_600SemiBold" },
+  tabBadge: {
+    backgroundColor: "#EF4444", borderRadius: 10,
+    paddingHorizontal: 6, paddingVertical: 1, minWidth: 18, alignItems: "center",
+  },
+  tabBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" },
+
+  // ── Chamados tab ─────────────────────────────────────────────────────
+  counters: { flexDirection: "row", gap: 8, padding: 16, paddingBottom: 8 },
+  counterCard: { flex: 1, borderRadius: 12, padding: 12, alignItems: "center" },
   counterValue: { fontSize: 22, fontFamily: "Inter_700Bold" },
   counterLabel: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
 
@@ -419,32 +685,66 @@ const styles = StyleSheet.create({
   catBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-
   cardTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 4 },
   cardDesc: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18, marginBottom: 8 },
-
   cardMeta: { flexDirection: "row", gap: 12, flexWrap: "wrap", marginBottom: 6 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   metaText: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" },
-
   assignedRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
   assignedText: { fontSize: 12, color: "#059669", fontFamily: "Inter_500Medium" },
-
   cardActions: { flexDirection: "row", gap: 8, marginTop: 4 },
-  actionBtn: {
-    flex: 1, paddingVertical: 8, borderRadius: 10,
-    alignItems: "center", justifyContent: "center",
-  },
+  actionBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   actionBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  delegateBtn: {
-    flexDirection: "row", gap: 5,
-    backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE",
-  },
+  delegateBtn: { flexDirection: "row", gap: 5, backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE" },
   delegateBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.tint },
-
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: C.textMuted, fontFamily: "Inter_500Medium" },
 
+  // ── Responsáveis tab ─────────────────────────────────────────────────
+  handlersList: { padding: 12, gap: 12 },
+  catSection: {
+    backgroundColor: C.surface, borderRadius: 14,
+    borderWidth: 1, borderColor: C.border, overflow: "hidden",
+  },
+  catHeader: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  catHeaderIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  catHeaderTitle: { flex: 1, fontSize: 14, fontFamily: "Inter_700Bold" },
+  catCount: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  catCountText: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  catEmpty: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 14, paddingVertical: 12, opacity: 0.6,
+  },
+  catEmptyText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular" },
+  handlerRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: C.borderLight,
+  },
+  handlerAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden",
+  },
+  handlerAvatarImg: { width: 36, height: 36, borderRadius: 18 },
+  handlerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  handlerSubName: { fontSize: 11, color: C.textSecondary, fontFamily: "Inter_400Regular", marginTop: 1 },
+  removeBtn: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center",
+  },
+  addHandlerBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 10, paddingHorizontal: 14,
+    borderTopWidth: 1,
+    backgroundColor: "transparent",
+  },
+  addHandlerBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
+  // ── Modals ────────────────────────────────────────────────────────────
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   modalSheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: "65%", paddingTop: 8 },
   modalHeader: {
@@ -454,6 +754,13 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
   modalSubtitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary, paddingHorizontal: 20, paddingVertical: 10 },
+  modalCatInfo: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 20, marginTop: 12, marginBottom: 2,
+    backgroundColor: "#F9FAFB", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  modalCatText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 
   currentAssignee: {
     flexDirection: "row", alignItems: "center", gap: 6,
@@ -469,21 +776,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: C.borderLight,
   },
   handlerItemActive: { backgroundColor: "#EFF6FF" },
-  handlerAvatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  handlerAvatarImg: { width: 42, height: 42, borderRadius: 21 },
-  handlerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
-  handlerRole: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  handlerAvatarLg: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  handlerAvatarImgLg: { width: 42, height: 42, borderRadius: 21 },
 
   noHandlers: { alignItems: "center", paddingTop: 40, gap: 10, paddingHorizontal: 24 },
   noHandlersText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 },
   noHandlersCta: { backgroundColor: C.tint, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, marginTop: 4 },
   noHandlersCtaText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
 
-  modalCatInfo: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    marginHorizontal: 20, marginTop: 12, marginBottom: 2,
-    backgroundColor: "#F9FAFB", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
-    alignSelf: "flex-start",
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    margin: 12, backgroundColor: C.inputBg, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
   },
-  modalCatText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  searchInput: { flex: 1, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
+  userItem: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: C.borderLight,
+  },
 });
