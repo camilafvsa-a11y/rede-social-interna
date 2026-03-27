@@ -45,14 +45,17 @@ async function enrichTicket(t: Ticket) {
 
 router.get("/", requireAuth, async (req, res) => {
   const user = (req as any).user;
-  const { status, category } = req.query as { status?: string; category?: string };
+  const { status, category, mine } = req.query as { status?: string; category?: string; mine?: string };
   let tickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.createdAt));
 
   const handlerEntries = await db.select().from(ticketHandlersTable).where(eq(ticketHandlersTable.userId, user.id));
   const handlerCategories = handlerEntries.map((h) => h.category);
   const isHandler = handlerCategories.length > 0;
 
-  if (user.role !== "admin" && user.role !== "master_admin") {
+  if (mine === "true") {
+    // Always return only the current user's own tickets
+    tickets = tickets.filter((t) => t.authorId === user.id);
+  } else if (user.role !== "admin" && user.role !== "master_admin") {
     if (isHandler) {
       tickets = tickets.filter((t) => handlerCategories.includes(t.category));
     } else {
