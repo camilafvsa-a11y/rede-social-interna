@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, Image, Platform, Modal,
@@ -12,242 +12,42 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-// ─── Etapas ────────────────────────────────────────────────────────────────
+// ─── Etapas ──────────────────────────────────────────────────────────────────
 const STEPS = [
   { id: "photo",    title: "Foto de Perfil",        description: "Adicione uma foto para que seus colegas possam te reconhecer" },
   { id: "docs",     title: "Documentos & Políticas", description: "Leia os documentos do Grupo Beija-flor para continuar" },
   { id: "terms",    title: "Termo de Imagem",        description: "Leia e assine o termo de uso de imagem e voz" },
 ];
 
-// ─── Política ──────────────────────────────────────────────────────────────
-type PolicyItem = {
-  key: string;
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+type IntegraItem = {
+  id: number;
+  category: string;
+  sectionName: string | null;
+  sectionIcon: string | null;
+  sectionColor: string | null;
+  sectionColorBg: string | null;
   title: string;
-  subtitle: string;
-  content: string;
-  required: boolean;
-  icon: string;
+  subtitle: string | null;
+  content: string | null;
+  pdfUrl: string | null;
+  requiresSign: boolean;
+  requiresRead: boolean;
+  docKey: string;
+  iconName: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  docType: string;
+  showInIntegra: boolean;
+  showInOnboarding: boolean;
+  countsForProgress: boolean;
 };
-type PolicySection = {
-  section: string;
-  icon: string;
-  color: string;
-  colorBg: string;
-  items: PolicyItem[];
-};
 
-const POLICY_SECTIONS: PolicySection[] = [
-  {
-    section: "Código de Conduta",
-    icon: "shield",
-    color: "#2563EB",
-    colorBg: "#EFF6FF",
-    items: [
-      {
-        key: "anticorrupcao",
-        title: "Tolerância Zero Contra Corrupção",
-        subtitle: "Trabalhamos de forma isenta e leal, sem aceitar subornos de qualquer espécie.",
-        required: true,
-        icon: "shield-off",
-        content: `O Grupo Beija-flor tem tolerância zero contra corrupção.
-
-Nossos Compromissos:
-• Trabalhamos de forma isenta e leal
-• Não prometemos, damos, oferecemos, solicitamos ou concordamos em receber ou aceitar subornos de qualquer espécie
-• Denunciamos e adotamos medidas para impedir e prevenir a corrupção
-
-Antes de Agir, Pergunte-se:
-• O que eu pretendo fazer é legal?
-• É ético?
-• Está de acordo com a cultura do Grupo Beija-flor?`,
-      },
-      {
-        key: "codigo_conduta",
-        title: "Código de Conduta",
-        subtitle: "Diretrizes de comportamento profissional.",
-        required: true,
-        icon: "book-open",
-        content: `Nossa empresa valoriza um ambiente de trabalho respeitoso e inclusivo.
-
-Princípios Básicos:
-• Respeito: Trate todos os colegas com dignidade
-• Integridade: Seja honesto e transparente
-• Colaboração: Trabalhe em equipe e apoie seus colegas
-• Profissionalismo: Mantenha uma postura profissional
-
-Políticas de Não-Discriminação:
-Não toleramos qualquer forma de discriminação por raça, gênero, idade, orientação sexual, religião ou deficiência.`,
-      },
-      {
-        key: "assedio",
-        title: "Assédio Moral e Sexual",
-        subtitle: "Ambiente seguro, sem discriminação nem violência.",
-        required: true,
-        icon: "alert-triangle",
-        content: `O Grupo Beija-flor não admite qualquer tipo de assédio moral e sexual.
-
-Condutas Proibidas:
-• Atitudes que prejudiquem o desempenho no ambiente de trabalho
-• Propostas ou insinuações sexuais verbais, gestuais ou físicas
-• Ambiente hostil, intimidador ou ofensivo
-
-Nosso Compromisso:
-• Promovemos um ambiente seguro, sem discriminação
-• Estimulamos denúncias: RH (31) 98496-0448`,
-      },
-      {
-        key: "conduta_profissional",
-        title: "Conduta Profissional",
-        subtitle: "Integridade e respeito ao horário de trabalho.",
-        required: true,
-        icon: "briefcase",
-        content: `Nossos Compromissos:
-• Atuamos de acordo com os valores da empresa
-• Cuidamos da nossa reputação pessoal e profissional
-• Respeitamos integralmente nosso horário de trabalho
-• Questões particulares não devem interferir na rotina
-
-Em Caso de Dúvida:
-Se não souber como agir, procure seu gestor ou o RH.
-Contato RH: (31) 98496-0448`,
-      },
-      {
-        key: "atendimento_cliente",
-        title: "Relacionamento com Clientes",
-        subtitle: "Excelência e transparência em cada atendimento.",
-        required: true,
-        icon: "users",
-        content: `Nossa Missão:
-Queremos que nossos clientes tenham sempre a melhor experiência.
-
-Princípios de Atendimento:
-• Transparência e cordialidade em todos os atendimentos
-• Atendimento rápido e cortês
-• Não é permitido pedir ou sugerir gorjeta
-
-Como representantes do Grupo Beija-flor, transformamos cada visita em um momento especial.`,
-      },
-      {
-        key: "uniformes",
-        title: "Uniformes e Apresentação",
-        subtitle: "Uniforme limpo, completo e crachá visível durante toda a jornada.",
-        required: true,
-        icon: "tag",
-        content: `Uso Obrigatório:
-• O uniforme deve ser usado em sua totalidade, sempre limpo e passado
-• Crachá de identificação durante toda a jornada
-
-Responsabilidades:
-• Cuidar do uniforme e usá-lo sempre limpo
-• O uniforme é entregue na admissão
-• Em caso de desligamento, todo uniforme deve ser devolvido
-
-Para colaboradores que manipulam alimentos:
-• Unhas curtas e sem esmaltes
-• Não usar perfume
-• Manter barba feita / cabelos presos
-• Usar touca ou boné`,
-      },
-      {
-        key: "denuncias",
-        title: "Denúncias e Ouvidoria",
-        subtitle: "Investigamos todas as denúncias com privacidade e sem retaliação.",
-        required: true,
-        icon: "message-square",
-        content: `Processo de Denúncia:
-• Todas as denúncias são investigadas
-• Qualquer parte envolvida pode ser chamada para prestar esclarecimentos
-
-Seus Direitos:
-• Privacidade e confidencialidade reservadas
-• Sem retaliação contra quem denuncia de boa-fé
-
-Como Denunciar:
-Contato RH: (31) 98496-0448`,
-      },
-    ],
-  },
-  {
-    section: "Segurança",
-    icon: "lock",
-    color: "#7C3AED",
-    colorBg: "#F5F3FF",
-    items: [
-      {
-        key: "seguranca_info",
-        title: "Política de Segurança da Informação",
-        subtitle: "Protegendo nossos dados e sistemas.",
-        required: true,
-        icon: "lock",
-        content: `A proteção dos dados é responsabilidade de todos.
-
-Senhas e Acessos:
-• Use senhas fortes
-• Nunca compartilhe suas credenciais
-• Reporte qualquer atividade suspeita
-
-Dados Confidenciais:
-• Não compartilhe informações sensíveis externamente
-• Use sempre canais oficiais de comunicação`,
-      },
-    ],
-  },
-  {
-    section: "Recursos Humanos",
-    icon: "user-check",
-    color: "#D97706",
-    colorBg: "#FFFBEB",
-    items: [
-      {
-        key: "pontualidade",
-        title: "Pontualidade e Registro de Ponto",
-        subtitle: "Ser pontual e registrar o ponto biométrico diariamente.",
-        required: true,
-        icon: "clock",
-        content: `Compromissos:
-• Ser pontual e não faltar ao trabalho sem justificativa
-• Atestados médicos ao coordenador ou RH no 1.° dia de afastamento
-
-Registro de Ponto Biométrico — deve ser feito diariamente:
-• Entrada / Saída para intervalo / Retorno / Saída final
-
-Contato RH: (31) 98496-0448`,
-      },
-    ],
-  },
-];
-
-const TERM_CONTENT = `Ao participar de ações, campanhas, eventos, gravações, entrevistas, fotografias ou quaisquer produções realizadas pelo Grupo Beija-flor, o participante autoriza, de forma gratuita, definitiva e por prazo indeterminado, o uso de sua imagem, nome e voz em materiais institucionais, publicitários, promocionais e informativos do Grupo Beija-flor.
-
-Essa autorização abrange, sem limitação, a veiculação em:
-
-• Redes sociais
-• Site institucional
-• Aplicativos
-• Materiais impressos
-• Vídeos, áudios e peças digitais
-• Campanhas publicitárias em qualquer mídia atual ou futura
-
-O uso poderá ocorrer no Brasil e no exterior, sem que disso decorra qualquer direito a remuneração, compensação ou indenização.
-
-O participante declara estar ciente de que:
-
-• A autorização é concedida de forma espontânea;
-• Não haverá limitação de tempo ou território para uso do material;
-• O Grupo Beija-flor poderá editar, adaptar ou combinar o conteúdo com outros materiais;
-• Esta autorização não caracteriza vínculo empregatício ou contratual.
-
-Ao assinar, você declara que leu, compreendeu e aceita todos os termos acima.`;
-
-// ─── Utils ─────────────────────────────────────────────────────────────────
-const allPolicyKeys = POLICY_SECTIONS.flatMap((s) => s.items.map((i) => i.key));
-const requiredKeys  = POLICY_SECTIONS.flatMap((s) => s.items.filter((i) => i.required).map((i) => i.key));
-
-// ─── Sub-componente: Card de política ──────────────────────────────────────
+// ─── Sub-componente: Card de política ─────────────────────────────────────────
 function PolicyCard({
   item, color, colorBg, isRead, onToggle,
 }: {
-  item: PolicyItem;
+  item: IntegraItem;
   color: string;
   colorBg: string;
   isRead: boolean;
@@ -263,12 +63,12 @@ function PolicyCard({
         activeOpacity={0.8}
       >
         <View style={[pStyles.icon, { backgroundColor: colorBg }]}>
-          <Feather name={item.icon as any} size={15} color={color} />
+          <Feather name={(item.iconName as any) || "file-text"} size={15} color={color} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={pStyles.titleRow}>
             <Text style={pStyles.title} numberOfLines={expanded ? undefined : 1}>{item.title}</Text>
-            {item.required && !isRead && (
+            {item.requiresRead && !isRead && (
               <View style={pStyles.reqBadge}>
                 <Text style={pStyles.reqText}>Obrigatório</Text>
               </View>
@@ -351,7 +151,7 @@ const pStyles = StyleSheet.create({
   readLabelDone: { color: "#059669" },
 });
 
-// ─── Tela principal ─────────────────────────────────────────────────────────
+// ─── Tela principal ───────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuth();
@@ -364,7 +164,42 @@ export default function OnboardingScreen() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── API fetch for onboarding items ───────────────────────────────────────
+  const [onboardingItems, setOnboardingItems] = useState<IntegraItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/integra-items/onboarding")
+      .then((data: IntegraItem[]) => setOnboardingItems(data))
+      .catch(() => {})
+      .finally(() => setItemsLoading(false));
+  }, []);
+
+  // Split into policies and terms
+  const policyItems = onboardingItems.filter((i) => !i.requiresSign);
+  const termItems   = onboardingItems.filter((i) => i.requiresSign);
+
+  // Group policies by sectionName
+  const sectionMap = new Map<string, { icon: string; color: string; colorBg: string; items: IntegraItem[] }>();
+  for (const item of policyItems) {
+    const sName = item.sectionName || item.category || "Outros";
+    if (!sectionMap.has(sName)) {
+      sectionMap.set(sName, {
+        icon: item.sectionIcon || "file-text",
+        color: item.sectionColor || C.tint,
+        colorBg: item.sectionColorBg || "#EFF6FF",
+        items: [],
+      });
+    }
+    sectionMap.get(sName)!.items.push(item);
+  }
+  const policySections = Array.from(sectionMap.entries()).map(([section, data]) => ({ section, ...data }));
+
+  const allPolicyKeys = policyItems.map((i) => i.docKey);
+  const requiredKeys  = policyItems.filter((i) => i.requiresRead).map((i) => i.docKey);
+  const firstTerm     = termItems[0] || null;
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function toggleRead(key: string) {
     setReadKeys((prev) => {
       const next = new Set(prev);
@@ -377,7 +212,7 @@ export default function OnboardingScreen() {
   const readCount    = readKeys.size;
   const totalCount   = allPolicyKeys.length;
 
-  // ── Foto ─────────────────────────────────────────────────────────────────
+  // ── Foto ──────────────────────────────────────────────────────────────────
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -390,21 +225,19 @@ export default function OnboardingScreen() {
     }
   }
 
-  // ── Finalizar onboarding ─────────────────────────────────────────────────
+  // ── Finalizar onboarding ──────────────────────────────────────────────────
   async function completeOnboarding() {
     setLoading(true);
     try {
       for (const key of allPolicyKeys) {
         try { await api.post("/docs/mark", { documentKey: key }); } catch {}
       }
-      try {
-        await api.post("/terms/accept", {
-          termKey:   "image_voice_authorization",
-          termTitle: "Termo de Autorização de Uso de Imagem e Voz",
-        });
-        await api.post("/docs/mark", { documentKey: "image_voice_authorization" });
-      } catch {}
-
+      for (const term of termItems) {
+        try {
+          await api.post("/terms/accept", { termKey: term.docKey, termTitle: term.title });
+          await api.post("/docs/mark", { documentKey: term.docKey });
+        } catch {}
+      }
       const updated = await api.post("/auth/complete-onboarding", {
         avatarUrl:     avatarUri,
         acceptedTerms: true,
@@ -418,10 +251,10 @@ export default function OnboardingScreen() {
     }
   }
 
-  // ── Lógica de avanço ─────────────────────────────────────────────────────
+  // ── Lógica de avanço ──────────────────────────────────────────────────────
   function canProceed() {
     if (currentStep === 0) return true;
-    if (currentStep === 1) return requiredDone;
+    if (currentStep === 1) return requiredDone || itemsLoading;
     if (currentStep === 2) return termChecked;
     return true;
   }
@@ -458,7 +291,7 @@ export default function OnboardingScreen() {
         <Text style={styles.title}>{step.title}</Text>
         <Text style={styles.desc}>{step.description}</Text>
 
-        {/* ── Passo 1: Foto ─────────────────────────────────────────────── */}
+        {/* ── Passo 1: Foto ──────────────────────────────────────────────── */}
         {currentStep === 0 && (
           <View style={styles.photoSection}>
             <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.8}>
@@ -478,75 +311,93 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* ── Passo 2: Documentos ───────────────────────────────────────── */}
+        {/* ── Passo 2: Documentos ─────────────────────────────────────────── */}
         {currentStep === 1 && (
           <View style={{ gap: 0, marginTop: 8 }}>
-            {/* Progresso de leitura */}
-            <View style={styles.readProgress}>
-              <Feather name="book-open" size={14} color={C.tint} />
-              <Text style={styles.readProgressText}>
-                {readCount} de {totalCount} lidos
-              </Text>
-              {requiredDone && (
-                <View style={styles.allDoneBadge}>
-                  <Feather name="check-circle" size={12} color="#059669" />
-                  <Text style={styles.allDoneText}>Todos obrigatórios concluídos</Text>
+            {itemsLoading ? (
+              <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 40 }} />
+            ) : (
+              <>
+                {/* Progresso de leitura */}
+                <View style={styles.readProgress}>
+                  <Feather name="book-open" size={14} color={C.tint} />
+                  <Text style={styles.readProgressText}>
+                    {readCount} de {totalCount} lidos
+                  </Text>
+                  {requiredDone && (
+                    <View style={styles.allDoneBadge}>
+                      <Feather name="check-circle" size={12} color="#059669" />
+                      <Text style={styles.allDoneText}>Todos obrigatórios concluídos</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            {POLICY_SECTIONS.map((sec) => (
-              <View key={sec.section} style={{ marginBottom: 16 }}>
-                {/* Cabeçalho da seção */}
-                <View style={[styles.sectionHeader, { backgroundColor: sec.colorBg }]}>
-                  <View style={[styles.sectionIconWrap, { backgroundColor: sec.color + "22" }]}>
-                    <Feather name={sec.icon as any} size={14} color={sec.color} />
+                {policySections.map((sec) => (
+                  <View key={sec.section} style={{ marginBottom: 16 }}>
+                    <View style={[styles.sectionHeader, { backgroundColor: sec.colorBg }]}>
+                      <View style={[styles.sectionIconWrap, { backgroundColor: sec.color + "22" }]}>
+                        <Feather name={sec.icon as any} size={14} color={sec.color} />
+                      </View>
+                      <Text style={[styles.sectionTitle, { color: sec.color }]}>{sec.section}</Text>
+                    </View>
+
+                    {sec.items.map((item) => (
+                      <PolicyCard
+                        key={item.docKey}
+                        item={item}
+                        color={sec.color}
+                        colorBg={sec.colorBg}
+                        isRead={readKeys.has(item.docKey)}
+                        onToggle={() => toggleRead(item.docKey)}
+                      />
+                    ))}
                   </View>
-                  <Text style={[styles.sectionTitle, { color: sec.color }]}>{sec.section}</Text>
-                </View>
-
-                {sec.items.map((item) => (
-                  <PolicyCard
-                    key={item.key}
-                    item={item}
-                    color={sec.color}
-                    colorBg={sec.colorBg}
-                    isRead={readKeys.has(item.key)}
-                    onToggle={() => toggleRead(item.key)}
-                  />
                 ))}
-              </View>
-            ))}
 
-            {!requiredDone && (
-              <View style={styles.hintBox}>
-                <Feather name="info" size={13} color="#92400E" />
-                <Text style={styles.hintText}>
-                  Leia e marque todos os itens obrigatórios para continuar
-                </Text>
-              </View>
+                {!requiredDone && (
+                  <View style={styles.hintBox}>
+                    <Feather name="info" size={13} color="#92400E" />
+                    <Text style={styles.hintText}>
+                      Leia e marque todos os itens obrigatórios para continuar
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
 
-        {/* ── Passo 3: Termo de Imagem ──────────────────────────────────── */}
+        {/* ── Passo 3: Termo de Imagem ────────────────────────────────────── */}
         {currentStep === 2 && (
           <View style={styles.documentSection}>
-            <View style={styles.termHeaderCard}>
-              <View style={styles.termHeaderIcon}>
-                <Feather name="camera" size={20} color={C.tint} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.termHeaderTitle}>Termo de Autorização</Text>
-                <Text style={styles.termHeaderSub}>Uso de imagem e voz pelo Grupo Beija-flor</Text>
-              </View>
-            </View>
+            {firstTerm ? (
+              <>
+                <View style={styles.termHeaderCard}>
+                  <View style={styles.termHeaderIcon}>
+                    <Feather name={(firstTerm.iconName as any) || "camera"} size={20} color={C.tint} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.termHeaderTitle}>{firstTerm.title}</Text>
+                    {firstTerm.subtitle && (
+                      <Text style={styles.termHeaderSub}>{firstTerm.subtitle}</Text>
+                    )}
+                  </View>
+                </View>
 
-            <View style={styles.documentCard}>
-              <ScrollView style={styles.documentScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                <Text style={styles.documentText}>{TERM_CONTENT}</Text>
-              </ScrollView>
-            </View>
+                <View style={styles.documentCard}>
+                  <ScrollView style={styles.documentScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    <Text style={styles.documentText}>{firstTerm.content}</Text>
+                  </ScrollView>
+                </View>
+              </>
+            ) : itemsLoading ? (
+              <ActivityIndicator size="large" color={C.tint} />
+            ) : (
+              <View style={styles.termHeaderCard}>
+                <Feather name="camera" size={20} color={C.tint} />
+                <Text style={styles.termHeaderTitle}>Nenhum termo pendente</Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.checkRow, termChecked && styles.checkRowActive]}
@@ -583,7 +434,7 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Modal de confirmação de assinatura ──────────────────────────── */}
+      {/* ── Modal de confirmação de assinatura ────────────────────────────── */}
       <Modal
         visible={showConfirmModal}
         transparent

@@ -14,6 +14,7 @@ const ADMIN_SECTIONS = [
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
   { icon: "inbox", title: "Chamados", desc: "Gerenciar chamados, delegar e configurar responsáveis por área", route: "/admin/tickets" },
   { icon: "flag", title: "Denúncias", desc: "Ver comentários reportados", route: "/admin/reports" },
+  { icon: "layers", title: "Central de Documentos", desc: "Criar, editar e excluir documentos, políticas e termos do Integra", route: "/admin/docs" },
   { icon: "file-text", title: "Termos Assinados", desc: "Ver quem aceitou os termos e documentos", route: "/admin/terms" },
   { icon: "book-open", title: "Progresso de Leitura", desc: "Ver % de documentos lidos por colaborador e resetar progresso", route: "/admin/doc-progress" },
   { icon: "database", title: "Exportar / Importar", desc: "Baixar planilha CSV de colaboradores ou importar em lote", route: "/admin/export-import" },

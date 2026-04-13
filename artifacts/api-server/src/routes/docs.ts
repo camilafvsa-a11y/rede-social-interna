@@ -12,7 +12,7 @@ async function getDynamicTotal(): Promise<number> {
     const [{ value }] = await db
       .select({ value: count() })
       .from(integraItemsTable)
-      .where(eq(integraItemsTable.isActive, true));
+      .where(and(eq(integraItemsTable.isActive, true), eq(integraItemsTable.countsForProgress, true)));
     const n = Number(value);
     return n > 0 ? n : FALLBACK_TOTAL;
   } catch {

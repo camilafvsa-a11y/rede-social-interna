@@ -1,0 +1,163 @@
+Quero que você implemente um sistema completo de gestão de documentos no painel de administradores do app, conectado à aba “Integra” e também à página de primeiro acesso.
+
+Objetivo geral
+
+Criar uma área no painel administrativo onde seja possível visualizar, cadastrar, editar, substituir e excluir documentos, tanto em texto nativo quanto em PDF, para que esses documentos apareçam corretamente na aba Integra do aplicativo e também, quando marcado, na página de primeiro acesso.
+
+Regras e funcionalidades obrigatórias
+1. Painel administrativo de documentos
+
+Criar uma seção no admin chamada, por exemplo, “Gestão de Documentos” ou “Central de Documentos”, contendo a listagem de todos os documentos já existentes no sistema.
+
+Cada documento deve aparecer no painel com as seguintes informações:
+
+Título do documento
+Categoria ou seção
+Tipo do documento: Texto nativo ou PDF
+Status: ativo/inativo
+Se aparece ou não na aba Integra
+Se aparece ou não na página de primeiro acesso
+Se exige apenas leitura ou assinatura
+Data de criação
+Data da última atualização
+2. Cadastro de novos documentos
+
+Permitir adicionar novos documentos com estas opções:
+
+Documento em texto nativo, com editor de texto rico
+Documento em PDF, com upload de arquivo
+
+Campos do cadastro:
+
+Título
+Subtítulo ou descrição curta
+Categoria
+Tipo do documento: texto ou PDF
+Conteúdo em texto nativo, quando esse formato for escolhido
+Upload do PDF, quando esse formato for escolhido
+Definir se o documento:
+aparece na aba Integra
+aparece na página de primeiro acesso
+entra na contabilização de progresso
+exige assinatura
+exige apenas leitura
+Status ativo/inativo
+Ordem de exibição
+3. Edição de documentos existentes
+
+Todos os documentos que já existem hoje no sistema devem aparecer dentro do painel administrativo para que eu possa:
+
+editar título
+editar descrição
+trocar categoria
+alterar conteúdo de texto
+substituir PDF
+alterar ordem
+ativar ou desativar
+marcar ou desmarcar exibição no primeiro acesso
+marcar ou desmarcar exibição na aba Integra
+definir se contabiliza ou não no progresso
+definir se é leitura ou assinatura
+
+Ou seja: quero que tudo o que já existe hoje esteja refletido no painel administrativo e seja totalmente editável por lá.
+
+4. Exclusão de documentos
+
+Permitir excluir documentos pelo painel administrativo, com confirmação antes da exclusão.
+
+Se um documento for excluído:
+
+ele não deve mais aparecer na aba Integra
+ele não deve mais aparecer na página de primeiro acesso
+ele não deve mais contar na porcentagem de progresso
+5. Integração com a aba Integra
+
+Todos os documentos ativos marcados para aparecer na aba Integra devem ser exibidos automaticamente nessa aba, separados corretamente por categoria, como por exemplo:
+
+Termos para Assinar
+Código de Conduta
+Documentos e Políticas
+ou outras categorias existentes
+
+A tela Integra deve refletir exatamente o que estiver configurado no painel administrativo.
+
+6. Integração com a página de primeiro acesso
+
+Adicionar no cadastro e na edição de cada documento um checkbox com algo como:
+
+Exibir no primeiro acesso
+
+Quando esse checkbox estiver marcado, o documento deve aparecer também na tela/página de primeiro acesso do usuário.
+
+Quando estiver desmarcado, ele deve aparecer apenas na aba Integra, se essa opção estiver ativa.
+
+Também quero que os documentos que atualmente já aparecem no primeiro acesso estejam corretamente marcados no painel administrativo.
+
+7. Contabilização da porcentagem de progresso
+
+A porcentagem de progresso mostrada na aba Integra deve ser baseada nos documentos configurados no painel.
+
+Ela deve considerar:
+
+quantos documentos contabilizam progresso
+quantos já foram lidos
+quantos já foram assinados
+quais são obrigatórios
+quais são apenas informativos
+
+O sistema deve recalcular automaticamente o progresso quando:
+
+um novo documento for adicionado
+um documento for removido
+um documento deixar de contabilizar
+um documento passar a contabilizar
+um usuário ler um documento
+um usuário assinar um documento
+8. Compatibilidade com texto e PDF
+
+O sistema precisa suportar dois formatos:
+
+Texto nativo, exibido dentro do app
+PDF, com visualização adequada no app
+
+Ambos devem funcionar igualmente para:
+
+exibição na aba Integra
+exibição no primeiro acesso
+leitura
+assinatura, quando aplicável
+contabilização de progresso
+9. Interface do admin
+
+No painel administrativo, quero uma interface prática e organizada com:
+
+listagem dos documentos existentes
+filtros por categoria
+filtro por tipo: texto ou PDF
+filtro por exibição no primeiro acesso
+filtro por exibição na Integra
+botão de editar
+botão de excluir
+botão de criar novo documento
+10. Importante
+
+Quero que a implementação:
+
+preserve os documentos atuais
+traga os documentos atuais para dentro do painel administrativo
+permita editar tudo o que já existe hoje
+mantenha a aba Integra sincronizada com o que for configurado no admin
+mantenha a página de primeiro acesso sincronizada com o que for configurado no admin
+Resultado esperado
+
+Ao final, quero ter um painel onde eu consiga administrar sozinho todos os documentos do sistema, sem precisar mexer no código, definindo:
+
+quais aparecem na Integra
+quais aparecem no primeiro acesso
+quais contam na porcentagem
+quais são texto
+quais são PDF
+quais exigem assinatura
+quais estão ativos ou inativos
+
+Além disso, quero que todos os documentos atuais já estejam visíveis e configuráveis dentro desse painel.

@@ -12,321 +12,31 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-// ─── Termos ────────────────────────────────────────────────────────────────
-const TERMS = [
-  {
-    key: "image_voice_authorization",
-    title: "Termo de Autorização de Uso de Imagem e Voz",
-    icon: "camera" as const,
-    content: `Ao participar de ações, campanhas, eventos, gravações, entrevistas, fotografias ou quaisquer produções realizadas pelo Grupo Beija-flor, o participante autoriza, de forma gratuita, definitiva e por prazo indeterminado, o uso de sua imagem, nome e voz em materiais institucionais, publicitários, promocionais e informativos do Grupo Beija-flor.
+// ─── IntegraItem type (matches DB) ─────────────────────────────────────────
+type IntegraItem = {
+  id: number;
+  category: string;
+  sectionName: string | null;
+  sectionIcon: string | null;
+  sectionColor: string | null;
+  sectionColorBg: string | null;
+  title: string;
+  subtitle: string | null;
+  content: string | null;
+  pdfUrl: string | null;
+  requiresSign: boolean;
+  requiresRead: boolean;
+  docKey: string;
+  iconName: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  docType: string;
+  showInIntegra: boolean;
+  showInOnboarding: boolean;
+  countsForProgress: boolean;
+};
 
-Essa autorização abrange, sem limitação, a veiculação em:
-
-• Redes sociais
-• Site institucional
-• Aplicativos
-• Materiais impressos
-• Vídeos, áudios e peças digitais
-• Campanhas publicitárias em qualquer mídia atual ou futura
-
-O uso poderá ocorrer no Brasil e no exterior, sem que disso decorra qualquer direito a remuneração, compensação ou indenização.
-
-O participante declara estar ciente de que:
-
-• A autorização é concedida de forma espontânea;
-• Não haverá limitação de tempo ou território para uso do material;
-• O Grupo Beija-flor poderá editar, adaptar ou combinar o conteúdo com outros materiais, respeitando sempre a integridade e a boa imagem do participante;
-• Esta autorização não caracteriza vínculo empregatício ou contratual de qualquer natureza.
-
-Ao participar das ações do Grupo Beija-flor, o participante declara estar de acordo com os termos acima.`,
-  },
-];
-
-// ─── Políticas ─────────────────────────────────────────────────────────────
-const POLICY_SECTIONS = [
-  {
-    section: "Código de Conduta",
-    icon: "shield" as const,
-    color: "#2563EB",
-    colorBg: "#EFF6FF",
-    items: [
-      {
-        key: "anticorrupcao",
-        title: "Tolerância Zero Contra Corrupção",
-        desc: "Trabalhamos de forma isenta e leal. Não prometemos, damos, oferecemos, solicitamos ou concordamos em receber ou aceitar subornos.",
-        icon: "shield-off" as const,
-        required: true,
-        content: `O Grupo Beija-flor tem tolerância zero contra corrupção.
-
-Nossos Compromissos:
-• Trabalhamos de forma isenta e leal
-• Não prometemos, damos, oferecemos, solicitamos ou concordamos em receber ou aceitar subornos de qualquer espécie
-• Denunciamos e adotamos medidas para impedir e prevenir a corrupção
-• Desqualificamos automaticamente qualquer parceiro que ofereça privilégios ilícitos
-
-Antes de Agir, Pergunte-se:
-• O que eu pretendo fazer é legal?
-• É ético?
-• Está de acordo com a cultura do Grupo Beija-flor?
-
-Se a resposta para qualquer uma dessas perguntas for não, não devemos adotar a conduta avaliada.`,
-      },
-      {
-        key: "codigo_conduta",
-        title: "Código de Conduta",
-        desc: "Diretrizes de comportamento profissional",
-        icon: "book-open" as const,
-        required: true,
-        content: `Nossa empresa valoriza um ambiente de trabalho respeitoso e inclusivo.
-
-Princípios Básicos:
-• Respeito: Trate todos os colegas com dignidade e respeito
-• Integridade: Seja honesto e transparente em todas as interações
-• Colaboração: Trabalhe em equipe e apoie seus colegas
-• Profissionalismo: Mantenha uma postura profissional em todas as situações
-
-Comportamentos Esperados:
-• Comunicação clara e respeitosa
-• Pontualidade em reuniões e compromissos
-• Confidencialidade com informações sensíveis
-• Disposição para aprender e ensinar
-
-Políticas de Não-Discriminação:
-Não toleramos qualquer forma de discriminação por raça, gênero, idade, orientação sexual, religião ou deficiência.`,
-      },
-      {
-        key: "assedio",
-        title: "Assédio Moral e Sexual",
-        desc: "O Grupo não admite qualquer tipo de assédio moral ou sexual. Promovemos um ambiente seguro, sem discriminação.",
-        icon: "alert-triangle" as const,
-        required: true,
-        content: `O Grupo Beija-flor não admite qualquer tipo de assédio moral e sexual.
-
-Condutas Proibidas:
-• Atitudes que prejudiquem o desempenho no ambiente de trabalho
-• Condutas que afetem a dignidade gerando ambiente hostil, intimidador ou ofensivo
-• Propostas ou insinuações sexuais verbais, gestuais ou físicas
-• Prática de assédio sexual de qualquer natureza
-
-Nosso Compromisso:
-• Promovemos um ambiente seguro, sem discriminação, assédio, injustiça ou violência
-• Respeitamos a privacidade de todos os colegas
-• Somos contrários a todo tipo de preconceito (religião, cultura, raça, idade, gênero, orientação sexual, etc.)
-
-Como Denunciar:
-Estimulamos a denúncia através dos canais próprios.
-Contato RH: (31) 98496-0448`,
-      },
-      {
-        key: "conduta_profissional",
-        title: "Conduta Profissional",
-        desc: "Atuamos com integridade e respeitamos nosso horário de trabalho, contribuindo para o crescimento da empresa.",
-        icon: "briefcase" as const,
-        required: true,
-        content: `Nossos Compromissos:
-• Atuamos de acordo com os valores da nossa empresa
-• Cuidamos da nossa reputação pessoal e profissional
-• Respeitamos integralmente nosso horário de trabalho
-• Durante o expediente, focamos nas atividades relacionadas ao trabalho
-
-Respeito à Diversidade:
-• Tratamos superiores, subordinados, fornecedores e clientes com dignidade e respeito
-• Questões particulares e íntimas não devem interferir na rotina de trabalho
-• Respeitamos a privacidade de todos
-
-Em Caso de Dúvida:
-Se não souber como agir, procure seu gestor ou o RH.
-
-Contato RH: (31) 98496-0448`,
-      },
-      {
-        key: "atendimento_cliente",
-        title: "Relacionamento com Clientes",
-        desc: "Conscientes de que atuamos como representantes diretos do Grupo, nos comprometemos a fornecer serviços de excelência.",
-        icon: "users" as const,
-        required: true,
-        content: `Nossa Missão:
-Queremos que nossos clientes tenham sempre a melhor experiência.
-
-Princípios de Atendimento:
-• Primamos pela transparência e cordialidade em todos os atendimentos
-• Procuramos realizar atendimento rápido e cortês
-• Asseguramos a plena satisfação dos clientes
-• Mantemos comunicação clara, franca e confiável
-
-Não é Permitido:
-• Pedir ou sugerir o recebimento de gorjeta
-
-Compromisso:
-Caso identifiquemos insatisfação, procuramos compreender as razões de maneira respeitosa e corrigir falhas para garantir que os próximos atendimentos sejam satisfatórios.
-
-Como representantes do Grupo Beija-flor, transformamos a visita de cada cliente em seu melhor momento.`,
-      },
-      {
-        key: "parceiros",
-        title: "Parceiros e Fornecedores",
-        desc: "Elegemos parceiros com base em princípios éticos, idoneidade, qualidade, preço e entrega.",
-        icon: "link" as const,
-        required: false,
-        content: `Critérios de Seleção:
-Elegemos nossos parceiros e fornecedores com base em:
-
-• Princípios éticos
-• Idoneidade
-• Qualidade
-• Preço e entrega
-
-Nosso Compromisso:
-• Respeitamos e valorizamos nosso relacionamento com todos
-• Nos empenhamos por mantê-lo o mais saudável possível
-• Desqualificamos automaticamente qualquer parceiro que comprovadamente ofereça privilégios ilícitos
-
-Resultado:
-Isso nos leva à escolha dos parceiros mais qualificados e transparentes.`,
-      },
-      {
-        key: "responsabilidade_social",
-        title: "Responsabilidade Social",
-        desc: "Apoiamos direitos humanos universais e temos consciência do nosso impacto ambiental.",
-        icon: "globe" as const,
-        required: false,
-        content: `Direitos Humanos:
-• Apoiamos os direitos humanos universais
-• Garantimos direitos iguais de emprego
-• Promovemos locais de trabalho seguros
-• Respeitamos liberdade de expressão e associação
-• Defendemos o direito de todos à educação
-
-Práticas de Trabalho:
-• Fazemos oposição a práticas desumanas ou ilegais
-• Esperamos que fornecedores e parceiros façam o mesmo
-
-Meio Ambiente:
-• Temos consciência de nosso impacto sobre o meio ambiente
-• Nos esforçamos para minimizar o impacto de nossas operações
-• Investimos em sustentabilidade (usina fotovoltaica)`,
-      },
-      {
-        key: "uniformes",
-        title: "Uniformes e Apresentação",
-        desc: "O uniforme deve ser usado em sua totalidade, sempre limpo e alinhado. Cuidar do uniforme é zelar pela nossa imagem.",
-        icon: "tag" as const,
-        required: true,
-        content: `Uso Obrigatório:
-• O uniforme deve ser usado em sua totalidade
-• Sempre limpo e passado
-• Crachá de identificação durante toda a jornada
-
-Responsabilidades:
-• Cuidar do uniforme e usá-lo sempre limpo e passado
-• O uniforme é entregue na admissão
-• Troca só mediante apresentação da peça a ser substituída
-• Em caso de desligamento, todo uniforme deve ser devolvido
-
-Não é Permitido:
-• Alterações ou ajustes no uniforme por parte do colaborador
-• Crachá deve estar sempre limpo (cordão pode ser lavado com sabonete)
-
-Para colaboradores que manipulam alimentos:
-• Unhas curtas e sem esmaltes
-• Não usar perfume (optar por produtos sem odor)
-• Manter barba feita
-• Cabelos curtos ou presos
-• Não usar acessórios ou maquiagem
-• Usar touca ou boné`,
-      },
-      {
-        key: "denuncias",
-        title: "Denúncias e Ouvidoria",
-        desc: "Todas as denúncias são investigadas. Garantimos privacidade e não aceitamos retaliações contra quem denuncia.",
-        icon: "message-square" as const,
-        required: true,
-        content: `Processo de Denúncia:
-• Todas as denúncias são investigadas
-• Devem conter o máximo de detalhes possíveis com fatos e dados
-• Qualquer parte envolvida pode ser chamada para prestar esclarecimentos
-
-Seus Direitos:
-• Privacidade e confidencialidade reservadas
-• São inaceitáveis quaisquer formas de coação, punição ou retaliação
-• Todos os envolvidos recebem informações sobre o resultado das investigações
-
-Nosso Compromisso:
-• Somos comprometidos com a verdade
-• Cooperamos com investigações
-• Não aceitamos atos contra profissionais que denunciam de boa-fé
-• Repudiamos denúncias vazias, conspiratórias ou vingativas
-
-Como Denunciar:
-Contato RH: (31) 98496-0448`,
-      },
-    ],
-  },
-  {
-    section: "Segurança",
-    icon: "lock" as const,
-    color: "#7C3AED",
-    colorBg: "#F5F3FF",
-    items: [
-      {
-        key: "seguranca_info",
-        title: "Política de Segurança da Informação",
-        desc: "Protegendo nossos dados e sistemas",
-        icon: "lock" as const,
-        required: true,
-        content: `A proteção dos dados é responsabilidade de todos.
-
-Senhas e Acessos:
-• Use senhas fortes (mínimo 12 caracteres)
-• Ative autenticação de dois fatores
-• Nunca compartilhe suas credenciais
-• Troque suas senhas a cada 90 dias
-
-Uso de Equipamentos:
-• Mantenha seu computador bloqueado quando ausente
-• Não instale softwares não autorizados
-• Use apenas a VPN para acessar sistemas internos
-• Reporte qualquer atividade suspeita
-
-Dados Confidenciais:
-• Não compartilhe informações sensíveis externamente
-• Use sempre canais oficiais de comunicação
-• Criptografe arquivos sensíveis`,
-      },
-    ],
-  },
-  {
-    section: "Recursos Humanos",
-    icon: "user-check" as const,
-    color: "#D97706",
-    colorBg: "#FFFBEB",
-    items: [
-      {
-        key: "pontualidade",
-        title: "Pontualidade e Registro de Ponto",
-        desc: "Ser pontual e não faltar sem justificativa. Utilizamos registro biométrico diário.",
-        icon: "clock" as const,
-        required: true,
-        content: `Compromissos:
-• Ser pontual e não faltar ao trabalho sem justificativa
-• Atestados médicos devem ser encaminhados ao coordenador ou RH no primeiro dia de afastamento
-
-Registro de Ponto Biométrico:
-Deve ser feito diariamente:
-
-• No início da jornada de trabalho
-• Na saída para intervalo
-• No retorno do intervalo
-• No final da jornada de trabalho
-
-Importante:
-Respeitamos integralmente nosso horário de trabalho, pois a jornada é a venda de nossa capacidade de produção. Durante o expediente, não realizamos atividades não relacionadas ao trabalho sem aprovação do gestor.`,
-      },
-    ],
-  },
-];
-
-// ─── Nossos Valores ────────────────────────────────────────────────────────
+// ─── Nossos Valores (static company values) ─────────────────────────────────
 const VALUES_DATA = [
   {
     key: "etica",
@@ -386,7 +96,7 @@ const VALUES_DATA = [
   },
 ];
 
-// ─── Utilitários ───────────────────────────────────────────────────────────
+// ─── Utilitários ─────────────────────────────────────────────────────────────
 function formatDateTime(isoStr: string): string {
   const d = new Date(isoStr);
   return d.toLocaleString("pt-BR", {
@@ -395,7 +105,7 @@ function formatDateTime(isoStr: string): string {
   });
 }
 
-// ─── Gráfico circular de progresso ─────────────────────────────────────────
+// ─── Gráfico circular de progresso ───────────────────────────────────────────
 function CircularProgress({ percent, size = 110 }: { percent: number; size?: number }) {
   const sw = 10;
   const r = (size - sw) / 2;
@@ -422,7 +132,7 @@ function CircularProgress({ percent, size = 110 }: { percent: number; size?: num
   );
 }
 
-// ─── Checkbox de leitura ───────────────────────────────────────────────────
+// ─── Checkbox de leitura ──────────────────────────────────────────────────────
 function ReadCheckbox({
   isRead, onPress, loading,
 }: { isRead: boolean; onPress: () => void; loading: boolean }) {
@@ -448,11 +158,11 @@ function ReadCheckbox({
   );
 }
 
-// ─── Card de política ──────────────────────────────────────────────────────
+// ─── Card de política ─────────────────────────────────────────────────────────
 function PolicyCard({
   item, sectionColor, sectionColorBg, isRead, onMarkRead, markLoading,
 }: {
-  item: typeof POLICY_SECTIONS[0]["items"][0];
+  item: IntegraItem;
   sectionColor: string;
   sectionColorBg: string;
   isRead: boolean;
@@ -469,14 +179,14 @@ function PolicyCard({
         activeOpacity={0.8}
       >
         <View style={[styles.policyIcon, { backgroundColor: sectionColorBg }]}>
-          <Feather name={item.icon} size={16} color={sectionColor} />
+          <Feather name={(item.iconName as any) || "file-text"} size={16} color={sectionColor} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.policyTitleRow}>
             <Text style={styles.policyTitle} numberOfLines={expanded ? undefined : 1}>
               {item.title}
             </Text>
-            {item.required && !isRead && (
+            {item.requiresRead && !isRead && (
               <View style={styles.requiredBadge}>
                 <Text style={styles.requiredText}>Obrigatório</Text>
               </View>
@@ -489,7 +199,7 @@ function PolicyCard({
             )}
           </View>
           {!expanded && (
-            <Text style={styles.policyDesc} numberOfLines={2}>{item.desc}</Text>
+            <Text style={styles.policyDesc} numberOfLines={2}>{item.subtitle}</Text>
           )}
         </View>
         <Feather
@@ -520,11 +230,11 @@ function formatCpf(cpf: string | null | undefined): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
-// ─── Card de termo ─────────────────────────────────────────────────────────
+// ─── Card de termo ────────────────────────────────────────────────────────────
 function TermCard({
   term, acceptance, onAccept, isRead, onMarkRead, userName, userCpf,
 }: {
-  term: typeof TERMS[0];
+  term: IntegraItem;
   acceptance: any;
   onAccept: () => void;
   isRead: boolean;
@@ -556,7 +266,7 @@ function TermCard({
     setShowConfirmModal(false);
     setAccepting(true);
     try {
-      await api.post("/terms/accept", { termKey: term.key, termTitle: term.title });
+      await api.post("/terms/accept", { termKey: term.docKey, termTitle: term.title });
       onMarkRead();
       onAccept();
     } catch (e: any) {
@@ -574,7 +284,7 @@ function TermCard({
         activeOpacity={0.8}
       >
         <View style={[styles.policyIcon, { backgroundColor: isSigned ? "#EFF6FF" : "#FEE2E2" }]}>
-          <Feather name={term.icon} size={16} color={isSigned ? C.tint : "#EF4444"} />
+          <Feather name={(term.iconName as any) || "file-text"} size={16} color={isSigned ? C.tint : "#EF4444"} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.policyTitleRow}>
@@ -652,7 +362,6 @@ function TermCard({
       <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
         <View style={styles.termModalOverlay}>
           <View style={styles.termModalSheet}>
-            {/* Header */}
             <View style={styles.termModalHeader}>
               <View style={styles.termModalIconWrap}>
                 <Feather name="alert-triangle" size={20} color="#B45309" />
@@ -660,7 +369,6 @@ function TermCard({
               <Text style={styles.termModalTitle}>Confirmar Assinatura</Text>
             </View>
 
-            {/* Warning */}
             <View style={styles.termModalWarningBox}>
               <Text style={styles.termModalWarningText}>
                 Ao assinar este termo, você autoriza o uso da sua imagem e voz pelo Grupo Beija-flor. Essa autorização{" "}
@@ -669,7 +377,6 @@ function TermCard({
               </Text>
             </View>
 
-            {/* User info */}
             <View style={styles.termModalUserCard}>
               <View style={styles.termModalUserRow}>
                 <Feather name="user" size={14} color={C.textSecondary} />
@@ -687,7 +394,6 @@ function TermCard({
               Ao confirmar, você declara que leu, compreendeu e aceita todos os termos acima em seu nome.
             </Text>
 
-            {/* Buttons */}
             <View style={styles.termModalBtnRow}>
               <TouchableOpacity style={styles.termModalCancelBtn} onPress={() => setShowConfirmModal(false)} activeOpacity={0.8}>
                 <Text style={styles.termModalCancelText}>Cancelar</Text>
@@ -704,7 +410,7 @@ function TermCard({
   );
 }
 
-// ─── Card de valores ───────────────────────────────────────────────────────
+// ─── Card de valores ──────────────────────────────────────────────────────────
 function ValueCard({
   value, isRead, onMarkRead, markLoading,
 }: {
@@ -768,7 +474,7 @@ function ValueCard({
   );
 }
 
-// ─── Tela Principal ────────────────────────────────────────────────────────
+// ─── Tela Principal ───────────────────────────────────────────────────────────
 export default function IntegraScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
@@ -798,6 +504,12 @@ export default function IntegraScreen() {
     initialData: { readKeys: [], completionCount: 0, totalDocs: 15 },
   });
 
+  const { data: integraItems = [], isLoading: itemsLoading } = useQuery<IntegraItem[]>({
+    queryKey: ["integra-items"],
+    queryFn: () => api.get("/integra-items"),
+    staleTime: 60_000,
+  });
+
   const readKeysSet = new Set(docsProgress?.readKeys ?? []);
 
   async function markRead(key: string) {
@@ -806,7 +518,7 @@ export default function IntegraScreen() {
     try {
       await api.post("/docs/mark", { documentKey: key });
       await refetchDocs();
-    } catch (e: any) {
+    } catch {
       Alert.alert("Erro", "Não foi possível salvar o progresso.");
     } finally {
       setMarkingKey(null);
@@ -817,11 +529,31 @@ export default function IntegraScreen() {
     return acceptances.find((a: any) => a.termKey === key) || null;
   }
 
-  const signedCount = TERMS.filter((t) => getAcceptance(t.key)).length;
+  // Split items: terms (requiresSign) vs policy sections
+  const terms = integraItems.filter((i) => i.requiresSign);
+  const policyItems = integraItems.filter((i) => !i.requiresSign);
+
+  // Group policies by sectionName
+  const sectionMap = new Map<string, { icon: string; color: string; colorBg: string; items: IntegraItem[] }>();
+  for (const item of policyItems) {
+    const sName = item.sectionName || item.category || "Outros";
+    if (!sectionMap.has(sName)) {
+      sectionMap.set(sName, {
+        icon: item.sectionIcon || "file-text",
+        color: item.sectionColor || C.tint,
+        colorBg: item.sectionColorBg || "#EFF6FF",
+        items: [],
+      });
+    }
+    sectionMap.get(sName)!.items.push(item);
+  }
+  const sections = Array.from(sectionMap.entries()).map(([section, data]) => ({ section, ...data }));
+
+  const signedCount = terms.filter((t) => getAcceptance(t.docKey)).length;
   const docsReadCount = readKeysSet.size;
-  const totalDocs = POLICY_SECTIONS.reduce((acc, s) => acc + s.items.length, 0) + VALUES_DATA.length;
+  const totalDocs = docsProgress?.totalDocs ?? 15;
   const totalRead = Math.min(docsReadCount, totalDocs);
-  const percent = Math.round((totalRead / totalDocs) * 100);
+  const percent = totalDocs > 0 ? Math.round((totalRead / totalDocs) * 100) : 0;
   const completionCount = docsProgress?.completionCount ?? 0;
 
   return (
@@ -850,7 +582,7 @@ export default function IntegraScreen() {
           </View>
         </View>
 
-        {/* Progress card com gráfico circular */}
+        {/* Progress card */}
         <View style={styles.progressCard}>
           <View style={styles.progressLeft}>
             <View style={{ position: "relative", width: 110, height: 110, alignItems: "center", justifyContent: "center" }}>
@@ -872,12 +604,14 @@ export default function IntegraScreen() {
                 <Text style={styles.progressStatBold}>{totalRead}</Text>/{totalDocs} documentos lidos
               </Text>
             </View>
-            <View style={styles.progressStat}>
-              <Feather name="edit-3" size={14} color={C.tint} />
-              <Text style={styles.progressStatText}>
-                <Text style={styles.progressStatBold}>{signedCount}</Text>/{TERMS.length} termos assinados
-              </Text>
-            </View>
+            {terms.length > 0 && (
+              <View style={styles.progressStat}>
+                <Feather name="edit-3" size={14} color={C.tint} />
+                <Text style={styles.progressStatText}>
+                  <Text style={styles.progressStatBold}>{signedCount}</Text>/{terms.length} termos assinados
+                </Text>
+              </View>
+            )}
             {completionCount > 0 && (
               <View style={[styles.progressStat, { marginTop: 4 }]}>
                 <Feather name="award" size={14} color="#D97706" />
@@ -895,58 +629,67 @@ export default function IntegraScreen() {
           </View>
         </View>
 
-        {/* ── Seção: Termos ── */}
-        <View style={styles.sectionHeader}>
-          <View style={[styles.sectionIconWrap, { backgroundColor: "#EFF6FF" }]}>
-            <Feather name="edit-3" size={14} color={C.tint} />
-          </View>
-          <Text style={styles.sectionTitle}>Termos para Assinar</Text>
-        </View>
+        {/* Loading state */}
+        {itemsLoading && (
+          <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 24 }} />
+        )}
 
-        <View style={styles.groupCard}>
-          {termsLoading
-            ? <ActivityIndicator size="small" color={C.tint} style={{ margin: 16 }} />
-            : TERMS.map((term, i) => (
-              <React.Fragment key={term.key}>
-                {i > 0 && <View style={styles.itemDivider} />}
-                <TermCard
-                  term={term}
-                  acceptance={getAcceptance(term.key)}
-                  isRead={readKeysSet.has(term.key)}
-                  onMarkRead={() => markRead(term.key)}
-                  onAccept={() => {
-                    refetchTerms();
-                    qc.invalidateQueries({ queryKey: ["my-terms"] });
-                  }}
-                  userName={currentUser?.name}
-                  userCpf={currentUser?.cpf}
-                />
-              </React.Fragment>
-            ))
-          }
-        </View>
+        {/* ── Termos para Assinar ── */}
+        {terms.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIconWrap, { backgroundColor: "#EFF6FF" }]}>
+                <Feather name="edit-3" size={14} color={C.tint} />
+              </View>
+              <Text style={styles.sectionTitle}>Termos para Assinar</Text>
+            </View>
 
-        {/* ── Políticas ── */}
-        {POLICY_SECTIONS.map((section) => (
+            <View style={styles.groupCard}>
+              {termsLoading
+                ? <ActivityIndicator size="small" color={C.tint} style={{ margin: 16 }} />
+                : terms.map((term, i) => (
+                  <React.Fragment key={term.docKey}>
+                    {i > 0 && <View style={styles.itemDivider} />}
+                    <TermCard
+                      term={term}
+                      acceptance={getAcceptance(term.docKey)}
+                      isRead={readKeysSet.has(term.docKey)}
+                      onMarkRead={() => markRead(term.docKey)}
+                      onAccept={() => {
+                        refetchTerms();
+                        qc.invalidateQueries({ queryKey: ["my-terms"] });
+                      }}
+                      userName={currentUser?.name}
+                      userCpf={currentUser?.cpf}
+                    />
+                  </React.Fragment>
+                ))
+              }
+            </View>
+          </>
+        )}
+
+        {/* ── Seções de Políticas (dinâmicas) ── */}
+        {sections.map((section) => (
           <View key={section.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconWrap, { backgroundColor: section.colorBg }]}>
-                <Feather name={section.icon} size={14} color={section.color} />
+                <Feather name={section.icon as any} size={14} color={section.color} />
               </View>
               <Text style={styles.sectionTitle}>{section.section}</Text>
             </View>
 
             <View style={styles.groupCard}>
               {section.items.map((item, i) => (
-                <React.Fragment key={item.key}>
+                <React.Fragment key={item.docKey}>
                   {i > 0 && <View style={styles.itemDivider} />}
                   <PolicyCard
                     item={item}
                     sectionColor={section.color}
                     sectionColorBg={section.colorBg}
-                    isRead={readKeysSet.has(item.key)}
-                    onMarkRead={() => markRead(item.key)}
-                    markLoading={markingKey === item.key}
+                    isRead={readKeysSet.has(item.docKey)}
+                    onMarkRead={() => markRead(item.docKey)}
+                    markLoading={markingKey === item.docKey}
                   />
                 </React.Fragment>
               ))}
@@ -983,7 +726,7 @@ export default function IntegraScreen() {
   );
 }
 
-// ─── Estilos ───────────────────────────────────────────────────────────────
+// ─── Estilos ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
 

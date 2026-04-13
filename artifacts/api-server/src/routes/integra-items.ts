@@ -1,26 +1,21 @@
 import { Router } from "express";
 import { db, integraItemsTable } from "@workspace/db";
-import { eq, asc, count } from "drizzle-orm";
+import { eq, asc, count, and } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 
 const router = Router();
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = join(__dirname, "../../uploads");
+const UPLOADS_DIR = join(process.cwd(), "uploads");
+if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
 
-if (!existsSync(UPLOADS_DIR)) {
-  mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// ─── GET /integra-items — list all active items ─────────────────────────────
-router.get("/", requireAuth, async (req, res) => {
+// ─── GET /integra-items — list active items shown in Integra tab ─────────────
+router.get("/", requireAuth, async (_req, res) => {
   const items = await db
     .select()
     .from(integraItemsTable)
-    .where(eq(integraItemsTable.isActive, true))
+    .where(and(eq(integraItemsTable.isActive, true), eq(integraItemsTable.showInIntegra, true)))
     .orderBy(
       asc(integraItemsTable.category),
       asc(integraItemsTable.sectionName),
@@ -29,16 +24,31 @@ router.get("/", requireAuth, async (req, res) => {
   res.json(items);
 });
 
-// ─── GET /integra-items/total — count of requiresRead items (for progress) ──
+// ─── GET /integra-items/onboarding — items shown in first-access onboarding ──
+router.get("/onboarding", requireAuth, async (_req, res) => {
+  const items = await db
+    .select()
+    .from(integraItemsTable)
+    .where(and(eq(integraItemsTable.isActive, true), eq(integraItemsTable.showInOnboarding, true)))
+    .orderBy(
+      asc(integraItemsTable.requiresSign),
+      asc(integraItemsTable.category),
+      asc(integraItemsTable.sectionName),
+      asc(integraItemsTable.sortOrder),
+    );
+  res.json(items);
+});
+
+// ─── GET /integra-items/total — count of items that count for progress ────────
 router.get("/total", requireAuth, async (_req, res) => {
   const [{ value }] = await db
     .select({ value: count() })
     .from(integraItemsTable)
-    .where(eq(integraItemsTable.isActive, true));
+    .where(and(eq(integraItemsTable.isActive, true), eq(integraItemsTable.countsForProgress, true)));
   res.json({ total: Number(value) });
 });
 
-// ─── GET /integra-items/admin — list all items (admin) ──────────────────────
+// ─── GET /integra-items/admin — list all items (active + inactive) ─────────
 router.get("/admin", requireAdmin, async (_req, res) => {
   const items = await db
     .select()
@@ -51,16 +61,17 @@ router.get("/admin", requireAdmin, async (_req, res) => {
   res.json(items);
 });
 
-// ─── POST /integra-items — create item (admin) ───────────────────────────────
+// ─── POST /integra-items — create item (admin) ────────────────────────────────
 router.post("/", requireAdmin, async (req, res) => {
   const {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
     title, subtitle, content, pdfUrl, requiresSign, requiresRead,
     docKey, iconName, sortOrder, isActive,
+    docType, showInIntegra, showInOnboarding, countsForProgress,
   } = req.body;
 
   if (!category || !title || !docKey) {
-    res.status(400).json({ error: "category, title and docKey are required" });
+    res.status(400).json({ error: "category, title and docKey são obrigatórios" });
     return;
   }
 
@@ -93,27 +104,31 @@ router.post("/", requireAdmin, async (req, res) => {
       iconName: iconName || "file-text",
       sortOrder: sortOrder ?? 0,
       isActive: isActive !== false,
+      docType: docType || "text",
+      showInIntegra: showInIntegra !== false,
+      showInOnboarding: showInOnboarding !== false,
+      countsForProgress: countsForProgress !== false,
     })
     .returning();
 
   res.json(item);
 });
 
-// ─── PATCH /integra-items/:id — update item (admin) ─────────────────────────
+// ─── PATCH /integra-items/:id — update item (admin) ──────────────────────────
 router.patch("/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
     title, subtitle, content, pdfUrl, requiresSign, requiresRead,
     docKey, iconName, sortOrder, isActive,
+    docType, showInIntegra, showInOnboarding, countsForProgress,
   } = req.body;
 
-  const updates: Partial<typeof integraItemsTable.$inferInsert> = {};
+  const updates: Partial<typeof integraItemsTable.$inferInsert> = {
+    updatedAt: new Date(),
+  };
   if (category !== undefined) updates.category = category;
   if (sectionName !== undefined) updates.sectionName = sectionName || null;
   if (sectionIcon !== undefined) updates.sectionIcon = sectionIcon || null;
@@ -129,6 +144,10 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (iconName !== undefined) updates.iconName = iconName;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
   if (isActive !== undefined) updates.isActive = !!isActive;
+  if (docType !== undefined) updates.docType = docType;
+  if (showInIntegra !== undefined) updates.showInIntegra = !!showInIntegra;
+  if (showInOnboarding !== undefined) updates.showInOnboarding = !!showInOnboarding;
+  if (countsForProgress !== undefined) updates.countsForProgress = !!countsForProgress;
 
   const [item] = await db
     .update(integraItemsTable)
@@ -136,27 +155,19 @@ router.patch("/:id", requireAdmin, async (req, res) => {
     .where(eq(integraItemsTable.id, id))
     .returning();
 
-  if (!item) {
-    res.status(404).json({ error: "Item não encontrado" });
-    return;
-  }
-
+  if (!item) { res.status(404).json({ error: "Item não encontrado" }); return; }
   res.json(item);
 });
 
 // ─── DELETE /integra-items/:id — delete item (admin) ────────────────────────
 router.delete("/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(integraItemsTable).where(eq(integraItemsTable.id, id));
   res.json({ success: true });
 });
 
-// ─── POST /integra-items/upload-pdf — upload PDF (admin) ────────────────────
+// ─── POST /integra-items/upload-pdf — upload PDF (admin) ─────────────────────
 router.post("/upload-pdf", requireAdmin, async (req, res) => {
   const { base64, filename } = req.body;
   if (!base64 || !filename) {
@@ -174,12 +185,11 @@ router.post("/upload-pdf", requireAdmin, async (req, res) => {
   }
 
   writeFileSync(filePath, buffer);
-
   const baseUrl = process.env.API_BASE_URL || "";
   res.json({ url: `${baseUrl}/uploads/${safeName}` });
 });
 
-// ─── POST /integra-items/seed — seed default content (admin) ────────────────
+// ─── POST /integra-items/seed — seed default content (admin) ─────────────────
 router.post("/seed", requireAdmin, async (_req, res) => {
   const existing = await db.select({ id: integraItemsTable.id }).from(integraItemsTable).limit(1);
   if (existing.length > 0) {
@@ -219,6 +229,10 @@ Ao participar das ações do Grupo Beija-flor, o participante declara estar de a
       docKey: "image_voice_authorization",
       iconName: "camera",
       sortOrder: 0,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
 
     // ── Código de Conduta ────────────────────────────────────────────────────
@@ -248,6 +262,10 @@ Se a resposta para qualquer uma dessas perguntas for não, não devemos adotar a
       docKey: "anticorrupcao",
       iconName: "shield-off",
       sortOrder: 0,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -277,6 +295,10 @@ Não toleramos qualquer forma de discriminação por raça, gênero, idade, orie
       docKey: "codigo_conduta",
       iconName: "book-open",
       sortOrder: 1,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -306,6 +328,10 @@ Contato RH: (31) 98496-0448`,
       docKey: "assedio",
       iconName: "alert-triangle",
       sortOrder: 2,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -334,6 +360,10 @@ Contato RH: (31) 98496-0448`,
       docKey: "conduta_profissional",
       iconName: "briefcase",
       sortOrder: 3,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -363,6 +393,10 @@ Como representantes do Grupo Beija-flor, transformamos a visita de cada cliente 
       docKey: "atendimento_cliente",
       iconName: "users",
       sortOrder: 4,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -391,6 +425,10 @@ Isso nos leva à escolha dos parceiros mais qualificados e transparentes.`,
       docKey: "parceiros",
       iconName: "link",
       sortOrder: 5,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
     },
     {
       category: "conduct",
@@ -419,6 +457,10 @@ Meio Ambiente:
       docKey: "responsabilidade_social",
       iconName: "globe",
       sortOrder: 6,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
     },
     {
       category: "conduct",
@@ -454,6 +496,10 @@ Para colaboradores que manipulam alimentos:
       docKey: "uniformes",
       iconName: "tag",
       sortOrder: 7,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
     {
       category: "conduct",
@@ -485,6 +531,10 @@ Contato RH: (31) 98496-0448`,
       docKey: "denuncias",
       iconName: "message-square",
       sortOrder: 8,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
 
     // ── Segurança ────────────────────────────────────────────────────────────
@@ -518,6 +568,10 @@ Dados Confidenciais:
       docKey: "seguranca_info",
       iconName: "lock",
       sortOrder: 0,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
 
     // ── Recursos Humanos ─────────────────────────────────────────────────────
@@ -547,6 +601,10 @@ Respeitamos integralmente nosso horário de trabalho, pois a jornada é a venda 
       docKey: "pontualidade",
       iconName: "clock",
       sortOrder: 0,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: true,
+      countsForProgress: true,
     },
   ];
 

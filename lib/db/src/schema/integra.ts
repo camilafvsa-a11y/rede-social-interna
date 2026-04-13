@@ -17,7 +17,12 @@ export const integraItemsTable = pgTable("integra_items", {
   iconName: varchar("icon_name", { length: 50 }).default("file-text"),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  docType: varchar("doc_type", { length: 20 }).notNull().default("text"),
+  showInIntegra: boolean("show_in_integra").notNull().default(true),
+  showInOnboarding: boolean("show_in_onboarding").notNull().default(true),
+  countsForProgress: boolean("counts_for_progress").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export type IntegraItem = typeof integraItemsTable.$inferSelect;
