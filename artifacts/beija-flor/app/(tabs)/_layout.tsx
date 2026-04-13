@@ -27,6 +27,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
         <Label>Integra</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="ranking">
+        <Icon sf={{ default: "trophy", selected: "trophy.fill" }} />
+        <Label>Ranking</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
         <Icon sf={{ default: "questionmark.bubble", selected: "questionmark.bubble.fill" }} />
         <Label>Chamados</Label>
@@ -97,6 +101,14 @@ function ClassicTabLayout() {
           title: "Integra",
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="doc.text" tintColor={color} size={24} /> : <Feather name="file-text" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ranking"
+        options={{
+          title: "Ranking",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="trophy" tintColor={color} size={24} /> : <Feather name="award" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

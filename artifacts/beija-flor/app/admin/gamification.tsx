@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
+import DatePickerModal from "@/components/DatePickerModal";
 
 const C = Colors.light;
 
@@ -473,11 +474,21 @@ function LeaderboardForm({ initial, onClose, onSave, saving }: {
           <FieldRow label="Descrição">
             <TextInput style={[st.input, { height: 80, textAlignVertical: "top" }]} value={desc} onChangeText={setDesc} multiline placeholder="Opcional" placeholderTextColor={C.textMuted} />
           </FieldRow>
-          <FieldRow label="Data de início">
-            <TextInput style={st.input} value={start} onChangeText={setStart} placeholder="AAAA-MM-DD" placeholderTextColor={C.textMuted} />
+          <FieldRow label="Data de início *">
+            <DatePickerModal
+              value={start}
+              onChange={setStart}
+              label="Data de início"
+              maxDate={end || undefined}
+            />
           </FieldRow>
-          <FieldRow label="Data de fim">
-            <TextInput style={st.input} value={end} onChangeText={setEnd} placeholder="AAAA-MM-DD" placeholderTextColor={C.textMuted} />
+          <FieldRow label="Data de fim *">
+            <DatePickerModal
+              value={end}
+              onChange={setEnd}
+              label="Data de fim"
+              minDate={start || undefined}
+            />
           </FieldRow>
           <FieldRow label="Status">
             <View style={st.chipRow}>
