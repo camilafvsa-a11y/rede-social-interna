@@ -1,9 +1,22 @@
 import { Router } from "express";
 import { db, integraItemsTable } from "@workspace/db";
-import { eq, asc, count, and } from "drizzle-orm";
+import { eq, asc, count, and, isNotNull } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+
+function generateDocKey(title: string): string {
+  const base = title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .substring(0, 50);
+  return base || `doc_${Date.now()}`;
+}
 
 const router = Router();
 
@@ -61,29 +74,68 @@ router.get("/admin", requireAdmin, async (_req, res) => {
   res.json(items);
 });
 
+// ─── GET /integra-items/sections — list distinct sections (admin) ─────────────
+router.get("/sections", requireAdmin, async (_req, res) => {
+  const items = await db
+    .select({
+      sectionName: integraItemsTable.sectionName,
+      sectionIcon: integraItemsTable.sectionIcon,
+      sectionColor: integraItemsTable.sectionColor,
+      sectionColorBg: integraItemsTable.sectionColorBg,
+    })
+    .from(integraItemsTable)
+    .where(isNotNull(integraItemsTable.sectionName))
+    .orderBy(asc(integraItemsTable.sectionName));
+
+  const seen = new Set<string>();
+  const countMap = new Map<string, number>();
+  for (const item of items) {
+    if (item.sectionName) countMap.set(item.sectionName, (countMap.get(item.sectionName) || 0) + 1);
+  }
+  const sections = items.filter((item) => {
+    if (!item.sectionName || seen.has(item.sectionName)) return false;
+    seen.add(item.sectionName);
+    return true;
+  }).map((item) => ({ ...item, count: countMap.get(item.sectionName!) || 0 }));
+
+  res.json(sections);
+});
+
+// ─── DELETE /integra-items/sections/:name — remove section from all docs ──────
+router.delete("/sections/:name", requireAdmin, async (req, res) => {
+  const name = decodeURIComponent(req.params.name);
+  if (!name) { res.status(400).json({ error: "Section name required" }); return; }
+  await db.update(integraItemsTable)
+    .set({ sectionName: null, sectionIcon: null, sectionColor: null, sectionColorBg: null, updatedAt: new Date() })
+    .where(eq(integraItemsTable.sectionName, name));
+  res.json({ success: true });
+});
+
 // ─── POST /integra-items — create item (admin) ────────────────────────────────
 router.post("/", requireAdmin, async (req, res) => {
   const {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
     title, subtitle, content, pdfUrl, requiresSign, requiresRead,
-    docKey, iconName, sortOrder, isActive,
+    docKey: rawDocKey, iconName, sortOrder, isActive,
     docType, showInIntegra, showInOnboarding, countsForProgress,
   } = req.body;
 
-  if (!category || !title || !docKey) {
-    res.status(400).json({ error: "category, title and docKey são obrigatórios" });
+  if (!category || !title) {
+    res.status(400).json({ error: "category e title são obrigatórios" });
     return;
   }
 
-  const existing = await db
-    .select({ id: integraItemsTable.id })
-    .from(integraItemsTable)
-    .where(eq(integraItemsTable.docKey, docKey))
-    .limit(1);
-
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Um item com esse docKey já existe" });
-    return;
+  const baseKey = (rawDocKey || generateDocKey(title)).trim();
+  let resolvedDocKey = baseKey;
+  let suffix = 2;
+  while (true) {
+    const existing = await db
+      .select({ id: integraItemsTable.id })
+      .from(integraItemsTable)
+      .where(eq(integraItemsTable.docKey, resolvedDocKey))
+      .limit(1);
+    if (existing.length === 0) break;
+    resolvedDocKey = `${baseKey}_${suffix++}`;
   }
 
   const [item] = await db
@@ -100,8 +152,8 @@ router.post("/", requireAdmin, async (req, res) => {
       pdfUrl: pdfUrl || null,
       requiresSign: !!requiresSign,
       requiresRead: requiresRead !== false,
-      docKey,
-      iconName: iconName || "file-text",
+      docKey: resolvedDocKey,
+      iconName: iconName || null,
       sortOrder: sortOrder ?? 0,
       isActive: isActive !== false,
       docType: docType || "text",
