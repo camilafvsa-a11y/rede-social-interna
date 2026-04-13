@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, documentReadsTable, docReadCompletionsTable, usersTable, integraItemsTable } from "@workspace/db";
 import { eq, and, count } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
+import { processGamificationEvent } from "./gamification.js";
 
 const router = Router();
 
@@ -55,8 +56,25 @@ router.post("/mark", requireAuth, async (req, res) => {
     .where(and(eq(documentReadsTable.userId, user.id), eq(documentReadsTable.documentKey, documentKey)))
     .limit(1);
 
-  if (existing.length === 0) {
+  const isNew = existing.length === 0;
+  if (isNew) {
     await db.insert(documentReadsTable).values({ userId: user.id, documentKey });
+  }
+
+  // Gamification: award points only for first-time reads
+  if (isNew) {
+    setImmediate(async () => {
+      try {
+        await processGamificationEvent({
+          userId: user.id,
+          actionType: "doc_read",
+          entityType: "doc",
+          idempotencyKey: `doc_read_${user.id}_${documentKey}`,
+        });
+      } catch (e) {
+        console.error("[Gamification doc_read]", e);
+      }
+    });
   }
 
   const totalRead = await db

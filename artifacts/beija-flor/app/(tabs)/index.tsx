@@ -108,8 +108,340 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type MainTab = "feed" | "interno" | "aniversarios";
+type MainTab = "feed" | "interno" | "aniversarios" | "ranking";
 type BdSubTab = "today" | "upcoming";
+
+// ─── Gamification Ranking View ────────────────────────────────────────────────
+const ACTION_LABELS: Record<string, string> = {
+  like: "Curtiu", comment: "Comentou",
+  doc_read: "Leu documento", doc_sign: "Assinou documento",
+  manual_adjustment: "Ajuste manual",
+};
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+function GamificationView({ currentUserId, botPad }: { currentUserId: number; botPad: number }) {
+  const { data: activeLeaderboards = [], isLoading: lbLoading } = useQuery<any[]>({
+    queryKey: ["active-leaderboards"],
+    queryFn: () => api.get("/gamification/leaderboards"),
+    refetchInterval: 60_000,
+  });
+
+  const { data: myStats } = useQuery<any>({
+    queryKey: ["my-gamif-stats"],
+    queryFn: () => api.get("/gamification/my-stats"),
+    refetchInterval: 60_000,
+  });
+
+  const { data: myHistory = [] } = useQuery<any[]>({
+    queryKey: ["my-gamif-history"],
+    queryFn: () => api.get("/gamification/my-events?limit=20"),
+  });
+
+  const [selectedLbId, setSelectedLbId] = useState<number | null>(null);
+
+  const activeLb = useMemo(() => {
+    if (activeLeaderboards.length === 0) return null;
+    const lb = selectedLbId
+      ? activeLeaderboards.find((l) => l.id === selectedLbId) ?? activeLeaderboards[0]
+      : activeLeaderboards[0];
+    return lb;
+  }, [activeLeaderboards, selectedLbId]);
+
+  const { data: lbRankings = [], isLoading: rankLoading } = useQuery<any[]>({
+    queryKey: ["lb-rankings", activeLb?.id],
+    queryFn: () => api.get(`/gamification/leaderboards/${activeLb!.id}/rankings`),
+    enabled: !!activeLb,
+    refetchInterval: 60_000,
+  });
+
+  const myRank = useMemo(
+    () => lbRankings.find((r) => r.userId === currentUserId) ?? null,
+    [lbRankings, currentUserId],
+  );
+
+  function fmtDate(s: string) {
+    try { return new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }); } catch { return s; }
+  }
+  function fmtDateTime(s: string) {
+    try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return s; }
+  }
+
+  if (lbLoading) {
+    return <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 60 }} />;
+  }
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[gSt.scrollContent, { paddingBottom: botPad }]}
+    >
+      {/* ── My Stats Card ── */}
+      {myStats && (
+        <View style={gSt.myStatsCard}>
+          <View style={gSt.myStatsHeader}>
+            <Feather name="zap" size={16} color="#F59E0B" />
+            <Text style={gSt.myStatsTitle}>Minha pontuação</Text>
+          </View>
+          <View style={gSt.myStatsRow}>
+            <View style={gSt.myStatItem}>
+              <Text style={gSt.myStatValue}>{myStats.totalPoints ?? 0}</Text>
+              <Text style={gSt.myStatLabel}>pontos totais</Text>
+            </View>
+            <View style={gSt.myStatsDivider} />
+            <View style={gSt.myStatItem}>
+              <Text style={gSt.myStatValue}>{myStats.todayPoints ?? 0}</Text>
+              <Text style={gSt.myStatLabel}>hoje</Text>
+            </View>
+            <View style={gSt.myStatsDivider} />
+            <View style={gSt.myStatItem}>
+              <Text style={gSt.myStatValue}>{myStats.todayActions ?? 0}</Text>
+              <Text style={gSt.myStatLabel}>ações hoje</Text>
+            </View>
+            {myRank && (
+              <>
+                <View style={gSt.myStatsDivider} />
+                <View style={gSt.myStatItem}>
+                  <Text style={[gSt.myStatValue, { color: C.tint }]}>#{myRank.rank}</Text>
+                  <Text style={gSt.myStatLabel}>ranking</Text>
+                </View>
+              </>
+            )}
+          </View>
+          {myStats.isBlocked && (
+            <View style={gSt.blockedWarning}>
+              <Feather name="alert-triangle" size={13} color="#EF4444" />
+              <Text style={gSt.blockedWarningText}>Sua pontuação está temporariamente suspensa.</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ── Leaderboard selector ── */}
+      {activeLeaderboards.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={gSt.lbSelector}>
+          {activeLeaderboards.map((lb) => (
+            <TouchableOpacity
+              key={lb.id}
+              style={[gSt.lbSelectorChip, (activeLb?.id === lb.id) && gSt.lbSelectorChipActive]}
+              onPress={() => setSelectedLbId(lb.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={[gSt.lbSelectorText, (activeLb?.id === lb.id) && gSt.lbSelectorTextActive]} numberOfLines={1}>
+                {lb.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* ── Active leaderboard ── */}
+      {activeLb ? (
+        <>
+          <View style={gSt.lbCard}>
+            <View style={gSt.lbCardHeader}>
+              <Feather name="award" size={16} color="#F59E0B" />
+              <View style={{ flex: 1 }}>
+                <Text style={gSt.lbName}>{activeLb.name}</Text>
+                {activeLb.description && <Text style={gSt.lbDesc} numberOfLines={2}>{activeLb.description}</Text>}
+                <Text style={gSt.lbDates}>
+                  {fmtDate(activeLb.startDate)} → {fmtDate(activeLb.endDate)}
+                </Text>
+              </View>
+            </View>
+
+            {rankLoading ? (
+              <ActivityIndicator size="small" color={C.tint} style={{ marginVertical: 20 }} />
+            ) : lbRankings.length === 0 ? (
+              <View style={gSt.rankEmpty}>
+                <Text style={gSt.rankEmptyText}>Nenhuma pontuação ainda. Seja o primeiro!</Text>
+              </View>
+            ) : (
+              <View style={gSt.rankList}>
+                {/* Top 3 podium */}
+                {lbRankings.slice(0, 3).map((r) => (
+                  <View
+                    key={r.rank}
+                    style={[
+                      gSt.rankTopRow,
+                      r.userId === currentUserId && gSt.rankTopRowMe,
+                      r.rank === 1 && { borderLeftColor: "#FFD700" },
+                    ]}
+                  >
+                    <Text style={gSt.rankMedal}>{MEDALS[r.rank - 1]}</Text>
+                    <View style={gSt.rankAvatarWrap}>
+                      {r.user?.avatarUrl
+                        ? <Image source={{ uri: r.user.avatarUrl }} style={gSt.rankAvatar} />
+                        : <View style={gSt.rankAvatarFallback}>
+                            <Text style={gSt.rankAvatarInitial}>{r.user?.name?.[0]?.toUpperCase()}</Text>
+                          </View>
+                      }
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={gSt.rankName} numberOfLines={1}>
+                        {r.user?.name ?? "Usuário"}
+                        {r.userId === currentUserId && <Text style={gSt.rankMeLabel}> (você)</Text>}
+                      </Text>
+                      <Text style={gSt.rankActions}>{r.totalActions} ações</Text>
+                    </View>
+                    <Text style={gSt.rankPts}>{r.totalPoints} pts</Text>
+                  </View>
+                ))}
+
+                {/* Separator */}
+                {lbRankings.length > 3 && <View style={gSt.rankSep} />}
+
+                {/* Rest of ranking */}
+                {lbRankings.slice(3).map((r) => (
+                  <View
+                    key={r.rank}
+                    style={[gSt.rankRow, r.userId === currentUserId && gSt.rankRowMe]}
+                  >
+                    <Text style={gSt.rankPos}>#{r.rank}</Text>
+                    <View style={gSt.rankAvatarWrap}>
+                      {r.user?.avatarUrl
+                        ? <Image source={{ uri: r.user.avatarUrl }} style={gSt.rankAvatar} />
+                        : <View style={gSt.rankAvatarFallback}>
+                            <Text style={gSt.rankAvatarInitial}>{r.user?.name?.[0]?.toUpperCase()}</Text>
+                          </View>
+                      }
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={gSt.rankName} numberOfLines={1}>
+                        {r.user?.name ?? "Usuário"}
+                        {r.userId === currentUserId && <Text style={gSt.rankMeLabel}> (você)</Text>}
+                      </Text>
+                      <Text style={gSt.rankActions}>{r.totalActions} ações</Text>
+                    </View>
+                    <Text style={gSt.rankPts}>{r.totalPoints} pts</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      ) : (
+        <View style={gSt.noLbCard}>
+          <Feather name="award" size={40} color={C.textMuted} />
+          <Text style={gSt.noLbTitle}>Sem competições ativas</Text>
+          <Text style={gSt.noLbSub}>Continue interagindo para acumular pontos!</Text>
+        </View>
+      )}
+
+      {/* ── My action history ── */}
+      {myHistory.length > 0 && (
+        <View style={gSt.historyCard}>
+          <Text style={gSt.historyTitle}>Minhas ações recentes</Text>
+          {myHistory.map((ev, i) => (
+            <View key={ev.id} style={[gSt.historyRow, i > 0 && gSt.historyRowBorder]}>
+              <View style={[gSt.historyDot, { backgroundColor: ev.status === "valid" ? "#10B981" : "#EF4444" }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={gSt.historyAction}>{ACTION_LABELS[ev.actionType] ?? ev.actionType}</Text>
+                {ev.blockReason && <Text style={gSt.historyBlockReason}>{ev.blockReason}</Text>}
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={[gSt.historyPts, { color: ev.pointsAwarded > 0 ? "#10B981" : "#9CA3AF" }]}>
+                  {ev.pointsAwarded > 0 ? `+${ev.pointsAwarded}` : "0"} pts
+                </Text>
+                <Text style={gSt.historyTime}>{fmtDateTime(ev.createdAt)}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Daily tip */}
+      <View style={gSt.tipCard}>
+        <Feather name="info" size={14} color="#7C3AED" />
+        <Text style={gSt.tipText}>
+          Ganhe pontos curtindo posts, comentando com qualidade, lendo e assinando documentos do Integra.
+        </Text>
+      </View>
+    </ScrollView>
+  );
+}
+
+// Gamification styles
+const gSt = StyleSheet.create({
+  scrollContent: { padding: 14, gap: 14 },
+
+  myStatsCard: {
+    backgroundColor: C.surface, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  myStatsHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  myStatsTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.text },
+  myStatsRow: { flexDirection: "row", alignItems: "center" },
+  myStatItem: { flex: 1, alignItems: "center", gap: 2 },
+  myStatValue: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
+  myStatLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center" },
+  myStatsDivider: { width: 1, height: 32, backgroundColor: C.borderLight },
+  blockedWarning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10, backgroundColor: "#FEF2F2", borderRadius: 8, padding: 8 },
+  blockedWarningText: { fontSize: 12, color: "#EF4444", fontFamily: "Inter_400Regular", flex: 1 },
+
+  lbSelector: { paddingHorizontal: 2, paddingBottom: 2, gap: 8, flexDirection: "row" },
+  lbSelectorChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  lbSelectorChipActive: { backgroundColor: "#EFF6FF", borderColor: C.tint },
+  lbSelectorText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  lbSelectorTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
+
+  lbCard: {
+    backgroundColor: C.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border,
+    overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  },
+  lbCardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight },
+  lbName: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text },
+  lbDesc: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular", marginTop: 2 },
+  lbDates: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 3 },
+
+  rankEmpty: { alignItems: "center", padding: 30 },
+  rankEmptyText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
+
+  rankList: { gap: 0 },
+  rankSep: { height: 1, backgroundColor: C.borderLight, marginVertical: 4, marginHorizontal: 14 },
+
+  rankTopRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderLeftWidth: 3, borderLeftColor: "transparent",
+  },
+  rankTopRowMe: { backgroundColor: "#EFF6FF" },
+  rankMedal: { fontSize: 20, width: 28, textAlign: "center" },
+  rankRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
+  rankRowMe: { backgroundColor: "#EFF6FF" },
+  rankPos: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.textMuted, width: 28, textAlign: "center" },
+  rankAvatarWrap: { width: 36, height: 36 },
+  rankAvatar: { width: 36, height: 36, borderRadius: 18 },
+  rankAvatarFallback: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#EFF6FF", justifyContent: "center", alignItems: "center" },
+  rankAvatarInitial: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.tint },
+  rankName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
+  rankMeLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.tint },
+  rankActions: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
+  rankPts: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.tint },
+
+  noLbCard: {
+    backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border,
+    alignItems: "center", padding: 40, gap: 10,
+  },
+  noLbTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  noLbSub: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
+
+  historyCard: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
+  historyTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.text, padding: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight },
+  historyRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
+  historyRowBorder: { borderTopWidth: 1, borderTopColor: C.borderLight },
+  historyDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  historyAction: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
+  historyBlockReason: { fontSize: 11, color: "#EF4444", fontFamily: "Inter_400Regular", marginTop: 2 },
+  historyPts: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  historyTime: { fontSize: 10, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
+
+  tipCard: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#F5F3FF", borderRadius: 12, padding: 12 },
+  tipText: { flex: 1, fontSize: 12, color: "#5B21B6", fontFamily: "Inter_400Regular", lineHeight: 18 },
+});
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function FeedScreen() {
@@ -460,6 +792,17 @@ export default function FeedScreen() {
           )}
           {mainTab === "aniversarios" && <View style={styles.mainTabIndicator} />}
         </TouchableOpacity>
+
+        {/* Ranking tab */}
+        <TouchableOpacity
+          style={[styles.mainTab, mainTab === "ranking" && styles.mainTabActive]}
+          onPress={() => setMainTab("ranking")}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.mainTabEmoji}>🏆</Text>
+          <Text style={[styles.mainTabText, mainTab === "ranking" && styles.mainTabTextActive]}>Ranking</Text>
+          {mainTab === "ranking" && <View style={styles.mainTabIndicator} />}
+        </TouchableOpacity>
       </View>
 
       {/* ══ FEED TAB ══ */}
@@ -622,6 +965,11 @@ export default function FeedScreen() {
             <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
           )}
         </>
+      )}
+
+      {/* ══ RANKING TAB ══ */}
+      {mainTab === "ranking" && user && (
+        <GamificationView currentUserId={user.id} botPad={botPad} />
       )}
     </View>
   );

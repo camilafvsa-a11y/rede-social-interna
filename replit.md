@@ -40,13 +40,15 @@ Internal social network for Grupo Beija-flor employees.
 
 ### Features
 - **Auth**: Login + 3-step onboarding (photo, manual reading, terms acceptance)
-- **Feed**: Facebook-style main feed with likes and comments
+- **Feed**: Facebook-style main feed with 4 sub-tabs: Feed, Comunicação Interna, Aniversários, Ranking
+- **Gamification**: Points engine (likes 5pts, comments 10pts, doc_read 15pts, doc_sign 20pts), leaderboards, anti-spam (daily limits, cooldown, min chars, blocked terms, max comments per post)
+- **Ranking Tab**: Active leaderboard with top-3 podium, full ranking, personal stats, action history
 - **Channels**: Tag-filtered channel feeds (marketing, adm, socio, posto, churrascaria, gerente)
 - **Internal Communication**: Restricted posting channel
 - **Birthdays**: Upcoming birthday list (60 days)
 - **Tickets**: Support ticket system with chat
 - **Profile**: User profiles with avatar upload
-- **Admin Panel**: User management, email allowlist, channel CRUD, ticket handlers, reports
+- **Admin Panel**: User management, email allowlist, channel CRUD, ticket handlers, reports, gamification panel
 
 ### Roles
 - `user` – regular employee

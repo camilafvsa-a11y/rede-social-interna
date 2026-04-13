@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, termAcceptancesTable, usersTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, formatUserBasic } from "../lib/auth.js";
+import { processGamificationEvent } from "./gamification.js";
 
 const router = Router();
 
@@ -55,6 +56,20 @@ router.post("/accept", requireAuth, async (req, res) => {
     termKey: acceptance.termKey,
     termTitle: acceptance.termTitle,
     acceptedAt: acceptance.acceptedAt?.toISOString?.() ?? acceptance.acceptedAt,
+  });
+
+  // Gamification: award points for signing a document
+  setImmediate(async () => {
+    try {
+      await processGamificationEvent({
+        userId: user.id,
+        actionType: "doc_sign",
+        entityType: "doc",
+        idempotencyKey: `doc_sign_${user.id}_${termKey}`,
+      });
+    } catch (e) {
+      console.error("[Gamification doc_sign]", e);
+    }
   });
 });
 

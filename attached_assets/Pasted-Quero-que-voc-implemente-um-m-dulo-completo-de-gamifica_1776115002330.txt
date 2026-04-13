@@ -1,0 +1,473 @@
+Quero que você implemente um módulo completo de gamificação para uma rede social empresarial, integrado ao app, com foco em engajamento saudável com os conteúdos da comunicação interna, evitando spam, curtidas vazias e comentários inúteis.
+
+O sistema deve ser pensado para uso corporativo, com regras claras, painéis de controle e proteção contra abuso.
+
+1. Objetivo do sistema
+
+Criar um sistema de gamificação dentro do app para incentivar os usuários a interagirem com conteúdos internos, especialmente no feed e em conteúdos da comunicação interna, de forma equilibrada.
+
+Esse sistema deve:
+
+incentivar engajamento real
+evitar spam
+limitar ganho de pontos por dia
+permitir administração total pelo painel admin
+mostrar leaderboard no app
+permitir campanhas mensais e competições personalizadas
+armazenar histórico completo de como cada usuário ganhou ou perdeu pontos
+permitir bloqueio manual de usuários para ganho de pontos
+ser escalável e seguro
+2. Estrutura visual no app
+2.1 Subaba no Feed
+
+Quero que no app exista, dentro da área do Feed, uma subaba/menu de gamificação.
+
+Essa subaba pode se chamar algo como:
+
+Ranking
+Gamificação
+Pontuação
+Missões e Ranking
+
+Ela deve ficar visível dentro da navegação do Feed como uma subtela clara e fácil de acessar.
+
+2.2 O que mostrar nessa subaba
+
+Quero exibir nessa subaba:
+
+ranking atual da competição ativa
+pontuação do usuário logado
+posição atual no ranking
+quanto ele ganhou hoje
+limites diários atingidos ou restantes
+período da competição ativa
+regras resumidas da pontuação
+histórico recente de ações que geraram pontos
+se ele recebeu premiação de 1º, 2º ou 3º lugar em algum mês, mostrar isso no perfil também
+3. Ações que geram pontos
+
+Quero que o sistema suporte pontuação por ações dentro do app, com foco em comportamento útil, mas sem peso por categoria ou relevância. Quero um sistema equilibrado para todos.
+
+As ações pontuáveis inicialmente devem ser configuráveis pelo admin e incluir:
+
+curtir conteúdo
+comentar conteúdo
+leitura/conclusão de documento
+assinatura de documento
+outras ações futuras configuráveis
+
+O admin deve conseguir ativar, desativar ou alterar a pontuação dessas ações sem precisar mexer no código.
+
+4. Limitações diárias obrigatórias
+
+Quero que as limitações sejam por dia e controladas pelo sistema.
+
+4.1 Regras base
+
+Implementar limite diário por tipo de ação, por usuário.
+
+Exemplo:
+
+Curtidas: pontuam apenas até X vezes por dia
+Comentários: pontuam apenas até Y vezes por dia
+Leitura de documentos: pontuam até Z por dia
+Assinaturas: pontuam até N por dia
+
+Esses limites devem ser totalmente configuráveis pelo admin.
+
+4.2 Pontos decrescentes por repetição diária
+
+Quero também a possibilidade de configurar pontuação decrescente para ações repetidas no mesmo dia, como opção administrativa.
+
+Exemplo:
+
+1ª curtida: 5 pts
+2ª curtida: 4 pts
+3ª curtida: 3 pts
+após atingir o limite ou o mínimo configurado: 0 pts
+
+Isso deve ser configurável por ação e opcional.
+
+4.3 Reset diário
+
+Os limites e contadores devem resetar automaticamente a cada dia, considerando o fuso horário correto do sistema.
+
+5. Regras anti-spam e antiexploração
+
+Quero que o sistema tenha proteção contra uso indevido e farming de pontos.
+
+5.1 Curtidas
+não pontuar curtidas repetidas no mesmo conteúdo
+não permitir ganhar pontos várias vezes no mesmo item
+impedir spam massivo de curtidas em sequência
+considerar limite diário
+5.2 Comentários
+
+Quero regras para evitar comentário inútil.
+
+Implementar:
+
+número mínimo de caracteres configurável
+ignorar ou bloquear comentários compostos apenas por emoji
+ignorar ou bloquear comentários muito curtos ou vazios
+permitir lista de termos bloqueados/configuráveis, como por exemplo:
+ok
+top
+show
+bom dia
+👍
+👏
+não pontuar comentários duplicados ou muito parecidos feitos pelo mesmo usuário em curto intervalo
+não pontuar múltiplos comentários seguidos no mesmo conteúdo além de um limite configurável
+5.3 Cooldown entre ações
+
+Quero opção de cooldown configurável entre ações que geram pontos, para evitar spam automatizado.
+
+Exemplo:
+
+mínimo de X segundos entre comentários pontuáveis
+mínimo de X segundos entre curtidas pontuáveis
+5.4 Ações inválidas
+
+O sistema nunca deve pontuar:
+
+ações duplicadas
+ações já contabilizadas antes
+ações em conteúdo excluído ou inativo
+ações de usuário bloqueado para pontuação
+ações fora do período de competição, quando essa competição exigir recorte de período
+interações inválidas detectadas por regras de fraude
+6. Painel administrativo completo
+
+Quero um menu administrativo específico para gamificação.
+
+Esse menu deve ter uma estrutura organizada, com pelo menos as seguintes áreas:
+
+6.1 Dashboard geral
+
+Mostrar:
+
+total de pontos gerados no período
+usuários mais engajados
+ações mais comuns
+tentativas bloqueadas por regras
+competições ativas
+quantos usuários atingiram limites diários
+ranking atual da competição principal
+6.2 Configurações de pontuação
+
+Permitir configurar:
+
+ações que geram pontos
+quantidade de pontos por ação
+limite diário por ação
+cooldown por ação
+mínimo de caracteres em comentário
+lista de termos/comentários inválidos
+habilitar ou desabilitar pontuação decrescente
+valores da pontuação decrescente
+habilitar ou desabilitar determinada ação na competição
+6.3 Gestão de usuários
+
+Quero uma tela para controle de usuários no sistema de gamificação.
+
+Permitir:
+
+buscar usuário
+ver pontuação total
+ver pontuação no período atual
+ver posição no ranking
+bloquear usuário para ganhar pontos
+desbloquear usuário
+zerar pontos de um período, se necessário
+adicionar ou remover ajuste manual de pontos
+adicionar observação administrativa para auditoria
+
+Ao bloquear o usuário:
+
+ele continua usando o app normalmente
+mas não ganha pontos
+o sistema deve registrar motivo, admin responsável e data do bloqueio
+6.4 Histórico de pontuação por usuário
+
+Quero uma tela detalhada mostrando como cada usuário ganhou ou perdeu pontos.
+
+Cada registro deve mostrar:
+
+usuário
+ação realizada
+conteúdo relacionado, se houver
+pontos atribuídos
+pontos bloqueados, se houver
+motivo do bloqueio, se aplicável
+data e hora
+competição associada, se houver
+origem da ação
+status do evento: validado, bloqueado, cancelado, ajustado manualmente
+
+Também quero filtros por:
+
+usuário
+período
+tipo de ação
+competição
+status
+ação manual ou automática
+6.5 Log administrativo
+
+Quero log das ações do admin no sistema, como:
+
+criou competição
+alterou limite diário
+bloqueou usuário
+desbloqueou usuário
+ajustou pontos
+encerrou leaderboard
+mudou regra
+
+Esse log deve ter:
+
+admin responsável
+data/hora
+ação realizada
+valor antigo e valor novo, quando aplicável
+7. Leaderboards e competições
+
+Quero que o sistema permita criar e controlar múltiplas leaderboards.
+
+7.1 Competição principal
+
+Quero conseguir criar competições como:
+
+competição do mês
+campanha da semana
+desafio trimestral
+
+Cada leaderboard deve poder ter:
+
+nome
+descrição
+data de início
+data de fim
+status: rascunho, ativa, encerrada, arquivada
+regras próprias
+ações válidas para pontuar naquela leaderboard
+visibilidade no app
+critério de desempate
+se aparece ou não no perfil do usuário
+7.2 Múltiplas leaderboards
+
+O sistema deve permitir criar mais de uma leaderboard ao mesmo tempo.
+
+Exemplos:
+
+ranking geral do mês
+desafio de leitura de documentos
+competição específica de campanha interna
+
+O admin deve conseguir:
+
+criar
+editar
+ativar
+pausar
+encerrar
+arquivar
+duplicar leaderboard
+7.3 Critérios de desempate
+
+Prever critério configurável, por exemplo:
+
+quem atingiu a pontuação primeiro
+quem teve mais ações válidas
+quem teve menos ações bloqueadas
+ordem padrão do sistema
+7.4 Encerramento e congelamento
+
+Ao encerrar uma competição:
+
+o ranking deve ser congelado
+o resultado final deve ficar salvo
+os vencedores devem ser registrados
+o histórico não pode mudar retroativamente sem ação administrativa explícita
+8. Exibição de premiação simples no perfil
+
+Você pode implementar um sistema simples de reconhecimento no perfil, sem criar um sistema completo de badges gerais.
+
+Quero apenas o seguinte:
+
+quando uma competição mensal for encerrada, os usuários que ficaram em 1º, 2º ou 3º lugar possam ter isso exibido no perfil
+esse reconhecimento deve aparecer como algo tipo:
+1º lugar - Competição de Março 2026
+2º lugar - Ranking de Abril 2026
+3º lugar - Campanha Interna Maio 2026
+
+Isso deve ficar salvo no perfil do usuário como histórico de conquistas.
+
+Quero que o admin consiga configurar se aquela competição gera ou não esse reconhecimento no perfil.
+
+Não quero ainda um sistema robusto de badges colecionáveis ou gamificação visual complexa além disso.
+
+9. Tela do usuário no app
+
+Na área da gamificação no app, exibir:
+
+ranking atual
+top usuários
+posição do usuário logado
+total de pontos da competição atual
+resumo de ganhos do dia
+limites diários restantes por ação
+regras da competição atual
+histórico recente de pontos
+conquistas de 1º, 2º e 3º lugar anteriores, quando houver
+
+Se o usuário estiver bloqueado para pontuação:
+
+mostrar mensagem discreta apropriada
+não quebrar a interface
+não expor motivo sensível publicamente
+10. Prevenção de erros e segurança
+
+Quero que você preveja e trate todos os cenários possíveis para evitar inconsistência de pontuação.
+
+10.1 Idempotência
+
+Cada ação pontuável deve ter um identificador único de processamento para evitar pontuar duas vezes o mesmo evento.
+
+10.2 Concorrência
+
+Se duas ações forem processadas ao mesmo tempo:
+
+evitar duplicidade
+usar transação
+garantir consistência
+10.3 Exclusão de conteúdo
+
+Se um conteúdo for apagado, ocultado ou invalidado:
+
+o sistema deve definir claramente se os pontos permanecem ou são removidos
+isso precisa ser configurável ou ter regra fixa documentada
+o histórico deve registrar qualquer reversão
+10.4 Falha parcial
+
+Se uma ação acontecer mas a pontuação falhar:
+
+registrar erro técnico
+não duplicar depois
+permitir reprocessamento controlado
+não quebrar a experiência do usuário
+10.5 Timezone
+
+Tratar corretamente:
+
+virada de dia
+horário local
+início e fim de competições
+reset dos limites diários
+10.6 Auditoria
+
+Tudo deve ser auditável:
+
+pontuação recebida
+pontuação negada
+bloqueio
+ajuste manual
+alteração de regra
+fechamento de competição
+10.7 Performance
+
+O sistema deve ser desenhado para não ficar recalculando tudo do zero o tempo todo.
+Criar estrutura eficiente para:
+
+ranking
+soma de pontos
+contadores diários
+histórico
+placares encerrados
+11. Estrutura de dados sugerida
+
+Implemente estrutura robusta e escalável, com tabelas ou coleções separadas para algo equivalente a:
+
+users
+gamification_actions
+gamification_rules
+gamification_events
+gamification_daily_counters
+gamification_adjustments
+gamification_blocks
+leaderboards
+leaderboard_rules
+leaderboard_participants
+leaderboard_results
+user_profile_achievements
+admin_gamification_logs
+
+Não precisa usar exatamente esses nomes, mas a arquitetura deve seguir essa lógica.
+
+12. Funcionalidades administrativas úteis adicionais
+
+Quero prever também:
+
+exportação do histórico de pontuação
+exportação de ranking
+filtro por período
+filtro por unidade/departamento, se existir esse dado no sistema
+busca por conteúdo relacionado
+reprocessamento manual de eventos com erro
+ajustes manuais positivos ou negativos
+visualização de usuários que bateram no limite diário
+visualização de ações bloqueadas por anti-spam
+13. Regras de UX
+
+Quero uma experiência clara e profissional.
+
+No app:
+
+interface simples
+leitura fácil
+sem poluição
+leaderboard legível
+histórico fácil de entender
+feedback quando o usuário pontua
+feedback quando não pontua por limite diário ou regra anti-spam
+
+No admin:
+
+filtros bons
+visual profissional
+ações sensíveis com confirmação
+loading states
+tratamento de erro
+mensagens claras
+paginação quando necessário
+14. Regras de negócio importantes
+Não usar peso por categoria
+Não usar peso por relevância
+Regras iguais para toda a empresa
+Limitações por dia
+Comentários inúteis não devem pontuar
+Curtir tudo não deve gerar vantagem indevida
+O sistema deve incentivar comportamento saudável e recorrente
+O admin deve ter controle total
+O usuário deve ter transparência básica sobre sua pontuação
+O sistema deve ser preparado para expansão futura
+15. Resultado esperado
+
+Quero receber um sistema de gamificação empresarial que tenha:
+
+uma subaba no Feed para ranking/gamificação
+painel administrativo completo
+regras configuráveis de pontuação
+limites diários por ação
+anti-spam para comentários e curtidas
+bloqueio de usuários para ganho de pontos
+histórico completo de pontuação por usuário
+criação e controle de múltiplas leaderboards
+competições mensais ou personalizadas
+exibição simples de 1º, 2º e 3º lugar no perfil do usuário
+logs administrativos
+prevenção de erros e inconsistências
+arquitetura pronta para crescer
+
+Implemente isso no frontend, backend e banco de dados, com foco em estabilidade, clareza e escalabilidade.

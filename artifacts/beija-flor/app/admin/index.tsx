@@ -10,6 +10,7 @@ import Colors from "@/constants/colors";
 const C = Colors.light;
 
 const ADMIN_SECTIONS = [
+  { icon: "award", title: "Gamificação", desc: "Ranking, competições, regras de pontuação e controle anti-spam", route: "/admin/gamification" },
   { icon: "users", title: "Usuários", desc: "Gerenciar usuários, permissões e e-mails autorizados", route: "/admin/users" },
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
   { icon: "inbox", title: "Chamados", desc: "Gerenciar chamados, delegar e configurar responsáveis por área", route: "/admin/tickets" },

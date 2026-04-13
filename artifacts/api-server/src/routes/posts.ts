@@ -3,6 +3,7 @@ import { db, postsTable, postLikesTable, commentsTable, commentReportsTable, use
 import { eq, and, sql, desc, ne } from "drizzle-orm";
 import { requireAuth, formatUserBasic } from "../lib/auth.js";
 import { sendPushToUsers, parseMentions } from "../lib/push.js";
+import { processGamificationEvent } from "./gamification.js";
 
 const router = Router();
 
@@ -167,7 +168,25 @@ router.post("/:id/like", requireAuth, async (req, res) => {
   }
 
   const [likeCountResult] = await db.select({ count: sql<number>`count(*)` }).from(postLikesTable).where(eq(postLikesTable.postId, postId));
-  res.json({ liked: !existing, likeCount: Number(likeCountResult?.count ?? 0) });
+  const liked = !existing;
+  res.json({ liked, likeCount: Number(likeCountResult?.count ?? 0) });
+
+  // Gamification: only award points when liking (not unliking)
+  if (liked) {
+    setImmediate(async () => {
+      try {
+        await processGamificationEvent({
+          userId: user.id,
+          actionType: "like",
+          entityType: "post",
+          entityId: postId,
+          idempotencyKey: `like_${user.id}_${postId}`,
+        });
+      } catch (e) {
+        console.error("[Gamification like]", e);
+      }
+    });
+  }
 });
 
 router.get("/:id/comments", requireAuth, async (req, res) => {
@@ -200,6 +219,22 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     author: formatUserBasic(user),
     postId: comment.postId,
     createdAt: comment.createdAt?.toISOString?.() ?? comment.createdAt,
+  });
+
+  setImmediate(async () => {
+    // Gamification: award points for comment
+    try {
+      await processGamificationEvent({
+        userId: user.id,
+        actionType: "comment",
+        entityType: "post",
+        entityId: postId,
+        commentContent: content,
+        idempotencyKey: `comment_${user.id}_${comment.id}`,
+      });
+    } catch (e) {
+      console.error("[Gamification comment]", e);
+    }
   });
 
   setImmediate(async () => {

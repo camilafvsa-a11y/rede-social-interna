@@ -14,6 +14,7 @@ import integraItemsRouter from "./integra-items.js";
 import workTagsRouter from "./work-tags.js";
 import dmsRouter from "./dms.js";
 import uploadRouter from "./upload.js";
+import gamificationRouter from "./gamification.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use("/integra-items", integraItemsRouter);
 router.use("/work-tags", workTagsRouter);
 router.use("/dms", dmsRouter);
 router.use("/upload", uploadRouter);
+router.use("/gamification", gamificationRouter);
 
 export default router;
