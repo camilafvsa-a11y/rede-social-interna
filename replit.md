@@ -40,15 +40,18 @@ Internal social network for Grupo Beija-flor employees.
 
 ### Features
 - **Auth**: Login + 3-step onboarding (photo, manual reading, terms acceptance)
-- **Feed**: Facebook-style main feed with 4 sub-tabs: Feed, Comunicação Interna, Aniversários, Ranking
+- **Feed**: Facebook-style main feed with 7 horizontal scrollable sub-tabs: Feed (Todos) | Destaques | Comunicação | Fotos | Vídeos | Salvos | Aniversários; search bar toggle, sort by Recentes/Populares, "Publicar" FAB
+- **PostCard**: Multi-media gallery (grid/swipe), save/bookmark toggle, share/repost button with embed, pinned/official/highlighted ribbon badges, admin pin+highlight actions, report post
+- **Composer (Enhanced)**: Multi-image picker (up to 6 images), video picker, category selector (8 categories), "Oficial" toggle for admins, mention autocomplete
+- **Profile Pages**: Banner with user-colored header, avatar overlapping banner, stats row (posts/curtidas/comentários), sub-tabs Linha do Tempo | Fotos | Vídeos
 - **Gamification**: Points engine (likes 5pts, comments 10pts, doc_read 15pts, doc_sign 20pts), leaderboards, anti-spam (daily limits, cooldown, min chars, blocked terms, max comments per post)
 - **Ranking Tab**: Active leaderboard with top-3 podium, full ranking, personal stats, action history
 - **Channels**: Tag-filtered channel feeds (marketing, adm, socio, posto, churrascaria, gerente)
-- **Internal Communication**: Restricted posting channel
-- **Birthdays**: Upcoming birthday list (60 days)
+- **Internal Communication**: Restricted posting channel (Comunicação tab)
+- **Birthdays**: Upcoming birthday list with Hoje/Próximos sub-tabs
 - **Tickets**: Support ticket system with chat
-- **Profile**: User profiles with avatar upload
 - **Admin Panel**: User management, email allowlist, channel CRUD, ticket handlers, reports, gamification panel
+- **DB extras**: postMediaTable, savedPostsTable, postSharesTable, postReportsTable; posts now have isPinned, isHighlighted, isOfficial, category, shareCount, saveCount, sharedFromId
 
 ### Roles
 - `user` – regular employee

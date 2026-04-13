@@ -1,0 +1,453 @@
+Quero que você reprojete e evolua o feed do aplicativo para ficar muito mais completo, moderno e funcional, trazendo uma experiência inspirada no Facebook, mas adaptada para um ambiente corporativo/rede social empresarial.
+
+O objetivo é transformar o feed em uma área viva de comunicação, interação e visibilidade entre colaboradores, com timeline pessoal, postagem de imagens e vídeos, comentários, reações, compartilhamentos internos e uma estrutura de navegação muito mais forte.
+
+1. Objetivo geral
+
+Melhorar o sistema de feed e timeline do app para que ele tenha uma estrutura semelhante a uma rede social moderna, com foco em:
+
+usabilidade
+engajamento
+comunicação interna
+conteúdo institucional
+interação entre usuários
+publicação multimídia
+linha do tempo pessoal de cada colaborador
+
+Quero que a experiência lembre bastante o Facebook em termos de lógica de uso, fluxo social e estrutura de conteúdo, mas sem copiar visualmente de forma literal. A proposta é adaptar esse modelo para um app empresarial.
+
+2. Estrutura principal do novo feed
+
+Quero que o feed deixe de ser uma lista simples de posts e passe a ter uma estrutura social completa, com:
+
+2.1 Feed principal
+
+Uma timeline principal com postagens de:
+
+comunicação interna
+RH
+segurança
+liderança
+usuários comuns, se permitido
+campanhas internas
+reconhecimentos
+avisos
+conteúdos multimídia
+
+Esse feed deve exibir os conteúdos em ordem cronológica inteligente ou com possibilidade de ordenação entre:
+
+mais recentes
+mais relevantes
+em destaque
+2.2 Linha do tempo pessoal
+
+Quero criar uma timeline pessoal para cada usuário, semelhante a um perfil social.
+
+Cada usuário deve ter uma área própria com:
+
+foto
+nome
+cargo ou setor, se houver
+unidade, se houver
+capa ou banner opcional
+resumo do perfil
+postagens daquele usuário
+fotos e vídeos publicados
+histórico de interações públicas, se fizer sentido
+conquistas futuras, se houver
+conteúdo compartilhado pelo próprio usuário
+
+Essa timeline deve funcionar como uma “linha do tempo pessoal”, semelhante ao conceito de perfil no Facebook.
+
+2.3 Perfil clicável
+
+Ao clicar no nome ou foto de um usuário em um post, deve abrir o perfil/timeline pessoal dele.
+
+3. Tipos de postagem
+
+Quero que o sistema permita diferentes tipos de postagens.
+
+3.1 Texto
+
+Postagem simples em texto, com:
+
+limite configurável
+quebra de linha
+suporte a emojis
+preview agradável
+3.2 Imagem
+
+Permitir postagem com:
+
+uma imagem
+várias imagens no mesmo post
+preview em grade quando houver múltiplas imagens
+clique para ampliar
+visualização em modal ou tela dedicada
+3.3 Vídeo
+
+Permitir postagem com vídeo:
+
+upload de vídeo
+preview com thumbnail
+player embutido no feed
+opção de abrir em tela cheia
+tratamento para performance e carregamento progressivo
+3.4 Texto + mídia
+
+Permitir posts mistos:
+
+texto + imagem
+texto + múltiplas imagens
+texto + vídeo
+3.5 Post fixado ou em destaque
+
+Permitir no admin ou em perfis autorizados:
+
+fixar posts no topo
+marcar como destaque
+destacar conteúdos importantes da comunicação interna
+4. Funcionalidades sociais
+
+Quero que o sistema de interação fique muito mais parecido com uma rede social moderna.
+
+4.1 Curtidas/Reações
+
+Permitir:
+
+curtir post
+possibilidade futura de reações além da curtida
+contador visível
+lista de quem curtiu, se fizer sentido
+4.2 Comentários
+
+Sistema completo de comentários:
+
+comentar post
+editar comentário
+excluir comentário próprio
+comentários em ordem clara
+suporte a respostas em thread, se possível
+contador de comentários
+opção de expandir/recolher comentários
+4.3 Compartilhamento interno
+
+Permitir compartilhamento dentro do app:
+
+compartilhar uma postagem no próprio feed
+compartilhar na timeline pessoal
+repostar com comentário próprio
+manter referência ao post original
+4.4 Salvar post
+
+Permitir salvar/favoritar post para ver depois.
+
+4.5 Visualizações
+
+Se fizer sentido, registrar e exibir visualizações em determinados conteúdos, principalmente institucionais.
+
+5. Composer de postagem
+
+Quero uma área de criação de post bem melhor, semelhante ao fluxo social moderno.
+
+Ao criar uma postagem, o usuário autorizado deve poder:
+
+escrever texto
+anexar imagem
+anexar múltiplas imagens
+anexar vídeo
+visualizar preview antes de publicar
+escolher visibilidade, se houver regras de acesso
+escolher se posta no feed geral, no próprio perfil, ou nos dois, dependendo da regra do sistema
+salvar como rascunho, se possível
+
+A UX dessa área precisa ser moderna, intuitiva e muito boa no mobile.
+
+6. Navegação do feed
+
+Quero melhorar a navegação do feed com subabas ou filtros.
+
+Exemplo de organização:
+
+Todos
+Comunicação Interna
+RH
+Segurança
+Minha timeline
+Salvos
+Vídeos
+Fotos
+Em destaque
+
+Esses nomes podem ser ajustados, mas quero uma estrutura que facilite consumo e descoberta de conteúdo.
+
+7. Sistema de timeline pessoal
+
+Quero um sistema robusto de timeline pessoal semelhante a redes sociais.
+
+Cada perfil deve ter:
+
+foto do usuário
+capa/banner
+nome
+setor
+unidade
+mini bio opcional
+lista das postagens desse usuário
+aba de fotos
+aba de vídeos
+aba de posts compartilhados
+indicadores como quantidade de posts, curtidas recebidas etc., se fizer sentido
+
+Também quero prever privacidade e permissões, para que a empresa possa definir o que cada tipo de usuário pode publicar.
+
+8. Upload e gestão de mídia
+
+Quero suporte real para mídia.
+
+8.1 Imagens
+upload de uma ou várias imagens
+compressão adequada
+redimensionamento quando necessário
+carregamento otimizado
+preview antes de publicar
+8.2 Vídeos
+upload de vídeo
+limite de tamanho configurável
+formatos permitidos configuráveis
+gerar thumbnail
+player responsivo
+performance otimizada
+fallback para erro de reprodução
+8.3 Biblioteca de mídia
+
+Se possível, criar base para uma biblioteca de mídia por postagem e por usuário.
+
+9. Layout e UX
+
+Quero que o feed fique com cara de rede social moderna.
+
+9.1 No mobile
+cards bem organizados
+boa hierarquia de texto
+áreas clicáveis confortáveis
+mídia bem encaixada
+comentários fáceis de abrir
+navegação fluida
+ótimo comportamento em iPhone e Android
+respeito à safe area
+performance boa
+9.2 No visual
+
+Quero algo inspirado em apps sociais modernos:
+
+limpo
+profissional
+fluido
+intuitivo
+com boa divisão entre post, autor, mídia e interações
+
+A inspiração de funcionamento é o Facebook, mas a estética pode ser mais moderna e alinhada ao app atual.
+
+10. Permissões e moderação
+
+Quero prever um sistema de permissões para publicação e moderação.
+
+10.1 Permissões
+
+Permitir definir:
+
+quem pode postar
+quem pode comentar
+quem pode publicar vídeo
+quem pode compartilhar
+quem pode fixar post
+quem pode excluir posts de terceiros
+quem pode moderar comentários
+10.2 Moderação
+
+Quero área administrativa para:
+
+editar ou excluir posts
+ocultar posts
+denunciar conteúdo
+revisar conteúdo denunciado
+bloquear publicação de determinados usuários
+controlar categorias de post
+gerenciar posts em destaque
+11. Feed administrativo e conteúdo institucional
+
+Quero que o feed também suporte bem o conteúdo oficial da empresa.
+
+Prever:
+
+posts da comunicação interna
+posts da liderança
+posts fixados
+comunicados importantes
+avisos urgentes
+conteúdos obrigatórios, se houver
+posts com destaque visual institucional
+
+O sistema deve permitir diferenciação visual entre:
+
+post oficial/institucional
+post comum de colaborador
+comunicado importante
+conteúdo patrocinado internamente/campanha
+12. Integração com gamificação
+
+Quero que essa nova estrutura de feed fique preparada para integração com o sistema de gamificação.
+
+Prever eventos como:
+
+curtir post
+comentar post
+compartilhar post
+publicar post
+publicar mídia
+receber interações
+
+Não precisa implementar toda a lógica da gamificação aqui, mas quero que a estrutura do feed esteja pronta para isso, com eventos claros e rastreáveis.
+
+13. Timeline e algoritmo/base de ordenação
+
+Quero prever uma boa lógica de ordenação de conteúdo.
+
+Permitir ao menos:
+
+mais recentes
+em destaque
+popularidade
+posts do meu setor/unidade, se houver esse dado
+
+Também quero preparar o sistema para futura evolução de recomendação de conteúdo.
+
+14. Busca e filtros
+
+Quero busca dentro do feed e das timelines.
+
+Permitir buscar por:
+
+texto
+autor
+categoria
+tipo de mídia
+período
+setor/unidade, se existir
+
+Também quero filtros úteis, como:
+
+só fotos
+só vídeos
+só posts oficiais
+só meus posts
+só posts salvos
+15. Notificações
+
+Quero que o sistema fique preparado para notificar:
+
+alguém comentou no meu post
+alguém curtiu meu post
+alguém respondeu meu comentário
+alguém compartilhou meu post
+novo post da comunicação interna
+novo post em destaque
+
+As notificações devem ser rastreáveis e preparadas para mobile.
+
+16. Prevenção de erros e robustez
+
+Quero que a implementação seja robusta e preveja problemas comuns.
+
+16.1 Upload
+tratar falha de upload
+reintentar quando possível
+exibir erro amigável
+não perder rascunho do texto
+16.2 Duplicidade
+evitar publicação duplicada por clique duplo
+evitar curtida duplicada
+evitar compartilhamento duplicado acidental
+16.3 Performance
+paginação ou carregamento infinito
+lazy load de mídia
+otimização de imagens
+otimização de vídeos
+não travar o app em feeds longos
+16.4 Exclusão
+ao excluir post, tratar comentários, curtidas e compartilhamentos relacionados
+definir regra clara para conteúdo removido
+não quebrar timeline nem contadores
+16.5 Segurança
+validação de permissões
+tratamento de conteúdo indevido
+sanitização de texto
+proteção contra upload inválido
+proteção contra arquivos perigosos
+logs de moderação e exclusão
+17. Estrutura administrativa
+
+Quero menu administrativo para controlar esse ecossistema do feed.
+
+Esse admin deve permitir:
+
+ver todos os posts
+filtrar por autor, tipo, data, setor, status
+criar post oficial
+editar post oficial
+fixar post
+marcar como destaque
+excluir ou ocultar post
+moderar comentários
+visualizar denúncias
+controlar permissões de publicação
+gerenciar categorias e seções do feed
+18. Estrutura de dados sugerida
+
+A arquitetura deve ser refeita ou expandida para suportar um sistema de feed social real.
+
+Quero algo equivalente a:
+
+users
+user_profiles
+profile_timeline_settings
+posts
+post_media
+post_videos
+post_images
+post_comments
+post_comment_replies
+post_reactions
+post_shares
+saved_posts
+feed_categories
+feed_permissions
+moderation_reports
+post_visibility_rules
+notifications
+admin_feed_logs
+
+Não precisa usar exatamente esses nomes, mas quero uma estrutura pensada para escalar.
+
+19. Resultado esperado
+
+Quero que o aplicativo passe a ter um sistema de feed muito mais completo e parecido com uma rede social real, especialmente com lógica semelhante ao Facebook, incluindo:
+
+feed principal moderno
+timeline pessoal por usuário
+perfil clicável
+postagens com texto, imagem e vídeo
+múltiplas imagens no mesmo post
+player de vídeo no feed
+comentários e respostas
+compartilhamento interno
+posts salvos
+posts fixados e em destaque
+filtros e subabas
+moderação e permissões
+painel administrativo robusto
+arquitetura pronta para gamificação
+experiência mobile muito boa
+
+Implemente isso no frontend, backend e banco de dados, com foco em escalabilidade, performance, boa UX e comportamento consistente no app.

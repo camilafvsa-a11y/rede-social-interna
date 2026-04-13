@@ -1,12 +1,13 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { api } from "@/lib/api";
@@ -15,7 +16,7 @@ import Colors from "@/constants/colors";
 
 const C = Colors.light;
 
-// ─── Header helpers ──────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const WEEKDAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 const MONTHS_HEADER = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
@@ -30,13 +31,12 @@ function getTodayLabel(): string {
   return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} de ${MONTHS_HEADER[d.getMonth()]}`;
 }
 
-// ─── Birthday helpers ────────────────────────────────────────────────────────
+// ─── Birthday helpers ─────────────────────────────────────────────────────────
 const TAG_LABELS_BD: Record<string, string> = {
   marketing: "Marketing", adm: "Adm", socio: "Sócio",
   posto: "Posto", churrascaria: "Churrascaria", gerente: "Gerente",
 };
-const MONTHS_BD = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_BD = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MONTHS_SHORT_BD = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 function formatFullDate(dateStr: string): string {
@@ -107,372 +107,53 @@ function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolea
   );
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-type MainTab = "feed" | "interno" | "aniversarios" | "ranking";
+// ─── Types ────────────────────────────────────────────────────────────────────
+type MainTab = "todos" | "destaques" | "comunicacao" | "fotos" | "videos" | "salvos" | "aniversarios";
 type BdSubTab = "today" | "upcoming";
 
-// ─── Gamification Ranking View ────────────────────────────────────────────────
-const ACTION_LABELS: Record<string, string> = {
-  like: "Curtiu", comment: "Comentou",
-  doc_read: "Leu documento", doc_sign: "Assinou documento",
-  manual_adjustment: "Ajuste manual",
-};
+const TABS: Array<{ key: MainTab; label: string; icon?: string; emoji?: string }> = [
+  { key: "todos",       label: "Feed",         icon: "home" },
+  { key: "destaques",   label: "Destaques",    icon: "star" },
+  { key: "comunicacao", label: "Comunicação",  icon: "shield" },
+  { key: "fotos",       label: "Fotos",        icon: "image" },
+  { key: "videos",      label: "Vídeos",       icon: "video" },
+  { key: "salvos",      label: "Salvos",       icon: "bookmark" },
+  { key: "aniversarios",label: "Aniversários", emoji: "🎂" },
+];
 
-const MEDALS = ["🥇", "🥈", "🥉"];
-
-function GamificationView({ currentUserId, botPad }: { currentUserId: number; botPad: number }) {
-  const { data: activeLeaderboards = [], isLoading: lbLoading } = useQuery<any[]>({
-    queryKey: ["active-leaderboards"],
-    queryFn: () => api.get("/gamification/leaderboards"),
-    refetchInterval: 60_000,
-  });
-
-  const { data: myStats } = useQuery<any>({
-    queryKey: ["my-gamif-stats"],
-    queryFn: () => api.get("/gamification/my-stats"),
-    refetchInterval: 60_000,
-  });
-
-  const { data: myHistory = [] } = useQuery<any[]>({
-    queryKey: ["my-gamif-history"],
-    queryFn: () => api.get("/gamification/my-events?limit=20"),
-  });
-
-  const [selectedLbId, setSelectedLbId] = useState<number | null>(null);
-
-  const activeLb = useMemo(() => {
-    if (activeLeaderboards.length === 0) return null;
-    const lb = selectedLbId
-      ? activeLeaderboards.find((l) => l.id === selectedLbId) ?? activeLeaderboards[0]
-      : activeLeaderboards[0];
-    return lb;
-  }, [activeLeaderboards, selectedLbId]);
-
-  const { data: lbRankings = [], isLoading: rankLoading } = useQuery<any[]>({
-    queryKey: ["lb-rankings", activeLb?.id],
-    queryFn: () => api.get(`/gamification/leaderboards/${activeLb!.id}/rankings`),
-    enabled: !!activeLb,
-    refetchInterval: 60_000,
-  });
-
-  const myRank = useMemo(
-    () => lbRankings.find((r) => r.userId === currentUserId) ?? null,
-    [lbRankings, currentUserId],
-  );
-
-  function fmtDate(s: string) {
-    try { return new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }); } catch { return s; }
-  }
-  function fmtDateTime(s: string) {
-    try { return new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return s; }
-  }
-
-  if (lbLoading) {
-    return <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 60 }} />;
-  }
-
-  return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[gSt.scrollContent, { paddingBottom: botPad }]}
-    >
-      {/* ── My Stats Card ── */}
-      {myStats && (
-        <View style={gSt.myStatsCard}>
-          <View style={gSt.myStatsHeader}>
-            <Feather name="zap" size={16} color="#F59E0B" />
-            <Text style={gSt.myStatsTitle}>Minha pontuação</Text>
-          </View>
-          <View style={gSt.myStatsRow}>
-            <View style={gSt.myStatItem}>
-              <Text style={gSt.myStatValue}>{myStats.totalPoints ?? 0}</Text>
-              <Text style={gSt.myStatLabel}>pontos totais</Text>
-            </View>
-            <View style={gSt.myStatsDivider} />
-            <View style={gSt.myStatItem}>
-              <Text style={gSt.myStatValue}>{myStats.todayPoints ?? 0}</Text>
-              <Text style={gSt.myStatLabel}>hoje</Text>
-            </View>
-            <View style={gSt.myStatsDivider} />
-            <View style={gSt.myStatItem}>
-              <Text style={gSt.myStatValue}>{myStats.todayActions ?? 0}</Text>
-              <Text style={gSt.myStatLabel}>ações hoje</Text>
-            </View>
-            {myRank && (
-              <>
-                <View style={gSt.myStatsDivider} />
-                <View style={gSt.myStatItem}>
-                  <Text style={[gSt.myStatValue, { color: C.tint }]}>#{myRank.rank}</Text>
-                  <Text style={gSt.myStatLabel}>ranking</Text>
-                </View>
-              </>
-            )}
-          </View>
-          {myStats.isBlocked && (
-            <View style={gSt.blockedWarning}>
-              <Feather name="alert-triangle" size={13} color="#EF4444" />
-              <Text style={gSt.blockedWarningText}>Sua pontuação está temporariamente suspensa.</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* ── Leaderboard selector ── */}
-      {activeLeaderboards.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={gSt.lbSelector}>
-          {activeLeaderboards.map((lb) => (
-            <TouchableOpacity
-              key={lb.id}
-              style={[gSt.lbSelectorChip, (activeLb?.id === lb.id) && gSt.lbSelectorChipActive]}
-              onPress={() => setSelectedLbId(lb.id)}
-              activeOpacity={0.8}
-            >
-              <Text style={[gSt.lbSelectorText, (activeLb?.id === lb.id) && gSt.lbSelectorTextActive]} numberOfLines={1}>
-                {lb.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* ── Active leaderboard ── */}
-      {activeLb ? (
-        <>
-          <View style={gSt.lbCard}>
-            <View style={gSt.lbCardHeader}>
-              <Feather name="award" size={16} color="#F59E0B" />
-              <View style={{ flex: 1 }}>
-                <Text style={gSt.lbName}>{activeLb.name}</Text>
-                {activeLb.description && <Text style={gSt.lbDesc} numberOfLines={2}>{activeLb.description}</Text>}
-                <Text style={gSt.lbDates}>
-                  {fmtDate(activeLb.startDate)} → {fmtDate(activeLb.endDate)}
-                </Text>
-              </View>
-            </View>
-
-            {rankLoading ? (
-              <ActivityIndicator size="small" color={C.tint} style={{ marginVertical: 20 }} />
-            ) : lbRankings.length === 0 ? (
-              <View style={gSt.rankEmpty}>
-                <Text style={gSt.rankEmptyText}>Nenhuma pontuação ainda. Seja o primeiro!</Text>
-              </View>
-            ) : (
-              <View style={gSt.rankList}>
-                {/* Top 3 podium */}
-                {lbRankings.slice(0, 3).map((r) => (
-                  <View
-                    key={r.rank}
-                    style={[
-                      gSt.rankTopRow,
-                      r.userId === currentUserId && gSt.rankTopRowMe,
-                      r.rank === 1 && { borderLeftColor: "#FFD700" },
-                    ]}
-                  >
-                    <Text style={gSt.rankMedal}>{MEDALS[r.rank - 1]}</Text>
-                    <View style={gSt.rankAvatarWrap}>
-                      {r.user?.avatarUrl
-                        ? <Image source={{ uri: r.user.avatarUrl }} style={gSt.rankAvatar} />
-                        : <View style={gSt.rankAvatarFallback}>
-                            <Text style={gSt.rankAvatarInitial}>{r.user?.name?.[0]?.toUpperCase()}</Text>
-                          </View>
-                      }
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={gSt.rankName} numberOfLines={1}>
-                        {r.user?.name ?? "Usuário"}
-                        {r.userId === currentUserId && <Text style={gSt.rankMeLabel}> (você)</Text>}
-                      </Text>
-                      <Text style={gSt.rankActions}>{r.totalActions} ações</Text>
-                    </View>
-                    <Text style={gSt.rankPts}>{r.totalPoints} pts</Text>
-                  </View>
-                ))}
-
-                {/* Separator */}
-                {lbRankings.length > 3 && <View style={gSt.rankSep} />}
-
-                {/* Rest of ranking */}
-                {lbRankings.slice(3).map((r) => (
-                  <View
-                    key={r.rank}
-                    style={[gSt.rankRow, r.userId === currentUserId && gSt.rankRowMe]}
-                  >
-                    <Text style={gSt.rankPos}>#{r.rank}</Text>
-                    <View style={gSt.rankAvatarWrap}>
-                      {r.user?.avatarUrl
-                        ? <Image source={{ uri: r.user.avatarUrl }} style={gSt.rankAvatar} />
-                        : <View style={gSt.rankAvatarFallback}>
-                            <Text style={gSt.rankAvatarInitial}>{r.user?.name?.[0]?.toUpperCase()}</Text>
-                          </View>
-                      }
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={gSt.rankName} numberOfLines={1}>
-                        {r.user?.name ?? "Usuário"}
-                        {r.userId === currentUserId && <Text style={gSt.rankMeLabel}> (você)</Text>}
-                      </Text>
-                      <Text style={gSt.rankActions}>{r.totalActions} ações</Text>
-                    </View>
-                    <Text style={gSt.rankPts}>{r.totalPoints} pts</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </>
-      ) : (
-        <View style={gSt.noLbCard}>
-          <Feather name="award" size={40} color={C.textMuted} />
-          <Text style={gSt.noLbTitle}>Sem competições ativas</Text>
-          <Text style={gSt.noLbSub}>Continue interagindo para acumular pontos!</Text>
-        </View>
-      )}
-
-      {/* ── My action history ── */}
-      {myHistory.length > 0 && (
-        <View style={gSt.historyCard}>
-          <Text style={gSt.historyTitle}>Minhas ações recentes</Text>
-          {myHistory.map((ev, i) => (
-            <View key={ev.id} style={[gSt.historyRow, i > 0 && gSt.historyRowBorder]}>
-              <View style={[gSt.historyDot, { backgroundColor: ev.status === "valid" ? "#10B981" : "#EF4444" }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={gSt.historyAction}>{ACTION_LABELS[ev.actionType] ?? ev.actionType}</Text>
-                {ev.blockReason && <Text style={gSt.historyBlockReason}>{ev.blockReason}</Text>}
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[gSt.historyPts, { color: ev.pointsAwarded > 0 ? "#10B981" : "#9CA3AF" }]}>
-                  {ev.pointsAwarded > 0 ? `+${ev.pointsAwarded}` : "0"} pts
-                </Text>
-                <Text style={gSt.historyTime}>{fmtDateTime(ev.createdAt)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Daily tip */}
-      <View style={gSt.tipCard}>
-        <Feather name="info" size={14} color="#7C3AED" />
-        <Text style={gSt.tipText}>
-          Ganhe pontos curtindo posts, comentando com qualidade, lendo e assinando documentos do Integra.
-        </Text>
-      </View>
-    </ScrollView>
-  );
-}
-
-// Gamification styles
-const gSt = StyleSheet.create({
-  scrollContent: { padding: 14, gap: 14 },
-
-  myStatsCard: {
-    backgroundColor: C.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: C.border,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
-  },
-  myStatsHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
-  myStatsTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.text },
-  myStatsRow: { flexDirection: "row", alignItems: "center" },
-  myStatItem: { flex: 1, alignItems: "center", gap: 2 },
-  myStatValue: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
-  myStatLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center" },
-  myStatsDivider: { width: 1, height: 32, backgroundColor: C.borderLight },
-  blockedWarning: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10, backgroundColor: "#FEF2F2", borderRadius: 8, padding: 8 },
-  blockedWarningText: { fontSize: 12, color: "#EF4444", fontFamily: "Inter_400Regular", flex: 1 },
-
-  lbSelector: { paddingHorizontal: 2, paddingBottom: 2, gap: 8, flexDirection: "row" },
-  lbSelectorChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
-  lbSelectorChipActive: { backgroundColor: "#EFF6FF", borderColor: C.tint },
-  lbSelectorText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  lbSelectorTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
-
-  lbCard: {
-    backgroundColor: C.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: C.border,
-    overflow: "hidden",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
-  },
-  lbCardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight },
-  lbName: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text },
-  lbDesc: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular", marginTop: 2 },
-  lbDates: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 3 },
-
-  rankEmpty: { alignItems: "center", padding: 30 },
-  rankEmptyText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
-
-  rankList: { gap: 0 },
-  rankSep: { height: 1, backgroundColor: C.borderLight, marginVertical: 4, marginHorizontal: 14 },
-
-  rankTopRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    paddingVertical: 12, paddingHorizontal: 14,
-    borderLeftWidth: 3, borderLeftColor: "transparent",
-  },
-  rankTopRowMe: { backgroundColor: "#EFF6FF" },
-  rankMedal: { fontSize: 20, width: 28, textAlign: "center" },
-  rankRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
-  rankRowMe: { backgroundColor: "#EFF6FF" },
-  rankPos: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.textMuted, width: 28, textAlign: "center" },
-  rankAvatarWrap: { width: 36, height: 36 },
-  rankAvatar: { width: 36, height: 36, borderRadius: 18 },
-  rankAvatarFallback: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#EFF6FF", justifyContent: "center", alignItems: "center" },
-  rankAvatarInitial: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.tint },
-  rankName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
-  rankMeLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.tint },
-  rankActions: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
-  rankPts: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.tint },
-
-  noLbCard: {
-    backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border,
-    alignItems: "center", padding: 40, gap: 10,
-  },
-  noLbTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
-  noLbSub: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
-
-  historyCard: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
-  historyTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.text, padding: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight },
-  historyRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
-  historyRowBorder: { borderTopWidth: 1, borderTopColor: C.borderLight },
-  historyDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  historyAction: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
-  historyBlockReason: { fontSize: 11, color: "#EF4444", fontFamily: "Inter_400Regular", marginTop: 2 },
-  historyPts: { fontSize: 13, fontFamily: "Inter_700Bold" },
-  historyTime: { fontSize: 10, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
-
-  tipCard: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#F5F3FF", borderRadius: 12, padding: 12 },
-  tipText: { flex: 1, fontSize: 12, color: "#5B21B6", fontFamily: "Inter_400Regular", lineHeight: 18 },
-});
-
-// ─── Main screen ─────────────────────────────────────────────────────────────
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { unreadCount, dmUnreadCount, refreshUnread } = useNotifications();
-  const [mainTab, setMainTab] = useState<MainTab>("feed");
-
-  // Per-tab channel filters
-  const [feedChannelId, setFeedChannelId] = useState<number | null>(null);
-  const [internoChannelId, setInternoChannelId] = useState<number | null>(null);
-
-  // Birthday sub-tab
+  const qc = useQueryClient();
+  const [mainTab, setMainTab] = useState<MainTab>("todos");
   const [bdSubTab, setBdSubTab] = useState<BdSubTab>("today");
-  const [bdRefreshing, setBdRefreshing] = useState(false);
+  const [feedChannelId, setFeedChannelId] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<"recent" | "popular">("recent");
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Birthday banner dismissal (per-day)
-  const todayKey = new Date().toDateString();
+  // Refresh flags
+  const [todosRefreshing, setTodosRefreshing] = useState(false);
+  const [destRefreshing, setDestRefreshing] = useState(false);
+  const [comRefreshing, setComRefreshing] = useState(false);
+  const [fotosRefreshing, setFotosRefreshing] = useState(false);
+  const [videosRefreshing, setVideosRefreshing] = useState(false);
+  const [savedRefreshing, setSavedRefreshing] = useState(false);
+  const [bdRefreshing, setBdRefreshing] = useState(false);
   const [bdBannerDismissedOn, setBdBannerDismissedOn] = useState<string | null>(null);
+  const todayKey = new Date().toDateString();
   const bdBannerDismissed = bdBannerDismissedOn === todayKey;
 
-  // Refresh states
-  const [feedRefreshing, setFeedRefreshing] = useState(false);
-  const [internoRefreshing, setInternoRefreshing] = useState(false);
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const botPad = Platform.OS === "web" ? 34 + 84 : 100;
 
-  // ── Channels ──
+  // ── Channels ──────────────────────────────────────────────────────────────
   const { data: channels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
   });
-
   const { data: unreadChannelData } = useQuery<{ unreadIds: number[] }>({
     queryKey: ["channels-unread"],
     queryFn: () => api.get("/channels/unread-ids"),
@@ -481,80 +162,104 @@ export default function FeedScreen() {
   const unreadChannelIds = new Set(unreadChannelData?.unreadIds ?? []);
 
   function markChannelRead(channelId: number) {
-    api.post(`/channels/${channelId}/read`, {}).then(() => {
-      refreshUnread();
-    }).catch(() => {});
+    api.post(`/channels/${channelId}/read`, {}).then(() => refreshUnread()).catch(() => {});
   }
 
-  const regularChannels = useMemo(
-    () => channels.filter((c: any) => !c.isInternalComm),
-    [channels]
-  );
-  const internalChannels = useMemo(
-    () => channels.filter((c: any) => c.isInternalComm),
-    [channels]
-  );
-  const internalIds = useMemo(
-    () => new Set(internalChannels.map((c: any) => c.id)),
-    [internalChannels]
-  );
+  const regularChannels = useMemo(() => channels.filter((c: any) => !c.isInternalComm), [channels]);
+  const internalChannels = useMemo(() => channels.filter((c: any) => c.isInternalComm), [channels]);
+  const internalIds = useMemo(() => new Set(internalChannels.map((c: any) => c.id)), [internalChannels]);
 
-  // ── Feed posts ──
-  const { data: feedData, isLoading: feedLoading, refetch: feedRefetch } = useQuery({
-    queryKey: ["feed", feedChannelId],
-    queryFn: () =>
-      api.get(feedChannelId ? `/posts?channelId=${feedChannelId}&limit=40` : "/posts?limit=60"),
+  // ── Queries ───────────────────────────────────────────────────────────────
+  const todosQ = useQuery({
+    queryKey: ["posts-todos", feedChannelId, sortMode],
+    queryFn: () => {
+      const base = feedChannelId ? `/posts?channelId=${feedChannelId}&sort=${sortMode}&limit=60` : `/posts?sort=${sortMode}&limit=60`;
+      return api.get(base);
+    },
   });
-  const feedPosts = useMemo(() => {
-    const all = feedData?.posts || [];
+  const todosData = useMemo(() => {
+    const all = todosQ.data?.posts || [];
     return feedChannelId ? all : all.filter((p: any) => !internalIds.has(p.channelId));
-  }, [feedData, feedChannelId, internalIds]);
+  }, [todosQ.data, feedChannelId, internalIds]);
 
-  // ── Interno posts ──
-  const { data: internoData, isLoading: internoLoading, refetch: internoRefetch } = useQuery({
-    queryKey: ["interno", internoChannelId],
-    queryFn: () =>
-      api.get(internoChannelId ? `/posts?channelId=${internoChannelId}&limit=40` : "/posts?limit=60"),
-    enabled: mainTab === "interno",
+  const destaquesQ = useQuery({
+    queryKey: ["posts-destaques"],
+    queryFn: () => api.get("/posts?onlyPinned=true&limit=40"),
+    enabled: mainTab === "destaques",
   });
-  const internoPosts = useMemo(() => {
-    const all = internoData?.posts || [];
-    return internoChannelId ? all : all.filter((p: any) => internalIds.has(p.channelId));
-  }, [internoData, internoChannelId, internalIds]);
+  const destaquesData = useMemo(() => destaquesQ.data?.posts || [], [destaquesQ.data]);
 
-  // ── Birthdays ──
-  const { data: birthdaysTodayData = [] } = useQuery<any[]>({
+  const comunicacaoQ = useQuery({
+    queryKey: ["posts-comunicacao"],
+    queryFn: () => api.get("/posts?limit=60"),
+    enabled: mainTab === "comunicacao",
+  });
+  const comunicacaoData = useMemo(() => {
+    const all = comunicacaoQ.data?.posts || [];
+    return all.filter((p: any) => internalIds.has(p.channelId));
+  }, [comunicacaoQ.data, internalIds]);
+
+  const fotosQ = useQuery({
+    queryKey: ["posts-fotos"],
+    queryFn: () => api.get("/posts?type=image&limit=40"),
+    enabled: mainTab === "fotos",
+  });
+  const fotosData = useMemo(() => fotosQ.data?.posts || [], [fotosQ.data]);
+
+  const videosQ = useQuery({
+    queryKey: ["posts-videos"],
+    queryFn: () => api.get("/posts?type=video&limit=40"),
+    enabled: mainTab === "videos",
+  });
+  const videosData = useMemo(() => videosQ.data?.posts || [], [videosQ.data]);
+
+  const savedQ = useQuery({
+    queryKey: ["posts-saved"],
+    queryFn: () => api.get("/posts/saved"),
+    enabled: mainTab === "salvos",
+  });
+  const savedData = useMemo(() => savedQ.data?.posts || [], [savedQ.data]);
+
+  const bdTodayQ = useQuery<any[]>({
     queryKey: ["birthdays-today"],
     queryFn: () => api.get("/birthdays?days=1"),
     staleTime: 10 * 60 * 1000,
   });
-  const todayBirthdays = (birthdaysTodayData as any[]).filter((b: any) => b.daysUntil === 0);
+  const todayBirthdays = ((bdTodayQ.data as any[]) || []).filter((b: any) => b.daysUntil === 0);
 
-  const { data: birthdaysAll = [], isLoading: bdLoading, refetch: bdRefetch } = useQuery<any[]>({
+  const bdAllQ = useQuery<any[]>({
     queryKey: ["birthdays-all"],
     queryFn: () => api.get("/birthdays?days=90"),
     enabled: mainTab === "aniversarios",
   });
-  const bdTodayList = birthdaysAll.filter((b: any) => b.daysUntil === 0);
-  const bdUpcomingList = birthdaysAll.filter((b: any) => b.daysUntil > 0);
+  const bdTodayList = (bdAllQ.data || []).filter((b: any) => b.daysUntil === 0);
+  const bdUpcomingList = (bdAllQ.data || []).filter((b: any) => b.daysUntil > 0);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const botPad = Platform.OS === "web" ? 34 + 84 : 100;
+  // ── Search filter ─────────────────────────────────────────────────────────
+  const filteredTodosData = useMemo(() => {
+    if (!searchQuery.trim()) return todosData;
+    const q = searchQuery.toLowerCase();
+    return todosData.filter((p: any) =>
+      (p.content || "").toLowerCase().includes(q) ||
+      (p.author?.name || "").toLowerCase().includes(q)
+    );
+  }, [todosData, searchQuery]);
 
-  // ── Shared channel filter bar renderer ──
-  function ChannelFilterBar({
-    chList,
-    selected,
-    onSelect,
-  }: { chList: any[]; selected: number | null; onSelect: (id: number | null) => void }) {
+  function invalidateAll() {
+    qc.invalidateQueries({ queryKey: ["posts-todos"] });
+    qc.invalidateQueries({ queryKey: ["posts-destaques"] });
+    qc.invalidateQueries({ queryKey: ["posts-comunicacao"] });
+    qc.invalidateQueries({ queryKey: ["posts-fotos"] });
+    qc.invalidateQueries({ queryKey: ["posts-videos"] });
+    qc.invalidateQueries({ queryKey: ["posts-saved"] });
+  }
+
+  // ── Channel filter bar ─────────────────────────────────────────────────────
+  function ChannelFilterBar({ chList, selected, onSelect }: { chList: any[]; selected: number | null; onSelect: (id: number | null) => void }) {
     return (
       <View style={styles.channelBarWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelBarContent}>
-          <TouchableOpacity
-            style={[styles.channelPill, selected === null && styles.channelPillActive]}
-            onPress={() => onSelect(null)}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={[styles.channelPill, selected === null && styles.channelPillActive]} onPress={() => onSelect(null)} activeOpacity={0.8}>
             <Text style={[styles.channelPillText, selected === null && styles.channelPillTextActive]}>Todos</Text>
           </TouchableOpacity>
           {chList.map((ch: any) => {
@@ -564,35 +269,13 @@ export default function FeedScreen() {
             return (
               <TouchableOpacity
                 key={ch.id}
-                style={[
-                  styles.channelPill,
-                  active
-                    ? { backgroundColor: chColor, borderColor: chColor }
-                    : ch.color
-                    ? { borderColor: ch.color, borderWidth: 1.5 }
-                    : null,
-                ]}
-                onPress={() => {
-                  const nextId = active ? null : ch.id;
-                  onSelect(nextId);
-                  if (!active && hasUnread) markChannelRead(ch.id);
-                }}
+                style={[styles.channelPill, active ? { backgroundColor: chColor, borderColor: chColor } : ch.color ? { borderColor: ch.color, borderWidth: 1.5 } : null]}
+                onPress={() => { const nextId = active ? null : ch.id; onSelect(nextId); if (!active && hasUnread) markChannelRead(ch.id); }}
                 activeOpacity={0.8}
               >
-                {/* Color dot for inactive colored pills */}
-                {!active && ch.color && (
-                  <View style={[styles.chPillDot, { backgroundColor: ch.color }]} />
-                )}
-                {ch.isInternalComm && (
-                  <Feather name="shield" size={11} color={active ? "#fff" : chColor} style={{ marginRight: 3 }} />
-                )}
-                <Text style={[styles.channelPillText, active && styles.channelPillTextActive, !active && ch.color && { color: ch.color }]}>
-                  {ch.name}
-                </Text>
-                {/* Unread dot */}
-                {hasUnread && !active && (
-                  <View style={styles.chUnreadDot} />
-                )}
+                {!active && ch.color && <View style={[styles.chPillDot, { backgroundColor: ch.color }]} />}
+                <Text style={[styles.channelPillText, active && styles.channelPillTextActive, !active && ch.color && { color: ch.color }]}>{ch.name}</Text>
+                {hasUnread && !active && <View style={styles.chUnreadDot} />}
               </TouchableOpacity>
             );
           })}
@@ -601,268 +284,264 @@ export default function FeedScreen() {
     );
   }
 
-  // ── Posts list renderer (shared between feed & interno) ──
+  // ── Generic posts list ─────────────────────────────────────────────────────
   function PostsList({
-    posts,
-    loading,
-    refreshing,
-    onRefresh,
-    channelId,
-    channelList,
-    onSelectChannel,
-    isFeed,
+    posts, loading, refreshing, onRefresh, queryKey, header, emptyIcon, emptyText, emptySubText, emptyAction,
   }: {
-    posts: any[];
-    loading: boolean;
-    refreshing: boolean;
-    onRefresh: () => void;
-    channelId: number | null;
-    channelList: any[];
-    onSelectChannel: (id: number | null) => void;
-    isFeed: boolean;
+    posts: any[]; loading: boolean; refreshing: boolean; onRefresh: () => void;
+    queryKey: string; header?: React.ReactNode;
+    emptyIcon?: string; emptyText?: string; emptySubText?: string; emptyAction?: React.ReactNode;
   }) {
-    const selectedChName = channelList.find((c: any) => c.id === channelId)?.name;
-    const ListHeader = (
-      <View>
-        {isFeed && (
-          <TouchableOpacity
-            style={styles.createBox}
-            onPress={() => router.push("/channel/create-post")}
-            activeOpacity={0.85}
-          >
-            <View style={styles.createAvatar}>
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.createAvatarImg} />
-              ) : (
-                <Text style={styles.createAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
-              )}
-            </View>
-            <View style={styles.createInputFake}>
-              <Text style={styles.createPlaceholder}>O que você está pensando?</Text>
-            </View>
-            <View style={styles.createImageBtn}>
-              <Feather name="image" size={18} color={C.tint} />
-            </View>
-          </TouchableOpacity>
-        )}
-        {channelId && selectedChName && (
-          <View style={styles.filterBanner}>
-            <Feather name="filter" size={13} color={C.tint} />
-            <Text style={styles.filterBannerText}>
-              Filtrando por: <Text style={{ fontFamily: "Inter_700Bold" }}>#{selectedChName}</Text>
-            </Text>
-            <TouchableOpacity onPress={() => onSelectChannel(null)}>
-              <Feather name="x" size={14} color={C.tint} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    );
-
     return (
       <FlatList
         data={posts}
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item }) => (
-          <PostCard post={item} onLikeChange={isFeed ? feedRefetch : internoRefetch} onDelete={isFeed ? feedRefetch : internoRefetch} />
+          <PostCard
+            post={item}
+            onLikeChange={invalidateAll}
+            onDelete={invalidateAll}
+            onSaveChange={invalidateAll}
+          />
         )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />}
         contentContainerStyle={[styles.listContent, { paddingBottom: botPad }]}
-        ListHeaderComponent={ListHeader}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Feather name={isFeed ? "inbox" : "shield-off"} size={36} color={C.tint} />
-              </View>
-              <Text style={styles.emptyText}>Nenhuma publicação ainda</Text>
-              <Text style={styles.emptySubText}>
-                {channelId ? "Nenhum post neste canal." : isFeed ? "Seja o primeiro a publicar algo!" : "Sem comunicados no momento."}
-              </Text>
-              {isFeed && (
-                <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
-                  <Feather name="edit-3" size={15} color="#fff" />
-                  <Text style={styles.emptyBtnText}>Criar publicação</Text>
-                </TouchableOpacity>
-              )}
+        ListHeaderComponent={header ? <>{header}</> : null}
+        ListEmptyComponent={!loading ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Feather name={(emptyIcon as any) || "inbox"} size={36} color={C.tint} />
             </View>
-          ) : null
-        }
+            <Text style={styles.emptyText}>{emptyText || "Nenhuma publicação"}</Text>
+            {emptySubText ? <Text style={styles.emptySubText}>{emptySubText}</Text> : null}
+            {emptyAction}
+          </View>
+        ) : null}
         showsVerticalScrollIndicator={false}
       />
     );
   }
 
+  // ── Sort bar ──────────────────────────────────────────────────────────────
+  const SortBar = () => (
+    <View style={styles.sortBar}>
+      <TouchableOpacity style={[styles.sortBtn, sortMode === "recent" && styles.sortBtnActive]} onPress={() => setSortMode("recent")} activeOpacity={0.8}>
+        <Feather name="clock" size={13} color={sortMode === "recent" ? C.tint : C.textMuted} />
+        <Text style={[styles.sortBtnText, sortMode === "recent" && styles.sortBtnTextActive]}>Recentes</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.sortBtn, sortMode === "popular" && styles.sortBtnActive]} onPress={() => setSortMode("popular")} activeOpacity={0.8}>
+        <Feather name="trending-up" size={13} color={sortMode === "popular" ? C.tint : C.textMuted} />
+        <Text style={[styles.sortBtnText, sortMode === "popular" && styles.sortBtnTextActive]}>Populares</Text>
+      </TouchableOpacity>
+      <View style={{ flex: 1 }} />
+      <TouchableOpacity onPress={() => router.push("/channel/create-post")} style={styles.createFab} activeOpacity={0.8}>
+        <Feather name="edit-3" size={14} color="#fff" />
+        <Text style={styles.createFabText}>Publicar</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // ── Feed header (create post box) ─────────────────────────────────────────
+  const FeedHeader = (
+    <View>
+      {todayBirthdays.length > 0 && !bdBannerDismissed && (
+        <TouchableOpacity style={styles.birthdayBanner} onPress={() => setMainTab("aniversarios")} activeOpacity={0.88}>
+          <Text style={styles.birthdayBannerEmoji}>🎂</Text>
+          <Text style={styles.birthdayBannerText} numberOfLines={1}>
+            {todayBirthdays.length === 1
+              ? `${todayBirthdays[0].name} faz aniversário hoje!`
+              : `${todayBirthdays.slice(0, 2).map((b: any) => b.name.split(" ")[0]).join(" e ")}${todayBirthdays.length > 2 ? ` +${todayBirthdays.length - 2}` : ""} fazem aniversário hoje!`}
+          </Text>
+          <TouchableOpacity onPress={(e) => { e.stopPropagation(); setBdBannerDismissedOn(todayKey); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={15} color="#166534" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity style={styles.createBox} onPress={() => router.push("/channel/create-post")} activeOpacity={0.85}>
+        <View style={styles.createAvatar}>
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.createAvatarImg} />
+          ) : (
+            <Text style={styles.createAvatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
+          )}
+        </View>
+        <View style={styles.createInputFake}>
+          <Text style={styles.createPlaceholder}>O que você está pensando?</Text>
+        </View>
+        <View style={styles.createMediaBtns}>
+          <Feather name="image" size={18} color={C.tint} />
+          <Feather name="video" size={18} color={C.tint} />
+        </View>
+      </TouchableOpacity>
+      {feedChannelId && (() => {
+        const ch = regularChannels.find((c: any) => c.id === feedChannelId);
+        return ch?.coverImageUrl ? (
+          <View style={styles.coverBanner}>
+            <Image source={{ uri: ch.coverImageUrl }} style={styles.coverBannerImg} resizeMode="cover" />
+            <View style={styles.coverBannerOverlay}>
+              <Text style={styles.coverBannerName}>{ch.name}</Text>
+              {ch.description ? <Text style={styles.coverBannerDesc}>{ch.description}</Text> : null}
+            </View>
+          </View>
+        ) : null;
+      })()}
+      {feedChannelId && (
+        <View style={styles.filterBanner}>
+          <Feather name="filter" size={13} color={C.tint} />
+          <Text style={styles.filterBannerText}>
+            Filtrando: <Text style={{ fontFamily: "Inter_700Bold" }}>#{regularChannels.find((c: any) => c.id === feedChannelId)?.name}</Text>
+          </Text>
+          <TouchableOpacity onPress={() => setFeedChannelId(null)}>
+            <Feather name="x" size={14} color={C.tint} />
+          </TouchableOpacity>
+        </View>
+      )}
+      {searchVisible && searchQuery.length > 0 && filteredTodosData.length !== todosData.length && (
+        <View style={styles.filterBanner}>
+          <Feather name="search" size={13} color={C.tint} />
+          <Text style={styles.filterBannerText}>{filteredTodosData.length} resultado{filteredTodosData.length !== 1 ? "s" : ""} para "{searchQuery}"</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        {/* Avatar (→ profile) */}
         <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.85}>
           {user?.avatarUrl ? (
             <Image source={{ uri: user.avatarUrl }} style={styles.headerAvatar} />
           ) : (
             <View style={styles.headerAvatarFallback}>
-              <Feather name="user" size={22} color="#9CA3AF" />
+              <Text style={styles.headerAvatarInitial}>{user?.name?.[0]?.toUpperCase() || "U"}</Text>
             </View>
           )}
         </TouchableOpacity>
 
-        {/* Greeting block */}
-        <View style={styles.headerGreetingBlock}>
-          <Text style={styles.headerGreeting} numberOfLines={1}>
-            {getGreeting()}, <Text style={styles.headerGreetingName}>{user?.name?.split(" ")[0]}!</Text>
-          </Text>
-          <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
-        </View>
-
-        {/* Header right icons */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          {/* DM icon */}
-          <TouchableOpacity
-            onPress={() => router.push("/messages" as any)}
-            style={styles.bellBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}
-          >
-            <Feather name="send" size={20} color={C.text} />
-            {dmUnreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Bell icon */}
-          <TouchableOpacity
-            onPress={() => router.push("/notifications" as any)}
-            style={styles.bellBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}
-          >
-            <Feather name="bell" size={22} color={C.text} />
-            {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-      </View>
-
-      {/* ── Main 3-tab bar ── */}
-      <View style={styles.mainTabBar}>
-        {/* Feed tab */}
-        <TouchableOpacity
-          style={[styles.mainTab, mainTab === "feed" && styles.mainTabActive]}
-          onPress={() => setMainTab("feed")}
-          activeOpacity={0.8}
-        >
-          <Feather name="home" size={14} color={mainTab === "feed" ? C.tint : C.textMuted} />
-          <Text style={[styles.mainTabText, mainTab === "feed" && styles.mainTabTextActive]}>Feed</Text>
-          {mainTab === "feed" && <View style={styles.mainTabIndicator} />}
-        </TouchableOpacity>
-
-        {/* Comunicação Interna tab */}
-        <TouchableOpacity
-          style={[styles.mainTab, mainTab === "interno" && styles.mainTabActive]}
-          onPress={() => setMainTab("interno")}
-          activeOpacity={0.8}
-        >
-          <Feather name="shield" size={14} color={mainTab === "interno" ? C.tint : C.textMuted} />
-          <Text style={[styles.mainTabText, mainTab === "interno" && styles.mainTabTextActive]}>Comunicação</Text>
-          {mainTab === "interno" && <View style={styles.mainTabIndicator} />}
-        </TouchableOpacity>
-
-        {/* Aniversários tab */}
-        <TouchableOpacity
-          style={[styles.mainTab, mainTab === "aniversarios" && styles.mainTabActive]}
-          onPress={() => setMainTab("aniversarios")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.mainTabEmoji}>🎂</Text>
-          <Text style={[styles.mainTabText, mainTab === "aniversarios" && styles.mainTabTextActive]}>Aniversários</Text>
-          {bdTodayList.length > 0 && mainTab !== "aniversarios" && (
-            <View style={styles.mainTabBadge}>
-              <Text style={styles.mainTabBadgeText}>{bdTodayList.length}</Text>
-            </View>
-          )}
-          {mainTab === "aniversarios" && <View style={styles.mainTabIndicator} />}
-        </TouchableOpacity>
-
-        {/* Ranking tab */}
-        <TouchableOpacity
-          style={[styles.mainTab, mainTab === "ranking" && styles.mainTabActive]}
-          onPress={() => setMainTab("ranking")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.mainTabEmoji}>🏆</Text>
-          <Text style={[styles.mainTabText, mainTab === "ranking" && styles.mainTabTextActive]}>Ranking</Text>
-          {mainTab === "ranking" && <View style={styles.mainTabIndicator} />}
-        </TouchableOpacity>
-      </View>
-
-      {/* ══ FEED TAB ══ */}
-      {mainTab === "feed" && (
-        <>
-          {/* Birthday notification banner */}
-          {todayBirthdays.length > 0 && !bdBannerDismissed && (
-            <TouchableOpacity
-              style={styles.birthdayBanner}
-              onPress={() => setMainTab("aniversarios")}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.birthdayBannerEmoji}>🎂</Text>
-              <Text style={styles.birthdayBannerText} numberOfLines={1}>
-                {todayBirthdays.length === 1
-                  ? `${todayBirthdays[0].name} faz aniversário hoje!`
-                  : `${todayBirthdays.slice(0, 2).map((b: any) => b.name.split(" ")[0]).join(" e ")}${todayBirthdays.length > 2 ? ` +${todayBirthdays.length - 2}` : ""} fazem aniversário hoje!`}
-              </Text>
-              <TouchableOpacity
-                onPress={(e) => { e.stopPropagation(); setBdBannerDismissedOn(todayKey); }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Feather name="x" size={15} color="#166534" />
+        {searchVisible ? (
+          <View style={styles.searchBarWrap}>
+            <Feather name="search" size={16} color={C.textMuted} />
+            <TextInput
+              style={styles.searchBarInput}
+              placeholder="Buscar posts..."
+              placeholderTextColor={C.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name="x-circle" size={16} color={C.textMuted} />
               </TouchableOpacity>
-            </TouchableOpacity>
-          )}
+            )}
+          </View>
+        ) : (
+          <View style={styles.headerGreetingBlock}>
+            <Text style={styles.headerGreeting} numberOfLines={1}>
+              {getGreeting()}, <Text style={styles.headerGreetingName}>{user?.name?.split(" ")[0]}!</Text>
+            </Text>
+            <Text style={styles.headerDate} numberOfLines={1}>{getTodayLabel()}</Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => { setSearchVisible((v) => !v); if (searchVisible) setSearchQuery(""); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name={searchVisible ? "x" : "search"} size={20} color={C.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/messages" as any)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.7}>
+            <Feather name="send" size={19} color={C.text} />
+            {dmUnreadCount > 0 && <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</Text></View>}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/notifications" as any)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.7}>
+            <Feather name="bell" size={21} color={C.text} />
+            {unreadCount > 0 && <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text></View>}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Horizontal tab bar ── */}
+      <View style={styles.tabBarWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBarContent}>
+          {TABS.map((tab) => {
+            const active = mainTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tabItem, active && styles.tabItemActive]}
+                onPress={() => setMainTab(tab.key)}
+                activeOpacity={0.8}
+              >
+                {tab.emoji ? (
+                  <Text style={styles.tabEmoji}>{tab.emoji}</Text>
+                ) : tab.icon ? (
+                  <Feather name={tab.icon as any} size={14} color={active ? C.tint : C.textMuted} />
+                ) : null}
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+                {tab.key === "aniversarios" && (bdTodayList.length > 0 || todayBirthdays.length > 0) && !active && (
+                  <View style={styles.tabBadge}><Text style={styles.tabBadgeText}>{bdTodayList.length || todayBirthdays.length}</Text></View>
+                )}
+                {active && <View style={styles.tabIndicator} />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ══ TODOS TAB ══ */}
+      {mainTab === "todos" && (
+        <>
           <ChannelFilterBar chList={regularChannels} selected={feedChannelId} onSelect={setFeedChannelId} />
-          {/* Channel cover banner */}
-          {feedChannelId && (() => {
-            const ch = regularChannels.find((c: any) => c.id === feedChannelId);
-            return ch?.coverImageUrl ? (
-              <View style={styles.coverBanner}>
-                <Image source={{ uri: ch.coverImageUrl }} style={styles.coverBannerImg} resizeMode="cover" />
-                <View style={styles.coverBannerOverlay}>
-                  <Text style={styles.coverBannerName}>{ch.name}</Text>
-                  {ch.description ? <Text style={styles.coverBannerDesc}>{ch.description}</Text> : null}
-                </View>
-              </View>
-            ) : null;
-          })()}
+          <SortBar />
           <PostsList
-            posts={feedPosts}
-            loading={feedLoading}
-            refreshing={feedRefreshing}
-            onRefresh={async () => { setFeedRefreshing(true); await feedRefetch(); setFeedRefreshing(false); }}
-            channelId={feedChannelId}
-            channelList={regularChannels}
-            onSelectChannel={setFeedChannelId}
-            isFeed={true}
+            posts={filteredTodosData}
+            loading={todosQ.isLoading}
+            refreshing={todosRefreshing}
+            onRefresh={async () => { setTodosRefreshing(true); await todosQ.refetch(); setTodosRefreshing(false); }}
+            queryKey="todos"
+            header={FeedHeader}
+            emptyIcon="inbox"
+            emptyText="Nenhuma publicação ainda"
+            emptySubText="Seja o primeiro a publicar algo!"
+            emptyAction={
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push("/channel/create-post")} activeOpacity={0.8}>
+                <Feather name="edit-3" size={15} color="#fff" />
+                <Text style={styles.emptyBtnText}>Criar publicação</Text>
+              </TouchableOpacity>
+            }
           />
-          {feedLoading && !feedRefreshing && (
-            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
-          )}
+          {todosQ.isLoading && !todosRefreshing && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
         </>
       )}
 
-      {/* ══ COMUNICAÇÃO INTERNA TAB ══ */}
-      {mainTab === "interno" && (
+      {/* ══ DESTAQUES TAB ══ */}
+      {mainTab === "destaques" && (
         <>
-          {/* Internal comms header card */}
+          <View style={styles.sectionHeader}>
+            <Feather name="star" size={16} color="#F59E0B" />
+            <Text style={styles.sectionHeaderText}>Posts fixados e em destaque</Text>
+          </View>
+          <PostsList
+            posts={destaquesData}
+            loading={destaquesQ.isLoading}
+            refreshing={destRefreshing}
+            onRefresh={async () => { setDestRefreshing(true); await destaquesQ.refetch(); setDestRefreshing(false); }}
+            queryKey="destaques"
+            emptyIcon="star"
+            emptyText="Sem destaques no momento"
+            emptySubText="Posts fixados e destacados pelo admin aparecem aqui."
+          />
+          {destaquesQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
+        </>
+      )}
+
+      {/* ══ COMUNICAÇÃO TAB ══ */}
+      {mainTab === "comunicacao" && (
+        <>
           <View style={styles.internoHeader}>
             <View style={styles.internoHeaderIcon}>
               <Feather name="shield" size={20} color={C.tint} />
@@ -873,18 +552,79 @@ export default function FeedScreen() {
             </View>
           </View>
           <PostsList
-            posts={internoPosts}
-            loading={internoLoading}
-            refreshing={internoRefreshing}
-            onRefresh={async () => { setInternoRefreshing(true); await internoRefetch(); setInternoRefreshing(false); }}
-            channelId={null}
-            channelList={internalChannels}
-            onSelectChannel={setInternoChannelId}
-            isFeed={false}
+            posts={comunicacaoData}
+            loading={comunicacaoQ.isLoading}
+            refreshing={comRefreshing}
+            onRefresh={async () => { setComRefreshing(true); await comunicacaoQ.refetch(); setComRefreshing(false); }}
+            queryKey="comunicacao"
+            emptyIcon="shield"
+            emptyText="Sem comunicados"
+            emptySubText="Avisos e comunicados oficiais da empresa aparecem aqui."
           />
-          {internoLoading && !internoRefreshing && (
-            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
-          )}
+          {comunicacaoQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
+        </>
+      )}
+
+      {/* ══ FOTOS TAB ══ */}
+      {mainTab === "fotos" && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Feather name="image" size={16} color={C.tint} />
+            <Text style={styles.sectionHeaderText}>Posts com fotos</Text>
+          </View>
+          <PostsList
+            posts={fotosData}
+            loading={fotosQ.isLoading}
+            refreshing={fotosRefreshing}
+            onRefresh={async () => { setFotosRefreshing(true); await fotosQ.refetch(); setFotosRefreshing(false); }}
+            queryKey="fotos"
+            emptyIcon="image"
+            emptyText="Nenhuma foto publicada"
+            emptySubText="Posts com imagens aparecem aqui."
+          />
+          {fotosQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
+        </>
+      )}
+
+      {/* ══ VÍDEOS TAB ══ */}
+      {mainTab === "videos" && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Feather name="video" size={16} color={C.tint} />
+            <Text style={styles.sectionHeaderText}>Posts com vídeos</Text>
+          </View>
+          <PostsList
+            posts={videosData}
+            loading={videosQ.isLoading}
+            refreshing={videosRefreshing}
+            onRefresh={async () => { setVideosRefreshing(true); await videosQ.refetch(); setVideosRefreshing(false); }}
+            queryKey="videos"
+            emptyIcon="video"
+            emptyText="Nenhum vídeo publicado"
+            emptySubText="Posts com vídeos aparecem aqui."
+          />
+          {videosQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
+        </>
+      )}
+
+      {/* ══ SALVOS TAB ══ */}
+      {mainTab === "salvos" && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Feather name="bookmark" size={16} color={C.tint} />
+            <Text style={styles.sectionHeaderText}>Posts salvos por você</Text>
+          </View>
+          <PostsList
+            posts={savedData}
+            loading={savedQ.isLoading}
+            refreshing={savedRefreshing}
+            onRefresh={async () => { setSavedRefreshing(true); await savedQ.refetch(); setSavedRefreshing(false); }}
+            queryKey="salvos"
+            emptyIcon="bookmark"
+            emptyText="Nenhum post salvo"
+            emptySubText='Toque no ícone 🔖 em um post para salvá-lo aqui.'
+          />
+          {savedQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
         </>
       )}
 
@@ -892,31 +632,15 @@ export default function FeedScreen() {
       {mainTab === "aniversarios" && (
         <>
           <View style={styles.bdTabBar}>
-            <TouchableOpacity
-              style={[styles.bdTab, bdSubTab === "today" && styles.bdTabActive]}
-              onPress={() => setBdSubTab("today")}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={[styles.bdTab, bdSubTab === "today" && styles.bdTabActive]} onPress={() => setBdSubTab("today")} activeOpacity={0.8}>
               <Text style={[styles.bdTabText, bdSubTab === "today" && styles.bdTabTextActive]}>
-                🎂 Hoje{bdTodayList.length > 0 && (
-                  <Text style={[styles.bdTabCount, bdSubTab === "today" && styles.bdTabCountActive]}>
-                    {"  "}{bdTodayList.length}
-                  </Text>
-                )}
+                🎂 Hoje{bdTodayList.length > 0 && <Text style={[styles.bdTabCount, bdSubTab === "today" && styles.bdTabCountActive]}>{"  "}{bdTodayList.length}</Text>}
               </Text>
               {bdSubTab === "today" && <View style={styles.bdTabIndicator} />}
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bdTab, bdSubTab === "upcoming" && styles.bdTabActive]}
-              onPress={() => setBdSubTab("upcoming")}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={[styles.bdTab, bdSubTab === "upcoming" && styles.bdTabActive]} onPress={() => setBdSubTab("upcoming")} activeOpacity={0.8}>
               <Text style={[styles.bdTabText, bdSubTab === "upcoming" && styles.bdTabTextActive]}>
-                📅 Próximos{bdUpcomingList.length > 0 && (
-                  <Text style={[styles.bdTabCount, bdSubTab === "upcoming" && styles.bdTabCountActive]}>
-                    {"  "}{bdUpcomingList.length}
-                  </Text>
-                )}
+                📅 Próximos{bdUpcomingList.length > 0 && <Text style={[styles.bdTabCount, bdSubTab === "upcoming" && styles.bdTabCountActive]}>{"  "}{bdUpcomingList.length}</Text>}
               </Text>
               {bdSubTab === "upcoming" && <View style={styles.bdTabIndicator} />}
             </TouchableOpacity>
@@ -926,9 +650,7 @@ export default function FeedScreen() {
             <View style={styles.bdTodayBanner}>
               <Text style={styles.bdTodayBannerEmoji}>🎊</Text>
               <Text style={styles.bdTodayBannerText}>
-                {bdTodayList.length === 1
-                  ? `${bdTodayList[0].name} faz aniversário hoje!`
-                  : `${bdTodayList.length} colaboradores fazem aniversário hoje!`}
+                {bdTodayList.length === 1 ? `${bdTodayList[0].name} faz aniversário hoje!` : `${bdTodayList.length} colaboradores fazem aniversário hoje!`}
               </Text>
             </View>
           )}
@@ -937,106 +659,142 @@ export default function FeedScreen() {
             data={bdSubTab === "today" ? bdTodayList : bdUpcomingList}
             keyExtractor={(item: any) => String(item.id)}
             renderItem={({ item }) => <BirthdayCard item={item} showFullDate={bdSubTab === "today"} />}
-            refreshControl={
-              <RefreshControl
-                refreshing={bdRefreshing}
-                onRefresh={async () => { setBdRefreshing(true); await bdRefetch(); setBdRefreshing(false); }}
-                tintColor={C.tint}
-                colors={[C.tint]}
-              />
-            }
+            refreshControl={<RefreshControl refreshing={bdRefreshing} onRefresh={async () => { setBdRefreshing(true); await bdAllQ.refetch(); setBdRefreshing(false); }} tintColor={C.tint} colors={[C.tint]} />}
             contentContainerStyle={[styles.bdListContent, { paddingBottom: botPad }]}
-            ListEmptyComponent={
-              !bdLoading ? (
-                <View style={styles.empty}>
-                  <Text style={styles.bdEmptyEmoji}>{bdSubTab === "today" ? "🎂" : "📅"}</Text>
-                  <Text style={styles.emptyText}>
-                    {bdSubTab === "today" ? "Nenhum aniversariante hoje" : "Nenhum aniversário nos próximos 90 dias"}
-                  </Text>
-                  {bdSubTab === "today" && (
-                    <Text style={styles.emptySubText}>Cheque os próximos na aba ao lado</Text>
-                  )}
-                </View>
-              ) : null
-            }
+            ListEmptyComponent={!bdAllQ.isLoading ? (
+              <View style={styles.empty}>
+                <Text style={styles.bdEmptyEmoji}>{bdSubTab === "today" ? "🎂" : "📅"}</Text>
+                <Text style={styles.emptyText}>{bdSubTab === "today" ? "Nenhum aniversariante hoje" : "Nenhum aniversário nos próximos 90 dias"}</Text>
+              </View>
+            ) : null}
             showsVerticalScrollIndicator={false}
           />
-          {bdLoading && (
-            <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>
-          )}
+          {bdAllQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
         </>
-      )}
-
-      {/* ══ RANKING TAB ══ */}
-      {mainTab === "ranking" && user && (
-        <GamificationView currentUserId={user.id} botPad={botPad} />
       )}
     </View>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
 
-  /* Header */
   header: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  headerAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.tint },
+  headerAvatar: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: C.tint },
   headerAvatarFallback: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center",
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: "#2563EB22", alignItems: "center", justifyContent: "center",
   },
-  headerAvatarInitial: { color: "#1E3A8A", fontSize: 18, fontFamily: "Inter_700Bold" },
+  headerAvatarInitial: { color: "#2563EB", fontSize: 17, fontFamily: "Inter_700Bold" },
   headerGreetingBlock: { flex: 1 },
   headerGreeting: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
-  headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 14 },
+  headerGreetingName: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 13 },
   headerDate: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
-  bellBtn: { position: "relative", width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  searchBarWrap: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: C.inputBg, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  searchBarInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text },
+  iconBtn: { position: "relative", width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   bellBadge: {
     position: "absolute", top: 0, right: 0,
     minWidth: 16, height: 16, borderRadius: 8,
     backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
-    paddingHorizontal: 3, borderColor: C.surface,
+    paddingHorizontal: 3,
   },
   bellBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
-  /* Main 3-tab bar */
-  mainTabBar: {
-    flexDirection: "row", backgroundColor: C.surface,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  mainTab: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 5, paddingVertical: 11, position: "relative",
-  },
-  mainTabActive: {},
-  mainTabEmoji: { fontSize: 14 },
-  mainTabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  mainTabTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
-  mainTabIndicator: {
-    position: "absolute", bottom: 0, left: "10%", right: "10%",
-    height: 3, backgroundColor: C.tint, borderRadius: 3,
-  },
-  mainTabBadge: {
-    backgroundColor: "#EF4444", borderRadius: 8,
-    paddingHorizontal: 5, paddingVertical: 1, marginLeft: 1,
-  },
-  mainTabBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },
 
-  /* Channel cover banner */
-  coverBanner: { position: "relative", height: 130, overflow: "hidden" },
+  tabBarWrapper: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabBarContent: { paddingHorizontal: 8, paddingBottom: 0, flexDirection: "row", gap: 0 },
+  tabItem: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 14, paddingVertical: 11,
+    position: "relative",
+  },
+  tabItemActive: {},
+  tabEmoji: { fontSize: 14 },
+  tabText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary, whiteSpace: "nowrap" as any },
+  tabTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
+  tabIndicator: { position: "absolute", bottom: 0, left: "10%", right: "10%", height: 3, backgroundColor: C.tint, borderRadius: 3 },
+  tabBadge: { backgroundColor: "#EF4444", borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, marginLeft: 1 },
+  tabBadgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff" },
+
+  sortBar: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.borderLight,
+  },
+  sortBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  sortBtnActive: { backgroundColor: "#EFF6FF" },
+  sortBtnText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textMuted },
+  sortBtnTextActive: { color: C.tint, fontFamily: "Inter_600SemiBold" },
+  createFab: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: C.tint, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+  },
+  createFabText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
+  sectionHeader: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  sectionHeaderText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
+
+  channelBarWrapper: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  channelBarContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: "row" },
+  channelPill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.surfaceAlt, borderColor: C.border },
+  channelPillActive: { backgroundColor: C.tint, borderColor: C.tint },
+  channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  channelPillTextActive: { color: "#fff" },
+  chPillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
+  chUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#EF4444", marginLeft: 4 },
+
+  createBox: {
+    flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.surface,
+    marginHorizontal: 12, marginTop: 10, marginBottom: 4, padding: 12, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+  },
+  createAvatar: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: C.tint,
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+  },
+  createAvatarImg: { width: 40, height: 40, borderRadius: 20 },
+  createAvatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
+  createInputFake: {
+    flex: 1, backgroundColor: C.inputBg, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  createPlaceholder: { color: C.placeholder, fontFamily: "Inter_400Regular", fontSize: 14 },
+  createMediaBtns: { flexDirection: "row", gap: 10, alignItems: "center" },
+
+  coverBanner: { position: "relative", height: 120, overflow: "hidden" },
   coverBannerImg: { width: "100%", height: "100%" },
-  coverBannerOverlay: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 16, paddingVertical: 10,
-  },
-  coverBannerName: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" },
+  coverBannerOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 16, paddingVertical: 10 },
+  coverBannerName: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
   coverBannerDesc: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontFamily: "Inter_400Regular", marginTop: 2 },
+  filterBanner: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginHorizontal: 12, marginBottom: 2, marginTop: 4,
+    backgroundColor: "#EFF6FF", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  filterBannerText: { flex: 1, fontSize: 12, color: C.tint, fontFamily: "Inter_400Regular" },
 
-  /* Birthday notification banner */
+  internoHeader: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: "#EFF6FF", paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: "#BFDBFE",
+  },
+  internoHeaderIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center" },
+  internoHeaderTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#1E40AF" },
+  internoHeaderSub: { fontSize: 12, color: "#3B82F6", fontFamily: "Inter_400Regular", marginTop: 1 },
+
   birthdayBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#F0FDF4", paddingHorizontal: 14, paddingVertical: 10,
@@ -1045,110 +803,32 @@ const styles = StyleSheet.create({
   birthdayBannerEmoji: { fontSize: 18 },
   birthdayBannerText: { flex: 1, fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#166534" },
 
-  /* Interno header card */
-  internoHeader: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: "#BFDBFE",
-  },
-  internoHeaderIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center",
-  },
-  internoHeaderTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#1E40AF" },
-  internoHeaderSub: { fontSize: 12, color: "#3B82F6", fontFamily: "Inter_400Regular", marginTop: 1 },
-
-  /* Channel filter bar */
-  channelBarWrapper: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
-  channelBarContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: "row" },
-  channelPill: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-    backgroundColor: C.surfaceAlt, borderColor: C.border,
-  },
-  channelPillActive: { backgroundColor: C.tint, borderColor: C.tint },
-  channelPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  channelPillTextActive: { color: "#fff" },
-  chPillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
-  chUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#EF4444", marginLeft: 4 },
-
-  /* Create post */
-  createBox: {
-    flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.surface,
-    marginHorizontal: 14, marginTop: 12, marginBottom: 4, padding: 12, borderRadius: 16,
-    borderColor: C.border,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
-  },
-  createAvatar: {
-    width: 38, height: 38, borderRadius: 19, backgroundColor: C.tint,
-    alignItems: "center", justifyContent: "center", overflow: "hidden",
-  },
-  createAvatarImg: { width: 38, height: 38, borderRadius: 19 },
-  createAvatarText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15 },
-  createInputFake: {
-    flex: 1, backgroundColor: C.inputBg, borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 9, borderColor: C.borderLight,
-  },
-  createPlaceholder: { color: C.placeholder, fontFamily: "Inter_400Regular", fontSize: 14 },
-  createImageBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center",
-  },
-  filterBanner: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    marginHorizontal: 14, marginBottom: 4, marginTop: 2,
-    backgroundColor: "#f0fdf4", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
-  },
-  filterBannerText: { flex: 1, fontSize: 12, color: C.tint, fontFamily: "Inter_400Regular" },
-
   listContent: { paddingTop: 4 },
 
-  /* Birthday sub-tab bar */
-  bdTabBar: {
-    flexDirection: "row", backgroundColor: C.surface,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  bdTab: {
-    flex: 1, alignItems: "center", justifyContent: "center",
-    paddingVertical: 12, position: "relative",
-  },
+  bdTabBar: { flexDirection: "row", backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  bdTab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, position: "relative" },
   bdTabActive: {},
   bdTabText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.textSecondary },
   bdTabTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
   bdTabCount: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textMuted },
   bdTabCountActive: { color: C.tint },
-  bdTabIndicator: {
-    position: "absolute", bottom: 0, left: "10%", right: "10%",
-    height: 3, backgroundColor: C.tint, borderRadius: 3,
-  },
-
-  /* Today celebration banner */
+  bdTabIndicator: { position: "absolute", bottom: 0, left: "10%", right: "10%", height: 3, backgroundColor: C.tint, borderRadius: 3 },
   bdTodayBanner: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "#f0fdf4", marginHorizontal: 14, marginTop: 10, marginBottom: 2,
-    borderRadius: 12, padding: 12, borderColor: "#bbf7d0",
+    flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#f0fdf4",
+    marginHorizontal: 12, marginTop: 10, marginBottom: 2, borderRadius: 12, padding: 12,
   },
   bdTodayBannerEmoji: { fontSize: 22 },
   bdTodayBannerText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: "#166534" },
-
-  bdListContent: { paddingTop: 10, paddingHorizontal: 14, gap: 8 },
-
-  /* Birthday cards */
+  bdListContent: { paddingTop: 10, paddingHorizontal: 12, gap: 8 },
   bdCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: C.surface, borderRadius: 16, padding: 14,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.surface,
+    borderRadius: 16, padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-    borderColor: C.borderLight,
   },
-  bdCardToday: { borderColor: C.tint, backgroundColor: "#f0fdf4" },
+  bdCardToday: { borderWidth: 1.5, borderColor: C.tint, backgroundColor: "#f0fdf4" },
   bdAvatarWrap: { position: "relative" },
   bdAvatar: { width: 52, height: 52, borderRadius: 26 },
-  bdAvatarFallback: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-  },
+  bdAvatarFallback: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
   bdAvatarFallbackToday: { backgroundColor: "#059669" },
   bdAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 20 },
   bdCakeEmoji: { position: "absolute", bottom: -4, right: -4, fontSize: 18 },
@@ -1161,32 +841,19 @@ const styles = StyleSheet.create({
   bdDateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 },
   bdDateText: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   bdAgeSuffix: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" },
-  bdDaysBadge: {
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: C.surfaceAlt, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, minWidth: 52,
-  },
+  bdDaysBadge: { alignItems: "center", justifyContent: "center", backgroundColor: C.surfaceAlt, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, minWidth: 52 },
   bdDaysBadgeToday: { backgroundColor: "#dcfce7" },
   bdTodayEmoji: { fontSize: 22 },
   bdDaysNum: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
   bdDaysLabel: { fontSize: 10, color: C.textSecondary, fontFamily: "Inter_400Regular" },
-
-  /* Empty state */
-  empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 40, gap: 10 },
-  emptyIcon: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: "#f0fdf4",
-    alignItems: "center", justifyContent: "center", marginBottom: 4,
-  },
-  emptyText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
-  emptySubText: { fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" },
-  emptyBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: C.tint, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, marginTop: 4,
-  },
-  emptyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
   bdEmptyEmoji: { fontSize: 48 },
 
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.7)",
-  },
+  empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 40, gap: 10 },
+  emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  emptyText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
+  emptySubText: { fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.tint, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, marginTop: 4 },
+  emptyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.7)" },
 });
