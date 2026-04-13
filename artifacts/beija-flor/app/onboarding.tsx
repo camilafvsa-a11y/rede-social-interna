@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
+import { RichText } from "@/components/RichText";
 
 const C = Colors.light;
 
@@ -95,7 +96,7 @@ function PolicyCard({
       {expanded && (
         <View style={pStyles.body}>
           <View style={pStyles.divider} />
-          <Text style={pStyles.content}>{item.content}</Text>
+          <RichText content={item.content || ""} baseSize={13} />
           <TouchableOpacity
             style={[pStyles.readRow, isRead && pStyles.readRowDone]}
             onPress={onToggle}
@@ -386,7 +387,7 @@ export default function OnboardingScreen() {
 
                 <View style={styles.documentCard}>
                   <ScrollView style={styles.documentScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                    <Text style={styles.documentText}>{firstTerm.content}</Text>
+                    <RichText content={firstTerm.content || ""} baseSize={13} />
                   </ScrollView>
                 </View>
               </>

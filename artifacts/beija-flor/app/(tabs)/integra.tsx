@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
+import { RichText } from "@/components/RichText";
 
 const C = Colors.light;
 
@@ -241,7 +242,7 @@ function PolicyCard({
       {expanded && (
         <View style={styles.policyContent}>
           <View style={styles.policyDivider} />
-          <Text style={styles.policyContentText}>{item.content}</Text>
+          <RichText content={item.content || ""} baseSize={13} />
           <View style={{ marginTop: 14 }}>
             <ReadCheckbox isRead={isRead} onPress={onMarkRead} loading={markLoading} />
           </View>
@@ -343,7 +344,7 @@ function TermCard({
         <View style={styles.policyContent}>
           <View style={styles.policyDivider} />
           <ScrollView style={styles.docScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-            <Text style={styles.policyContentText}>{term.content}</Text>
+            <RichText content={term.content || ""} baseSize={13} />
           </ScrollView>
 
           {!isSigned && (
