@@ -658,6 +658,96 @@ Respeitamos integralmente nosso horário de trabalho, pois a jornada é a venda 
       showInOnboarding: true,
       countsForProgress: true,
     },
+
+    // ── Nossos Valores ────────────────────────────────────────────────────────
+    {
+      category: "values",
+      sectionName: null,
+      sectionIcon: null,
+      sectionColor: "#2563EB",
+      sectionColorBg: "#EFF6FF",
+      title: "Ética é Inegociável",
+      subtitle: "Atuamos com integridade, lealdade e eficiência em nosso trabalho. A ética é a base de tudo que fazemos.",
+      content: `• Trabalhamos de forma isenta e leal
+• Temos tolerância zero contra corrupção
+• Não aceitamos subornos de qualquer espécie
+• Antes de agir, perguntamos: É legal? É ético? Está de acordo com nossa cultura?`,
+      requiresSign: false,
+      requiresRead: false,
+      docKey: "valor_etica",
+      iconName: "shield",
+      sortOrder: 0,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
+    },
+    {
+      category: "values",
+      sectionName: null,
+      sectionIcon: null,
+      sectionColor: "#DC2626",
+      sectionColorBg: "#FEF2F2",
+      title: "Comprometimento em Fazer o Bem",
+      subtitle: "Nosso compromisso vai além dos negócios. Buscamos constantemente elevar os padrões de qualidade.",
+      content: `• Garantimos a confiança em nosso combustível e excelência alimentar
+• Nossa equipe é treinada para transformar cada visita em um momento especial
+• Apoiamos direitos humanos universais e locais de trabalho seguros
+• Temos consciência do impacto ambiental e trabalhamos para minimizá-lo`,
+      requiresSign: false,
+      requiresRead: false,
+      docKey: "valor_comprometimento",
+      iconName: "heart",
+      sortOrder: 1,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
+    },
+    {
+      category: "values",
+      sectionName: null,
+      sectionIcon: null,
+      sectionColor: "#7C3AED",
+      sectionColorBg: "#F5F3FF",
+      title: "Simplicidade e Respeito",
+      subtitle: "Nossa característica mais marcante é a simplicidade. Respeitamos a diversidade e tratamos todos com dignidade.",
+      content: `• Tratamos superiores, subordinados, fornecedores e clientes com dignidade
+• Somos contrários a todo tipo de preconceito e discriminação
+• Promovemos um ambiente seguro, sem assédio ou injustiça
+• Respeitamos a privacidade de todos os colegas de trabalho`,
+      requiresSign: false,
+      requiresRead: false,
+      docKey: "valor_simplicidade",
+      iconName: "users",
+      sortOrder: 2,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
+    },
+    {
+      category: "values",
+      sectionName: null,
+      sectionIcon: null,
+      sectionColor: "#D97706",
+      sectionColorBg: "#FFFBEB",
+      title: "Trabalho em Equipe é Indispensável",
+      subtitle: "Crescemos de forma sustentável nos adaptando a diversos momentos. Como o beija-flor, nos mantemos firmes em pleno voo.",
+      content: `• Mais de 600 colaboradores engajados no mesmo propósito
+• Mantemos um bom relacionamento entre colegas
+• Cooperamos com investigações quando solicitado
+• Nossa equipe é comprometida e treinada para servir com excelência`,
+      requiresSign: false,
+      requiresRead: false,
+      docKey: "valor_trabalho_equipe",
+      iconName: "star",
+      sortOrder: 3,
+      docType: "text",
+      showInIntegra: true,
+      showInOnboarding: false,
+      countsForProgress: false,
+    },
   ];
 
   await db.insert(integraItemsTable).values(seedItems);

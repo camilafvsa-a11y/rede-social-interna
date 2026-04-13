@@ -192,6 +192,7 @@ const CATEGORIES = [
   { value: "conduct", label: "Conduta" },
   { value: "hr", label: "RH" },
   { value: "safety", label: "Segurança" },
+  { value: "values", label: "Valores" },
   { value: "other", label: "Outros" },
 ];
 
@@ -229,6 +230,84 @@ function TextRow({
         textAlignVertical={multiline ? "top" : "center"}
       />
     </FieldRow>
+  );
+}
+
+// ─── ContentEditor (with formatting toolbar) ──────────────────────────────────
+function ContentEditor({ value, onChange }: { value: string; onChange: (t: string) => void }) {
+  const selRef = React.useRef({ start: 0, end: 0 });
+
+  function applyFmt(type: string) {
+    const text = value;
+    const { start, end } = selRef.current;
+
+    if (type === "bold") {
+      const sel = text.slice(start, end);
+      const ins = `**${sel || "texto"}**`;
+      onChange(text.slice(0, start) + ins + text.slice(end));
+      return;
+    }
+
+    const prefixes: Record<string, string> = {
+      heading: "# ",
+      sub: "## ",
+      bullet: "• ",
+      check: "[ ] ",
+      checkdone: "[x] ",
+    };
+    const prefix = prefixes[type];
+    if (!prefix) return;
+
+    const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+    const before = text.slice(0, lineStart);
+    const lineRest = text.slice(lineStart);
+    const clean = lineRest.replace(/^(#+ |• |- |\[ \] |\[x\] )/i, "");
+    onChange(before + prefix + clean);
+  }
+
+  const BTNS = [
+    { icon: "type" as const,         label: "Título",    action: "heading" },
+    { icon: "minus" as const,        label: "Subtítulo", action: "sub" },
+    { icon: "bold" as const,         label: "Negrito",   action: "bold" },
+    { icon: "list" as const,         label: "• Lista",   action: "bullet" },
+    { icon: "circle" as const,       label: "☐ Check",  action: "check" },
+    { icon: "check-circle" as const, label: "☑ Feito",  action: "checkdone" },
+  ];
+
+  return (
+    <View style={styles.fieldRow}>
+      <Text style={styles.fieldLabel}>Texto</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.fmtToolbar}
+      >
+        {BTNS.map((b) => (
+          <TouchableOpacity
+            key={b.action}
+            onPress={() => applyFmt(b.action)}
+            style={styles.fmtBtn}
+            activeOpacity={0.7}
+          >
+            <Feather name={b.icon} size={13} color={C.tint} />
+            <Text style={styles.fmtBtnLabel}>{b.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <TextInput
+        style={[styles.input, styles.inputMulti, { height: 220 }]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={"# Título do bloco\n\nTexto normal aqui...\n\n• Item de lista\n[ ] Tarefa a fazer\n[x] Tarefa feita\n\n**texto em negrito**"}
+        placeholderTextColor={C.textMuted}
+        multiline
+        textAlignVertical="top"
+        onSelectionChange={(e) => { selRef.current = e.nativeEvent.selection; }}
+      />
+      <Text style={styles.fmtHint}>
+        # Título · ## Subtítulo · • Lista · [ ] Checkbox · **negrito**
+      </Text>
+    </View>
   );
 }
 
@@ -309,6 +388,7 @@ function ColorPicker({ label, value, options, onChange }: {
 function IconPickerModal({ visible, value, onClose, onChange }: {
   visible: boolean; value: string | null; onClose: () => void; onChange: (icon: string | null) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const filtered = useMemo(() =>
     search.trim()
@@ -325,7 +405,7 @@ function IconPickerModal({ visible, value, onClose, onChange }: {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalContainer}>
-        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "ios" ? 54 : 14 }]}>
+        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Feather name="x" size={22} color={C.text} />
           </TouchableOpacity>
@@ -411,6 +491,7 @@ function SectionPickerModal({ visible, sections, onClose, onSelect }: {
   onClose: () => void;
   onSelect: (section: { name: string; icon: string | null; color: string; colorBg: string } | null) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [creating, setCreating] = useState(false);
   const [newSec, setNewSec] = useState<NewSectionState>({
     name: "", icon: "shield", color: "#2563EB", colorBg: "#EFF6FF",
@@ -432,7 +513,7 @@ function SectionPickerModal({ visible, sections, onClose, onSelect }: {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={() => { resetCreate(); onClose(); }}>
       <View style={styles.modalContainer}>
-        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "ios" ? 54 : 14 }]}>
+        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
           <TouchableOpacity onPress={() => { if (creating) { resetCreate(); } else { onClose(); } }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Feather name={creating ? "arrow-left" : "x"} size={22} color={C.text} />
@@ -602,6 +683,7 @@ function DocFormModal({ visible, item, sections, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const isEdit = !!item;
   const [form, setForm] = useState<FormState>(item ? itemToForm(item) : EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -675,7 +757,7 @@ function DocFormModal({ visible, item, sections, onClose, onSaved }: {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalContainer}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Feather name="x" size={22} color={C.text} />
             </TouchableOpacity>
@@ -740,7 +822,7 @@ function DocFormModal({ visible, item, sections, onClose, onSaved }: {
             </FieldRow>
 
             {form.docType === "text" && (
-              <TextRow label="Texto" value={form.content} onChangeText={(t) => set("content", t)} placeholder="Conteúdo do documento..." multiline />
+              <ContentEditor value={form.content} onChange={(t) => set("content", t)} />
             )}
 
             {form.docType === "pdf" && (
@@ -1200,9 +1282,8 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: C.background },
   modalHeader: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    paddingHorizontal: 16, paddingVertical: 14,
+    paddingHorizontal: 16, paddingBottom: 14,
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
-    paddingTop: Platform.OS === "ios" ? 54 : 14,
   },
   modalTitle: { flex: 1, fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
   saveBtn: { backgroundColor: C.tint, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7, minWidth: 64, alignItems: "center" },
@@ -1290,6 +1371,22 @@ const styles = StyleSheet.create({
   secPickerIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   secPickerName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   secPickerCount: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
+
+  // ── Content editor toolbar ──
+  fmtToolbar: {
+    flexDirection: "row", gap: 6, paddingVertical: 6,
+  },
+  fmtBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "#EFF6FF", borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: "#BFDBFE",
+  },
+  fmtBtnLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.tint },
+  fmtHint: {
+    fontSize: 10, color: C.textMuted, fontFamily: "Inter_400Regular",
+    marginTop: 4, lineHeight: 15,
+  },
 
   // ── PDF ──
   pdfPreview: {

@@ -36,8 +36,36 @@ type IntegraItem = {
   countsForProgress: boolean;
 };
 
-// ─── Nossos Valores (static company values) ─────────────────────────────────
-const VALUES_DATA = [
+// ─── ValueItem shape ─────────────────────────────────────────────────────────
+type ValueItem = {
+  key: string;
+  title: string;
+  desc: string;
+  icon: string;
+  color: string;
+  colorBg: string;
+  practices: string[];
+};
+
+function integraItemToValue(item: IntegraItem): ValueItem {
+  const practices = (item.content || "")
+    .split("\n")
+    .filter((l) => l.startsWith("• ") || l.startsWith("- "))
+    .map((l) => l.replace(/^[•\-]\s+/, "").trim())
+    .filter(Boolean);
+  return {
+    key: item.docKey,
+    title: item.title,
+    desc: item.subtitle || "",
+    icon: item.iconName || "heart",
+    color: item.sectionColor || "#2563EB",
+    colorBg: item.sectionColorBg || "#EFF6FF",
+    practices,
+  };
+}
+
+// ─── Nossos Valores (fallback static — used when DB has no values category) ──
+const VALUES_DATA: ValueItem[] = [
   {
     key: "etica",
     title: "Ética é Inegociável",
@@ -414,7 +442,7 @@ function TermCard({
 function ValueCard({
   value, isRead, onMarkRead, markLoading,
 }: {
-  value: typeof VALUES_DATA[0];
+  value: ValueItem;
   isRead: boolean;
   onMarkRead: () => void;
   markLoading: boolean;
@@ -429,7 +457,7 @@ function ValueCard({
         activeOpacity={0.8}
       >
         <View style={[styles.valueIcon, { backgroundColor: value.colorBg }]}>
-          <Feather name={value.icon} size={20} color={value.color} />
+          <Feather name={value.icon as any} size={20} color={value.color} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -529,9 +557,14 @@ export default function IntegraScreen() {
     return acceptances.find((a: any) => a.termKey === key) || null;
   }
 
-  // Split items: terms (requiresSign) vs policy sections
-  const terms = integraItems.filter((i) => i.requiresSign);
-  const policyItems = integraItems.filter((i) => !i.requiresSign);
+  // Split items: values / terms (requiresSign) / policy sections
+  const valueItems = integraItems.filter((i) => i.category === "values");
+  const displayValues: ValueItem[] = valueItems.length > 0
+    ? valueItems.map(integraItemToValue)
+    : VALUES_DATA;
+
+  const terms = integraItems.filter((i) => i.requiresSign && i.category !== "values");
+  const policyItems = integraItems.filter((i) => !i.requiresSign && i.category !== "values");
 
   // Group policies by sectionName
   const sectionMap = new Map<string, { icon: string; color: string; colorBg: string; items: IntegraItem[] }>();
@@ -712,7 +745,7 @@ export default function IntegraScreen() {
           </Text>
         </View>
 
-        {VALUES_DATA.map((value) => (
+        {displayValues.map((value) => (
           <ValueCard
             key={value.key}
             value={value}
