@@ -942,6 +942,54 @@ function SectionsView({ sections, isLoading, onCreateNew, onDelete }: {
   );
 }
 
+// ─── ConfirmDeleteModal ───────────────────────────────────────────────────────
+function ConfirmDeleteModal({ visible, title, message, onConfirm, onCancel, loading }: {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={confirmStyles.overlay}>
+        <View style={confirmStyles.box}>
+          <View style={confirmStyles.iconWrap}>
+            <Feather name="alert-triangle" size={28} color="#EF4444" />
+          </View>
+          <Text style={confirmStyles.title}>{title}</Text>
+          <Text style={confirmStyles.message}>{message}</Text>
+          <View style={confirmStyles.actions}>
+            <TouchableOpacity style={confirmStyles.cancelBtn} onPress={onCancel} activeOpacity={0.8} disabled={loading}>
+              <Text style={confirmStyles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[confirmStyles.deleteBtn, loading && { opacity: 0.6 }]} onPress={onConfirm} activeOpacity={0.8} disabled={loading}>
+              {loading
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={confirmStyles.deleteText}>Excluir</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const confirmStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 24 },
+  box: { backgroundColor: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 360, alignItems: "center", gap: 12 },
+  iconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#FEF2F2", justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#111827", textAlign: "center" },
+  message: { fontSize: 14, fontFamily: "Inter_400Regular", color: "#6B7280", textAlign: "center", lineHeight: 20 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 4, width: "100%" },
+  cancelBtn: { flex: 1, height: 44, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", justifyContent: "center", alignItems: "center" },
+  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#374151" },
+  deleteBtn: { flex: 1, height: 44, borderRadius: 10, backgroundColor: "#EF4444", justifyContent: "center", alignItems: "center" },
+  deleteText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+});
+
 // ─── Tela Principal ───────────────────────────────────────────────────────────
 export default function AdminDocsScreen() {
   const insets = useSafeAreaInsets();
@@ -954,6 +1002,8 @@ export default function AdminDocsScreen() {
   const [editItem, setEditItem] = useState<IntegraItem | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [search, setSearch] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<IntegraItem | null>(null);
+  const [pendingDeleteSection, setPendingDeleteSection] = useState<string | null>(null);
 
   const { data: items = [], isLoading } = useQuery<IntegraItem[]>({
     queryKey: ["admin-integra-items"],
@@ -970,6 +1020,8 @@ export default function AdminDocsScreen() {
     qc.invalidateQueries({ queryKey: ["admin-sections"] });
     qc.invalidateQueries({ queryKey: ["integra-items"] });
     qc.invalidateQueries({ queryKey: ["integra-items-onboarding"] });
+    qc.invalidateQueries({ queryKey: ["my-docs-progress"] });
+    qc.invalidateQueries({ queryKey: ["admin-doc-progress"] });
   }
 
   const toggleActive = useMutation({
@@ -981,36 +1033,22 @@ export default function AdminDocsScreen() {
 
   const deleteItem = useMutation({
     mutationFn: (id: number) => api.delete(`/integra-items/${id}`),
-    onSuccess: invalidateAll,
+    onSuccess: () => { setPendingDelete(null); invalidateAll(); },
     onError: () => Alert.alert("Erro", "Não foi possível excluir o item."),
   });
 
   const deleteSection = useMutation({
     mutationFn: (name: string) => api.delete(`/integra-items/sections/${encodeURIComponent(name)}`),
-    onSuccess: invalidateAll,
+    onSuccess: () => { setPendingDeleteSection(null); invalidateAll(); },
     onError: () => Alert.alert("Erro", "Não foi possível excluir a seção."),
   });
 
   function handleDelete(item: IntegraItem) {
-    Alert.alert(
-      "Excluir documento",
-      `Excluir "${item.title}"? Esta ação não pode ser desfeita.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Excluir", style: "destructive", onPress: () => deleteItem.mutate(item.id) },
-      ]
-    );
+    setPendingDelete(item);
   }
 
   function handleDeleteSection(name: string) {
-    Alert.alert(
-      "Excluir seção",
-      `Remover a seção "${name}" de todos os documentos? Os documentos continuarão existindo, mas sem seção.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Remover", style: "destructive", onPress: () => deleteSection.mutate(name) },
-      ]
-    );
+    setPendingDeleteSection(name);
   }
 
   async function handleSeed() {
@@ -1168,6 +1206,24 @@ export default function AdminDocsScreen() {
         sections={sections}
         onClose={() => setShowModal(false)}
         onSaved={invalidateAll}
+      />
+
+      <ConfirmDeleteModal
+        visible={!!pendingDelete}
+        title="Excluir documento"
+        message={pendingDelete ? `Excluir "${pendingDelete.title}"?\n\nEsta ação é permanente e removerá o documento de todas as telas e do progresso de leitura.` : ""}
+        loading={deleteItem.isPending}
+        onConfirm={() => pendingDelete && deleteItem.mutate(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
+
+      <ConfirmDeleteModal
+        visible={!!pendingDeleteSection}
+        title="Remover seção"
+        message={pendingDeleteSection ? `Remover a seção "${pendingDeleteSection}" de todos os documentos?\n\nOs documentos continuarão existindo, mas sem seção atribuída.` : ""}
+        loading={deleteSection.isPending}
+        onConfirm={() => pendingDeleteSection && deleteSection.mutate(pendingDeleteSection)}
+        onCancel={() => setPendingDeleteSection(null)}
       />
     </View>
   );
