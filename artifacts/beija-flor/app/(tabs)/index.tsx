@@ -462,6 +462,9 @@ export default function FeedScreen() {
           >
             <Feather name={searchVisible ? "x" : "search"} size={20} color={C.text} />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/saved" as any)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.7}>
+            <Feather name="bookmark" size={20} color={C.text} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/messages" as any)} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.7}>
             <Feather name="send" size={19} color={C.text} />
             {dmUnreadCount > 0 && <View style={styles.bellBadge}><Text style={styles.bellBadgeText}>{dmUnreadCount > 99 ? "99+" : dmUnreadCount}</Text></View>}

@@ -655,7 +655,7 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
             </View>
             <TouchableOpacity onPress={() => {
               setShowSavedToast(false);
-              router.push({ pathname: "/(tabs)/", params: { openTab: "salvos" } } as any);
+              router.push("/saved" as any);
             }} activeOpacity={0.75}>
               <Text style={styles.savedToastLink}>Ver salvos →</Text>
             </TouchableOpacity>

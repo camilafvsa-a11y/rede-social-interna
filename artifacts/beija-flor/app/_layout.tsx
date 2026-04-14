@@ -46,6 +46,7 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/[id]" options={{ headerShown: false, presentation: "card" }} />
       <Stack.Screen name="channel/create-post" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="notifications" options={{ headerShown: false, presentation: "card" }} />
+      <Stack.Screen name="saved" options={{ headerShown: false, presentation: "card" }} />
     </Stack>
   );
 }
