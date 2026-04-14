@@ -2,11 +2,12 @@ import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, Alert,
   Modal, Pressable, Platform, ScrollView, Dimensions, TextInput,
-  ActivityIndicator,
+  ActivityIndicator, TouchableWithoutFeedback,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { useRouter } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Colors from "@/constants/colors";
@@ -169,16 +170,38 @@ function Lightbox({ items, startIndex, onClose }: { items: any[]; startIndex: nu
 }
 
 // ── Share Modal ───────────────────────────────────────────────────────────────
+type ShareDest = "timeline" | "channel";
+
 function ShareModal({ post, visible, onClose, onShared }: { post: any; visible: boolean; onClose: () => void; onShared: () => void }) {
   const { user } = useAuth();
+  const [dest, setDest] = useState<ShareDest>("timeline");
+  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [sharing, setSharing] = useState(false);
 
+  const { data: channels = [] } = useQuery<any[]>({
+    queryKey: ["channels"],
+    queryFn: () => api.get("/channels"),
+    enabled: visible,
+  });
+
+  const canShare = dest === "timeline" || (dest === "channel" && selectedChannelId !== null);
+
   async function doShare() {
+    if (!canShare) return;
     setSharing(true);
     try {
-      await api.post(`/posts/${post.id}/share`, { comment: comment.trim() || null, channelId: post.channelId });
+      const body: Record<string, any> = { comment: comment.trim() || null };
+      if (dest === "timeline") {
+        body.shareToTimeline = true;
+      } else {
+        body.channelId = selectedChannelId;
+      }
+      await api.post(`/posts/${post.id}/share`, body);
       setSharing(false);
+      setComment("");
+      setSelectedChannelId(null);
+      setDest("timeline");
       onClose();
       onShared();
     } catch (e: any) {
@@ -187,16 +210,104 @@ function ShareModal({ post, visible, onClose, onShared }: { post: any; visible: 
     }
   }
 
+  function handleClose() {
+    setComment("");
+    setSelectedChannelId(null);
+    setDest("timeline");
+    onClose();
+  }
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={shareStyles.overlay}>
-        <View style={shareStyles.sheet}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <TouchableWithoutFeedback onPress={handleClose}>
+        <View style={shareStyles.overlay}>
+          <TouchableWithoutFeedback>
+            <View style={shareStyles.sheet}>
+          {/* Header */}
           <View style={shareStyles.header}>
             <Text style={shareStyles.title}>Compartilhar post</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Feather name="x" size={20} color={C.text} />
             </TouchableOpacity>
           </View>
+
+          {/* Destination selector */}
+          <View style={shareStyles.destRow}>
+            <TouchableOpacity
+              style={[shareStyles.destBtn, dest === "timeline" && shareStyles.destBtnActive]}
+              onPress={() => { setDest("timeline"); setSelectedChannelId(null); }}
+              activeOpacity={0.8}
+            >
+              <Feather name="user" size={15} color={dest === "timeline" ? "#fff" : C.tint} />
+              <Text style={[shareStyles.destBtnText, dest === "timeline" && shareStyles.destBtnTextActive]}>
+                Minha linha do tempo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[shareStyles.destBtn, dest === "channel" && shareStyles.destBtnActive]}
+              onPress={() => setDest("channel")}
+              activeOpacity={0.8}
+            >
+              <Feather name="hash" size={15} color={dest === "channel" ? "#fff" : C.tint} />
+              <Text style={[shareStyles.destBtnText, dest === "channel" && shareStyles.destBtnTextActive]}>
+                Em um canal
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Channel list (only when dest = channel) */}
+          {dest === "channel" && (
+            <ScrollView
+              style={shareStyles.channelList}
+              contentContainerStyle={shareStyles.channelListContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {(channels as any[]).map((ch: any) => {
+                const active = selectedChannelId === ch.id;
+                const chColor = ch.color || C.tint;
+                return (
+                  <TouchableOpacity
+                    key={ch.id}
+                    style={[shareStyles.channelRow, active && shareStyles.channelRowActive]}
+                    onPress={() => setSelectedChannelId(active ? null : ch.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[shareStyles.channelDot, { backgroundColor: chColor }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[shareStyles.channelName, active && { color: C.tint }]}>{ch.name}</Text>
+                      {ch.description ? (
+                        <Text style={shareStyles.channelDesc} numberOfLines={1}>{ch.description}</Text>
+                      ) : null}
+                    </View>
+                    {active && <Feather name="check-circle" size={18} color={C.tint} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Destination summary when timeline */}
+          {dest === "timeline" && (
+            <View style={shareStyles.timelineSummary}>
+              <View style={shareStyles.timelineIconWrap}>
+                {user?.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={shareStyles.timelineAvatar} />
+                ) : (
+                  <View style={[shareStyles.timelineAvatar, { backgroundColor: C.tint, alignItems: "center", justifyContent: "center" }]}>
+                    <Text style={{ color: "#fff", fontFamily: "Inter_700Bold", fontSize: 14 }}>
+                      {user?.name?.[0]?.toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={shareStyles.timelineLabel}>Compartilhar no seu perfil</Text>
+                <Text style={shareStyles.timelineSub}>Aparecerá na sua linha do tempo pessoal</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Comment input */}
           <TextInput
             style={shareStyles.input}
             placeholder="Adicione um comentário (opcional)"
@@ -204,20 +315,44 @@ function ShareModal({ post, visible, onClose, onShared }: { post: any; visible: 
             value={comment}
             onChangeText={setComment}
             multiline
+            maxLength={500}
           />
-          {/* Mini preview of the original post */}
+
+          {/* Mini preview of original post */}
           <View style={shareStyles.origPreview}>
             <View style={shareStyles.origLine} />
             <View style={{ flex: 1 }}>
               <Text style={shareStyles.origAuthor}>{post.author?.name}</Text>
-              {post.content ? <Text style={shareStyles.origContent} numberOfLines={2}>{post.content}</Text> : null}
+              {post.content ? (
+                <Text style={shareStyles.origContent} numberOfLines={2}>{post.content}</Text>
+              ) : (
+                <Text style={shareStyles.origContent} numberOfLines={1}>📷 Mídia anexada</Text>
+              )}
             </View>
           </View>
-          <TouchableOpacity style={[shareStyles.shareBtn, sharing && { opacity: 0.6 }]} onPress={doShare} disabled={sharing} activeOpacity={0.8}>
-            {sharing ? <ActivityIndicator size="small" color="#fff" /> : <><Feather name="share-2" size={16} color="#fff" /><Text style={shareStyles.shareBtnText}>Compartilhar</Text></>}
+
+          {/* Share button */}
+          <TouchableOpacity
+            style={[shareStyles.shareBtn, (!canShare || sharing) && { opacity: 0.4 }]}
+            onPress={doShare}
+            disabled={!canShare || sharing}
+            activeOpacity={0.8}
+          >
+            {sharing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Feather name="share-2" size={16} color="#fff" />
+                <Text style={shareStyles.shareBtnText}>
+                  {dest === "timeline" ? "Compartilhar no perfil" : selectedChannelId ? `Compartilhar em #${(channels as any[]).find((c: any) => c.id === selectedChannelId)?.name}` : "Compartilhar"}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -706,11 +841,47 @@ const shareStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: C.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    padding: 20, gap: 14,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 28, gap: 14,
     shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8,
+    maxHeight: "90%",
   },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   title: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
+
+  // Destination selector
+  destRow: { flexDirection: "row", gap: 10 },
+  destBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
+    paddingVertical: 11, borderRadius: 14,
+    borderWidth: 1.5, borderColor: C.tint, backgroundColor: "#EFF6FF",
+  },
+  destBtnActive: { backgroundColor: C.tint },
+  destBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.tint },
+  destBtnTextActive: { color: "#fff" },
+
+  // Channel list
+  channelList: { maxHeight: 180 },
+  channelListContent: { gap: 4 },
+  channelRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
+    backgroundColor: C.surfaceAlt,
+  },
+  channelRowActive: { backgroundColor: "#EFF6FF", borderWidth: 1.5, borderColor: C.tint },
+  channelDot: { width: 10, height: 10, borderRadius: 5 },
+  channelName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  channelDesc: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
+
+  // Timeline summary
+  timelineSummary: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: "#EFF6FF", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  timelineIconWrap: {},
+  timelineAvatar: { width: 40, height: 40, borderRadius: 20, overflow: "hidden" },
+  timelineLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.tint },
+  timelineSub: { fontSize: 12, color: C.tint, fontFamily: "Inter_400Regular", marginTop: 2, opacity: 0.7 },
+
   input: {
     borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 12,
     fontSize: 15, fontFamily: "Inter_400Regular", color: C.text,

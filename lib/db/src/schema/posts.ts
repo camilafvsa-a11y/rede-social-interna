@@ -8,7 +8,7 @@ export const postsTable = pgTable("posts", {
   imageUrl: text("image_url"),
   videoUrl: text("video_url"),
   authorId: integer("author_id").notNull(),
-  channelId: integer("channel_id").notNull(),
+  channelId: integer("channel_id"),
   targetUserId: integer("target_user_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   // Social feed extensions

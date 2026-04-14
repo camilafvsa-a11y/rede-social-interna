@@ -298,13 +298,24 @@ router.post("/:id/save", requireAuth, async (req, res) => {
 });
 
 // ── POST /posts/:id/share ─────────────────────────────────────────────────────
+// Body: { comment?, channelId?, shareToTimeline? }
+// shareToTimeline=true  → post on personal timeline (channelId = null)
+// channelId provided    → post in that specific channel
+// neither               → post in original channel (legacy behaviour)
 router.post("/:id/share", requireAuth, async (req, res) => {
   const user = (req as any).user;
   const originalPostId = parseInt(req.params.id);
-  const { comment, channelId } = req.body;
+  const { comment, channelId, shareToTimeline } = req.body;
   const [orig] = await db.select().from(postsTable).where(eq(postsTable.id, originalPostId)).limit(1);
   if (!orig) { res.status(404).json({ error: "Post não encontrado" }); return; }
-  const targetChannelId = channelId ?? orig.channelId;
+
+  // Determine target channel: null = personal timeline, provided = chosen channel, else original channel
+  const targetChannelId: number | null = shareToTimeline
+    ? null
+    : channelId != null
+      ? parseInt(channelId)
+      : orig.channelId;
+
   await db.execute(sql`UPDATE posts SET share_count = COALESCE(share_count, 0) + 1 WHERE id = ${originalPostId}`);
   await db.insert(postSharesTable).values({ originalPostId, userId: user.id, comment: comment ?? null });
   const [newPost] = await db.insert(postsTable).values({
