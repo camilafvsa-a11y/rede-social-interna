@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Image, Alert,
   Modal, Pressable, Platform, ScrollView, Dimensions, TextInput,
@@ -453,6 +453,12 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const moreRef = useRef<TouchableOpacity>(null);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const savedToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (savedToastTimer.current) clearTimeout(savedToastTimer.current); };
+  }, []);
 
   const isAdmin = user?.role === "admin" || user?.role === "master_admin";
   const canDelete = user?.id === post.authorId || isAdmin;
@@ -484,6 +490,13 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
     try {
       await api.post(`/posts/${post.id}/save`, {});
       onSaveChange?.();
+      if (!prev) {
+        if (savedToastTimer.current) clearTimeout(savedToastTimer.current);
+        setShowSavedToast(true);
+        savedToastTimer.current = setTimeout(() => setShowSavedToast(false), 3000);
+      } else {
+        setShowSavedToast(false);
+      }
     } catch {
       setSaved(prev);
     } finally {
@@ -537,9 +550,15 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
   return (
     <>
       <View style={[styles.card, cardBorderStyle]}>
-        {/* ── Pinned / Official ribbon ── */}
-        {(isPinned || isOfficial) && (
+        {/* ── Pinned / Official / Highlighted ribbon ── */}
+        {(isPinned || isOfficial || isHighlighted) && (
           <View style={styles.ribbon}>
+            {isHighlighted && (
+              <View style={[styles.ribbonTag, { backgroundColor: "#EEF2FF" }]}>
+                <Feather name="star" size={11} color="#4F46E5" />
+                <Text style={[styles.ribbonText, { color: "#4F46E5" }]}>Em Destaque</Text>
+              </View>
+            )}
             {isPinned && (
               <View style={[styles.ribbonTag, { backgroundColor: "#FEF3C7" }]}>
                 <Feather name="bookmark" size={11} color="#D97706" />
@@ -627,6 +646,22 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
         </TouchableOpacity>
 
         {/* ── Action bar ── */}
+        {/* ── Saved toast ── */}
+        {showSavedToast && (
+          <View style={styles.savedToast}>
+            <View style={styles.savedToastLeft}>
+              <Feather name="bookmark" size={13} color="#4F46E5" />
+              <Text style={styles.savedToastText}>Post salvo!</Text>
+            </View>
+            <TouchableOpacity onPress={() => {
+              setShowSavedToast(false);
+              router.push({ pathname: "/(tabs)/", params: { openTab: "salvos" } } as any);
+            }} activeOpacity={0.75}>
+              <Text style={styles.savedToastLink}>Ver salvos →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7}>
             <Feather name="heart" size={18} color={liked ? C.danger : C.textSecondary} />
@@ -814,6 +849,14 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   deleteBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 13, borderRadius: 12, backgroundColor: C.danger },
   deleteBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  savedToast: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: "#EEF2FF", borderLeftWidth: 3, borderLeftColor: "#4F46E5",
+    paddingHorizontal: 14, paddingVertical: 9, marginHorizontal: 16, marginBottom: 6, borderRadius: 8,
+  },
+  savedToastLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+  savedToastText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#3730A3" },
+  savedToastLink: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#4F46E5" },
 });
 
 const gStyles = StyleSheet.create({

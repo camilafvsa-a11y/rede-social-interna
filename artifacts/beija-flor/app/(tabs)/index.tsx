@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl,
   ActivityIndicator, TouchableOpacity, ScrollView, Image, Platform,
@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/context/NotificationContext";
@@ -127,7 +127,16 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const { unreadCount, dmUnreadCount, refreshUnread } = useNotifications();
   const qc = useQueryClient();
+  const params = useLocalSearchParams<{ openTab?: string }>();
   const [mainTab, setMainTab] = useState<MainTab>("todos");
+
+  useEffect(() => {
+    if (params.openTab && TABS.some((t) => t.key === params.openTab)) {
+      setMainTab(params.openTab as MainTab);
+      router.setParams({ openTab: undefined });
+    }
+  }, [params.openTab]);
+
   const [bdSubTab, setBdSubTab] = useState<BdSubTab>("today");
   const [feedChannelId, setFeedChannelId] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<"recent" | "popular">("recent");

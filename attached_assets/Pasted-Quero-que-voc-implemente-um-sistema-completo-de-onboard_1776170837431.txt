@@ -1,0 +1,544 @@
+Quero que você implemente um sistema completo de onboarding, documentos, assinaturas e cadastro de usuários, integrado ao app e ao painel administrativo, com foco em organização, rastreabilidade, boa experiência mobile e controle total pelo administrador.
+
+O sistema deve conversar com o que já foi criado antes para documentos, Integra, primeiro acesso e assinaturas, expandindo e organizando tudo de forma robusta.
+
+1. Objetivo geral
+
+Quero um fluxo onde:
+
+Um usuário administrador, dentro do painel de usuários, possa cadastrar o e-mail de uma pessoa.
+Essa pessoa receba ou tenha acesso a um fluxo para criar sua conta no aplicativo da Replit.
+No primeiro acesso, essa pessoa passe por um passo a passo obrigatório:
+criar conta / definir acesso
+colocar foto de perfil
+preencher dados pessoais obrigatórios
+ler os documentos obrigatórios
+confirmar leitura dos valores da empresa
+escolher se aceita ou não o termo de uso de imagem
+assinar os documentos obrigatórios, quando aplicável
+Tudo isso fique registrado corretamente no painel administrativo.
+Depois, a pessoa consiga rever os documentos e assinar futuramente pela aba Integra, caso não assine tudo de imediato.
+O sistema tenha uma área administrativa para consultar documentos assinados e exportar em CSV.
+2. Cadastro inicial do usuário pelo administrador
+2.1 Painel de usuários
+
+Quero que no painel administrativo exista uma área de Usuários onde o administrador possa:
+
+cadastrar um novo usuário informando pelo menos:
+nome
+e-mail
+cargo, se houver
+setor, se houver
+unidade, se houver
+deixar esse usuário como:
+convidado / pendente de ativação
+ativo
+inativo
+gerar convite de acesso
+2.2 Fluxo de convite
+
+Quando o admin cadastrar o e-mail da pessoa:
+
+o sistema deve permitir que esse usuário seja convidado para criar conta
+esse cadastro precisa ficar ligado ao e-mail informado pelo admin
+o sistema deve tratar convites pendentes
+o admin deve conseguir:
+reenviar convite
+cancelar convite
+ver status do convite
+ver se a conta já foi criada ou não
+2.3 Regras
+não permitir duplicidade de e-mail
+tratar convites expirados
+permitir reativação de convite
+registrar data de envio, reenvio e criação de conta
+3. Criação de conta pelo usuário
+
+Quando o usuário acessar o app pela primeira vez com o e-mail cadastrado:
+
+ele deve poder criar a própria conta
+o sistema deve validar que o e-mail foi previamente autorizado pelo admin
+o cadastro deve ficar vinculado ao usuário criado pelo painel administrativo
+3.1 Dados básicos da conta
+
+No primeiro acesso, além do login, o sistema deve orientar a pessoa por um fluxo em etapas.
+
+4. Fluxo de primeiro acesso obrigatório
+
+Quero um fluxo de onboarding de primeiro acesso em etapas, com visual profissional, bom no mobile e com barra de progresso.
+
+4.1 Etapas obrigatórias
+
+Quero que o primeiro acesso inclua pelo menos estas etapas:
+
+Etapa 1: Foto de perfil
+usuário faz upload de foto de perfil
+preview da foto
+opção de trocar antes de salvar
+corte/ajuste simples se possível
+compressão e otimização
+Etapa 2: Dados pessoais
+
+Campos obrigatórios:
+
+nome completo
+data de nascimento
+CPF
+telefone
+data de admissão
+
+Também quero prever:
+
+cargo
+setor
+unidade
+
+Mesmo que alguns desses já venham do admin, o sistema deve permitir completar e confirmar.
+
+Etapa 3: Valores da empresa
+mostrar uma tela com os valores da empresa
+o usuário deve confirmar que leu
+registrar data/hora da confirmação
+Etapa 4: Termos e documentos
+mostrar os documentos obrigatórios de primeiro acesso
+permitir leitura
+permitir assinatura, quando exigida
+permitir apenas confirmação de leitura, quando não exigir assinatura
+Etapa 5: Uso de imagem
+
+Quero que os termos de uso de imagem já existentes sejam apresentados como escolha explícita:
+
+aceitar e assinar
+ou não aceitar
+
+Esse aceite ou recusa deve ser registrado formalmente.
+
+Etapa 6: Finalização
+mostrar resumo do que foi concluído
+indicar pendências, se houver
+liberar acesso ao app após conclusão mínima obrigatória
+5. Máscaras e formatação automática dos campos
+
+Quero tratamento automático de formatação para os campos abaixo.
+
+5.1 Data de nascimento
+
+Campo com preenchimento automático no formato:
+
+DD/MM/AAAA
+
+À medida que a pessoa digita os números, a máscara deve aplicar automaticamente.
+
+Exemplo:
+
+digitou 01011990 → mostrar 01/01/1990
+5.2 Data de admissão
+
+Quero o mesmo comportamento:
+
+DD/MM/AAAA
+com máscara automática
+validação real de data
+5.3 CPF
+
+Campo com máscara automática:
+
+000.000.000-00
+
+Também deve:
+
+aceitar apenas números
+aplicar pontuação automaticamente
+validar tamanho
+impedir CPF inválido se houver validação disponível
+5.4 Telefone
+
+Quero campo com máscara automática para telefone brasileiro:
+
+DDD com parênteses
+2 dígitos de DDD
+9 dígitos de telefone
+
+Formato:
+
+(31) 99999-9999
+
+Regras:
+
+aceitar somente números
+preencher automaticamente os parênteses e separador
+limitar ao total correto
+validar quantidade de dígitos
+6. Edição de dados pelo administrador
+
+Quero que um administrador possa editar esses dados depois no painel administrativo.
+
+O admin deve conseguir alterar:
+
+foto de perfil
+nome
+e-mail
+data de nascimento
+CPF
+telefone
+data de admissão
+cargo
+setor
+unidade
+status do onboarding
+status de leitura/assinatura dos documentos
+
+Toda edição administrativa deve gerar log com:
+
+admin responsável
+data/hora
+valor anterior
+valor novo
+7. Integração com o sistema de documentos já criado
+
+Quero integrar esse fluxo com o sistema de documentos, leitura e assinatura que já foi especificado anteriormente.
+
+7.1 Regras de documentos
+
+Os documentos criados no painel administrativo devem poder ser marcados como:
+
+exibidos no primeiro acesso
+exibidos na aba Integra
+exigem leitura
+exigem assinatura
+opcionais
+obrigatórios
+contam para progresso
+7.2 Acesso posterior pela aba Integra
+
+Quero que, se o usuário não assinar um documento no primeiro acesso, ele possa:
+
+rever esse documento depois
+ler novamente
+assinar depois
+fazer isso pela aba Integra
+
+Ou seja:
+
+o documento deve continuar acessível no ambiente normal do app
+o primeiro acesso é um fluxo guiado, mas os documentos continuam disponíveis depois
+7.3 Histórico individual
+
+Cada usuário deve ter histórico individual de:
+
+documento visualizado
+documento lido
+documento confirmado como lido
+documento assinado
+data/hora
+versão do documento
+IP/dispositivo, se fizer sentido registrar
+8. Popup de confirmação com texto editável por documento
+
+Quero expandir o sistema de assinatura.
+
+Quando um documento exigir assinatura, o popup de confirmação da assinatura deve poder ter um texto personalizado e editável para cada documento, configurado no admin.
+
+8.1 Exemplo
+
+Ao invés de sempre mostrar o mesmo texto, quero que cada documento possa ter seu próprio texto de confirmação.
+
+Exemplo:
+
+“Declaro que li e concordo com o Código de Conduta.”
+“Confirmo que estou ciente das regras de segurança descritas acima.”
+“Autorizo o uso da minha imagem nos termos deste documento.”
+“Confirmo ciência e concordância com os valores e diretrizes institucionais.”
+8.2 No painel admin
+
+Ao criar ou editar documento, incluir um campo:
+
+Texto do popup de assinatura
+ou
+Mensagem de confirmação da assinatura
+
+Esse texto deve:
+
+ser opcional
+ser editável
+aparecer no momento da assinatura
+funcionar tanto para texto nativo quanto para PDF
+ser salvo junto do documento
+
+Se estiver vazio, usar texto padrão do sistema.
+
+9. Registro dos documentos assinados
+
+Quero uma área administrativa específica chamada algo como:
+
+Documentos Assinados
+Assinaturas
+Controle de Assinaturas
+9.1 Nessa área quero ver:
+documento
+nome da pessoa
+e-mail
+contato
+CPF
+data e hora da assinatura
+status
+versão do documento
+tipo de aceite:
+leitura confirmada
+assinatura
+recusado, se aplicável
+se foi feito no primeiro acesso ou depois pela Integra
+9.2 Filtros
+
+Quero filtros por:
+
+documento
+usuário
+período
+status
+tipo de aceite
+unidade/setor, se houver
+10. Exportação CSV
+
+Quero que cada documento criado possa ter seus assinantes exportados em CSV.
+
+10.1 Exportação por documento
+
+Ao abrir um documento no admin, quero baixar uma planilha CSV contendo:
+
+nome da pessoa
+e-mail
+contato
+CPF
+data de assinatura
+hora da assinatura
+status
+versão assinada
+10.2 Exportação geral
+
+Também quero opção de exportar geral, com filtro.
+
+10.3 Requisitos
+CSV com codificação correta
+compatível com Excel
+colunas bem organizadas
+respeitando filtros aplicados
+11. Valores da empresa
+
+Quero que os valores da empresa façam parte do fluxo obrigatório de primeiro acesso.
+
+11.1 Regras
+deve haver uma tela/lista com os valores da empresa
+o usuário deve marcar que leu e está ciente
+isso deve gerar registro administrativo
+deve ser possível rever depois na aba Integra, se desejado
+o admin deve conseguir ver:
+quem leu
+quando leu
+quem ainda não confirmou leitura
+
+Se quiser, isso pode ser tratado como um documento especial ou bloco institucional especial, desde que fique bem organizado no painel.
+
+12. Uso de imagem: aceite ou recusa
+
+Quero que os documentos de uso de imagem já existentes entrem nesse fluxo com possibilidade de escolha do usuário.
+
+12.1 Regras
+
+O usuário deve poder:
+
+aceitar e assinar
+ou não aceitar
+
+O sistema deve registrar:
+
+decisão tomada
+data/hora
+versão do termo
+se aceitou ou recusou
+12.2 Painel admin
+
+O admin deve conseguir ver claramente:
+
+quem aceitou
+quem recusou
+quem ainda não respondeu
+13. Estado de conclusão do onboarding
+
+Quero que o sistema trate o progresso do primeiro acesso.
+
+13.1 Mostrar status como:
+convite pendente
+conta criada
+onboarding em andamento
+onboarding concluído
+onboarding concluído com pendências
+bloqueado por falta de assinatura obrigatória, se aplicável
+13.2 Pendências
+
+O admin deve ver pendências por usuário, como:
+
+sem foto
+sem CPF
+sem data de admissão
+não leu valores
+não assinou documento obrigatório
+não respondeu uso de imagem
+14. Aba Integra
+
+Quero que a aba Integra passe a ser o local contínuo de gestão desses documentos depois do primeiro acesso.
+
+Nela, o usuário deve poder:
+
+rever documentos
+abrir documentos em texto ou PDF
+ver o que já leu
+ver o que já assinou
+ver o que ainda está pendente
+assinar depois, se não tiver assinado no onboarding
+acessar valores da empresa
+acessar termo de uso de imagem
+acessar histórico simples de confirmações
+15. Melhoria do sistema de mensagens privadas já existente
+
+Além disso, quero melhorar o sistema de mensagens privadas do feed já existente.
+
+15.1 Objetivo
+
+Quero que seja realmente possível enviar mensagens privadas entre usuários de forma funcional e clara.
+
+15.2 Melhorias desejadas
+
+Implementar ou melhorar:
+
+lista de conversas
+conversa individual entre usuários
+envio de mensagem privada
+indicador de mensagem lida/não lida
+contador de não lidas
+busca por usuário para iniciar conversa
+abrir perfil básico do usuário a partir da conversa, se fizer sentido
+envio de texto com boa UX
+timestamps claros
+ordenação por conversa mais recente
+funcionamento bom no mobile
+15.3 Regras
+respeitar permissões do sistema
+não permitir bugs de duplicidade
+não perder mensagem em caso de falha temporária
+manter histórico
+registrar status de entrega/leitura, se possível
+permitir bloquear acesso a mensagens privadas por perfil, se a empresa quiser no futuro
+16. Painel administrativo relacionado às mensagens privadas
+
+Quero que o admin tenha controle mínimo sobre o sistema de mensagens privadas.
+
+Permitir:
+
+visualizar métricas gerais
+ver quantidade de conversas
+ver quantidade de mensagens
+investigar problemas técnicos
+opcionalmente moderar ou consultar mensagens somente se isso fizer parte da política interna do app
+
+Se esse acesso for sensível, deixe preparado com permissão administrativa específica.
+
+17. Prevenção de erros e consistência
+
+Quero que você implemente esse sistema com bastante prevenção de erros.
+
+17.1 Cadastros
+impedir e-mails duplicados
+impedir CPF inválido ou incompleto
+impedir telefone incompleto
+impedir datas inválidas
+validar campos obrigatórios
+17.2 Documentos e assinaturas
+impedir assinatura duplicada do mesmo documento/mesma versão
+garantir histórico por versão
+registrar corretamente aceite, recusa e leitura
+impedir perda de registro
+manter rastreabilidade
+17.3 Primeiro acesso
+permitir retomada se o usuário sair no meio
+salvar progresso parcial
+não perder foto nem dados digitados
+não quebrar fluxo no mobile
+17.4 CSV
+exportação precisa refletir dados reais
+não duplicar linhas
+respeitar filtros
+17.5 Mensagens privadas
+evitar duplicação de mensagens
+evitar erro de ordenação
+manter consistência entre não lidas e lidas
+garantir boa performance
+17.6 Auditoria
+
+Tudo deve ser auditável:
+
+cadastro do usuário pelo admin
+envio de convite
+criação de conta
+edição de dados
+leitura de documentos
+assinaturas
+recusa de uso de imagem
+alteração administrativa
+exportação de CSV
+mudanças em documentos
+18. Estrutura de dados sugerida
+
+Quero uma arquitetura robusta, com algo equivalente a:
+
+users
+user_invites
+user_profiles
+onboarding_progress
+onboarding_steps
+company_values_confirmations
+document_templates
+document_versions
+user_document_reads
+user_document_signatures
+user_document_choices
+signed_documents_exports
+admin_user_logs
+private_conversations
+private_messages
+private_message_reads
+
+Não precisa usar exatamente esses nomes, mas a lógica precisa existir.
+
+19. Resultado esperado
+
+Quero um sistema onde:
+
+o admin cadastra o e-mail da pessoa no painel
+a pessoa cria a conta no app
+no primeiro acesso ela:
+coloca foto
+preenche data de nascimento
+CPF
+telefone
+data de admissão
+lê valores da empresa
+lê documentos
+assina documentos obrigatórios
+escolhe aceitar ou não o uso de imagem
+tudo isso fica registrado no painel administrativo
+ela pode rever e assinar depois pela aba Integra
+documentos assinados vão para uma área administrativa própria
+cada documento tem exportação CSV com nome, contato, CPF e data de assinatura
+o admin pode editar os dados do usuário
+o popup de assinatura pode ter texto editável por documento
+o sistema de mensagens privadas funcione melhor e de forma confiável
+
+Implemente isso no frontend, backend e banco de dados com foco em:
+
+boa UX
+mobile
+rastreabilidade
+segurança
+consistência
+escalabilidade
