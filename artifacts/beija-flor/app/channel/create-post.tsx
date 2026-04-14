@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
-  ActivityIndicator, Image, FlatList,
+  ActivityIndicator, Image, FlatList, Modal, Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -48,16 +48,21 @@ export default function CreatePostScreen() {
   const [isOfficial, setIsOfficial] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [internalCommConfirm, setInternalCommConfirm] = useState(false);
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionStart, setMentionStart] = useState<number>(-1);
 
   const isAdmin = user?.role === "admin" || user?.role === "master_admin";
 
-  const { data: channels = [] } = useQuery<any[]>({
+  const { data: allChannels = [] } = useQuery<any[]>({
     queryKey: ["channels"],
     queryFn: () => api.get("/channels"),
   });
+  // Non-admins cannot see or select internal comm channels
+  const channels = (allChannels as any[]).filter((ch: any) => isAdmin || !ch.isInternalComm);
+  const selectedChannel = (allChannels as any[]).find((ch: any) => ch.id === channelId) ?? null;
+  const isInternalCommSelected = selectedChannel?.isInternalComm ?? false;
   const { data: allUsers = [] } = useQuery<any[]>({
     queryKey: ["users-brief"],
     queryFn: () => api.get("/users"),
@@ -126,11 +131,21 @@ export default function CreatePostScreen() {
     setMediaItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function submit() {
+  function submit() {
     if (!content.trim() && mediaItems.length === 0) {
       Alert.alert("Atenção", "Adicione um texto ou mídia antes de postar."); return;
     }
     if (!channelId) { Alert.alert("Atenção", "Selecione um canal."); return; }
+    // If posting to internal comm channel, show confirmation first
+    if (isInternalCommSelected) {
+      setInternalCommConfirm(true);
+      return;
+    }
+    performSubmit();
+  }
+
+  async function performSubmit() {
+    setInternalCommConfirm(false);
     setLoading(true);
     try {
       let imageUrl: string | null = null;
@@ -161,6 +176,7 @@ export default function CreatePostScreen() {
       });
 
       qc.invalidateQueries({ queryKey: ["posts-todos"] });
+      qc.invalidateQueries({ queryKey: ["posts-comunicacao"] });
       qc.invalidateQueries({ queryKey: ["posts-fotos"] });
       qc.invalidateQueries({ queryKey: ["posts-videos"] });
       router.back();
@@ -235,7 +251,9 @@ export default function CreatePostScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.authorName}>{user?.name}</Text>
-            <Text style={styles.authorSub}>Publicando agora</Text>
+            <Text style={[styles.authorSub, isInternalCommSelected && styles.authorSubOfficial]}>
+              {isInternalCommSelected ? "📢 Publicação Oficial — Comunicação Interna" : "Publicando agora"}
+            </Text>
           </View>
         </View>
 
@@ -339,8 +357,39 @@ export default function CreatePostScreen() {
 
         {/* Channel selector */}
         <Text style={styles.sectionLabel}>Selecionar canal *</Text>
+
+        {/* Internal comm channels (admin only) — shown first with special visual */}
+        {isAdmin && (channels as any[]).some((ch: any) => ch.isInternalComm) && (
+          <>
+            <View style={styles.channelSectionHeader}>
+              <Feather name="shield" size={13} color={C.tint} />
+              <Text style={styles.channelSectionHeaderText}>Canais Oficiais</Text>
+            </View>
+            <View style={styles.channelGrid}>
+              {(channels as any[]).filter((ch: any) => ch.isInternalComm).map((ch: any) => {
+                const active = channelId === ch.id;
+                return (
+                  <TouchableOpacity
+                    key={ch.id}
+                    style={[styles.channelChip, styles.channelChipOfficial, active && styles.channelChipOfficialSelected]}
+                    onPress={() => setChannelId(ch.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="shield" size={14} color={active ? "#fff" : C.tint} />
+                    <Text style={[styles.channelChipText, { color: active ? "#fff" : C.tint }]}>{ch.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.channelSectionHeader}>
+              <Feather name="hash" size={13} color={C.textMuted} />
+              <Text style={[styles.channelSectionHeaderText, { color: C.textMuted }]}>Outros canais</Text>
+            </View>
+          </>
+        )}
+
         <View style={styles.channelGrid}>
-          {(channels as any[]).map((ch: any) => (
+          {(channels as any[]).filter((ch: any) => !ch.isInternalComm).map((ch: any) => (
             <TouchableOpacity
               key={ch.id}
               style={[styles.channelChip, channelId === ch.id && styles.channelChipSelected]}
@@ -353,6 +402,16 @@ export default function CreatePostScreen() {
           ))}
         </View>
 
+        {/* Internal comm banner warning */}
+        {isInternalCommSelected && (
+          <View style={styles.internalCommBanner}>
+            <Feather name="alert-circle" size={15} color="#1D4ED8" />
+            <Text style={styles.internalCommBannerText}>
+              Este é um canal oficial. A publicação será visível para todos os usuários.
+            </Text>
+          </View>
+        )}
+
         {channelId && !canPost && (
           <View style={styles.noPermission}>
             <Feather name="lock" size={16} color={C.warning} />
@@ -360,6 +419,54 @@ export default function CreatePostScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Internal comm confirmation modal */}
+      <Modal
+        visible={internalCommConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInternalCommConfirm(false)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setInternalCommConfirm(false)}>
+          <Pressable style={styles.confirmBox} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.confirmIconWrap}>
+              <Feather name="shield" size={30} color={C.tint} />
+            </View>
+            <Text style={styles.confirmTitle}>Publicação Oficial</Text>
+            <Text style={styles.confirmDesc}>
+              Você está publicando no canal{" "}
+              <Text style={{ fontFamily: "Inter_700Bold" }}>{selectedChannel?.name ?? "Comunicação Interna"}</Text>.{"\n\n"}
+              Este é um canal oficial e institucional visível para{" "}
+              <Text style={{ fontFamily: "Inter_700Bold" }}>todos os usuários</Text> do app.
+              Deseja confirmar a publicação?
+            </Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelBtn}
+                onPress={() => setInternalCommConfirm(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmPublishBtn}
+                onPress={performSubmit}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Feather name="send" size={15} color="#fff" />
+                    <Text style={styles.confirmPublishText}>Confirmar publicação</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -445,7 +552,11 @@ const styles = StyleSheet.create({
   categoryOptionText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
   categoryOptionTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
 
+  authorSubOfficial: { color: C.tint, fontFamily: "Inter_600SemiBold" },
+
   sectionLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  channelSectionHeader: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 6, marginTop: 4 },
+  channelSectionHeaderText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.tint, textTransform: "uppercase", letterSpacing: 0.5 },
   channelGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   channelChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
@@ -453,7 +564,43 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface,
   },
   channelChipSelected: { backgroundColor: C.tint, borderColor: C.tint },
+  channelChipOfficial: { borderColor: C.tint, backgroundColor: "#EFF6FF" },
+  channelChipOfficialSelected: { backgroundColor: C.tint, borderColor: C.tint },
   channelChipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
   noPermission: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEF3C7", borderRadius: 10, padding: 12 },
   noPermissionText: { fontSize: 13, color: "#92400E", fontFamily: "Inter_400Regular", flex: 1 },
+
+  internalCommBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "#EFF6FF", borderRadius: 10, padding: 12,
+    borderLeftWidth: 3, borderLeftColor: C.tint,
+  },
+  internalCommBannerText: { flex: 1, fontSize: 13, color: "#1D4ED8", fontFamily: "Inter_500Medium", lineHeight: 18 },
+
+  confirmOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 },
+  confirmBox: {
+    backgroundColor: C.surface, borderRadius: 20, padding: 24,
+    width: "100%", maxWidth: 360, alignItems: "center",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10,
+  },
+  confirmIconWrap: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 14,
+  },
+  confirmTitle: { fontSize: 19, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10 },
+  confirmDesc: {
+    fontSize: 14, color: C.textSecondary, fontFamily: "Inter_400Regular",
+    textAlign: "center", lineHeight: 21, marginBottom: 22,
+  },
+  confirmActions: { flexDirection: "row", gap: 10, width: "100%" },
+  confirmCancelBtn: {
+    flex: 1, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: C.surfaceAlt, alignItems: "center",
+  },
+  confirmCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  confirmPublishBtn: {
+    flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 7, paddingVertical: 13, borderRadius: 12, backgroundColor: C.tint,
+  },
+  confirmPublishText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
 });

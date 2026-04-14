@@ -255,14 +255,14 @@ function ShareModal({ post, visible, onClose, onShared }: { post: any; visible: 
             </TouchableOpacity>
           </View>
 
-          {/* Channel list (only when dest = channel) */}
+          {/* Channel list (only when dest = channel) — exclude internal comm channels */}
           {dest === "channel" && (
             <ScrollView
               style={shareStyles.channelList}
               contentContainerStyle={shareStyles.channelListContent}
               showsVerticalScrollIndicator={false}
             >
-              {(channels as any[]).map((ch: any) => {
+              {(channels as any[]).filter((ch: any) => !ch.isInternalComm).map((ch: any) => {
                 const active = selectedChannelId === ch.id;
                 const chColor = ch.color || C.tint;
                 return (
@@ -283,6 +283,11 @@ function ShareModal({ post, visible, onClose, onShared }: { post: any; visible: 
                   </TouchableOpacity>
                 );
               })}
+              {(channels as any[]).filter((ch: any) => !ch.isInternalComm).length === 0 && (
+                <View style={shareStyles.noChannels}>
+                  <Text style={shareStyles.noChannelsText}>Nenhum canal disponível para compartilhamento</Text>
+                </View>
+              )}
             </ScrollView>
           )}
 
@@ -914,6 +919,8 @@ const shareStyles = StyleSheet.create({
   channelDot: { width: 10, height: 10, borderRadius: 5 },
   channelName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   channelDesc: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 1 },
+  noChannels: { padding: 14, alignItems: "center" },
+  noChannelsText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
 
   // Timeline summary
   timelineSummary: {

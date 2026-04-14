@@ -37,7 +37,7 @@ async function enrichPost(post: any, userId: number, includeSharedFrom = true): 
     authorId: post.authorId,
     author: author ? formatUserBasic(author) : { id: post.authorId, name: "Usuário", role: "user" },
     channelId: post.channelId,
-    channel: channel ? { id: channel.id, name: channel.name, icon: channel.icon } : { id: post.channelId, name: "Canal" },
+    channel: channel ? { id: channel.id, name: channel.name, icon: channel.icon, isInternalComm: channel.isInternalComm ?? false } : { id: post.channelId, name: "Canal", isInternalComm: false },
     targetUserId: post.targetUserId ?? null,
     likeCount: Number(likeCountResult?.count ?? 0),
     commentCount: Number(commentCountResult?.count ?? 0),
@@ -48,7 +48,7 @@ async function enrichPost(post: any, userId: number, includeSharedFrom = true): 
     savedByMe: !!saved,
     isPinned: post.isPinned ?? false,
     isHighlighted: post.isHighlighted ?? false,
-    isOfficial: post.isOfficial ?? false,
+    isOfficial: (post.isOfficial ?? false) || (channel?.isInternalComm ?? false),
     category: post.category ?? null,
     sharedFromId: post.sharedFromId ?? null,
     sharedFrom,
@@ -154,7 +154,16 @@ router.post("/", requireAuth, async (req, res) => {
   if (ch.isInternalComm && user.role !== "admin" && user.role !== "master_admin") {
     const [poster] = await db.select().from(channelAllowedPostersTable)
       .where(and(eq(channelAllowedPostersTable.channelId, channelId), eq(channelAllowedPostersTable.userId, user.id))).limit(1);
-    if (!poster) { res.status(403).json({ error: "Você não tem permissão para postar neste canal" }); return; }
+    if (!poster) {
+      console.warn(`[SECURITY] User ${user.id} (${user.email}) attempted to post in internal comm channel ${channelId} without permission`);
+      res.status(403).json({ error: "Você não tem permissão para postar neste canal oficial" }); return;
+    }
+  }
+
+  // Block reposts/shares INTO internal communication channels
+  if (sharedFromId && ch.isInternalComm) {
+    console.warn(`[SECURITY] User ${user.id} attempted to repost into internal comm channel ${channelId}`);
+    res.status(403).json({ error: "Não é permitido compartilhar posts no canal de Comunicação Interna" }); return;
   }
 
   // Only admins can set isOfficial
@@ -315,6 +324,15 @@ router.post("/:id/share", requireAuth, async (req, res) => {
     : channelId != null
       ? parseInt(channelId)
       : orig.channelId;
+
+  // Block sharing INTO internal communication channels
+  if (targetChannelId !== null) {
+    const [targetCh] = await db.select().from(channelsTable).where(eq(channelsTable.id, targetChannelId)).limit(1);
+    if (targetCh?.isInternalComm) {
+      console.warn(`[SECURITY] User ${user.id} attempted to share post ${originalPostId} into internal comm channel ${targetChannelId}`);
+      res.status(403).json({ error: "Não é permitido compartilhar posts no canal de Comunicação Interna" }); return;
+    }
+  }
 
   await db.execute(sql`UPDATE posts SET share_count = COALESCE(share_count, 0) + 1 WHERE id = ${originalPostId}`);
   await db.insert(postSharesTable).values({ originalPostId, userId: user.id, comment: comment ?? null });

@@ -18,6 +18,67 @@ const ICON_MAP: Record<string, string> = {
   hash: "hash", users: "users", default: "hash",
 };
 
+type SectionItem = { type: "section"; label: string; icon: string };
+type ChannelItem = { type: "channel"; data: any };
+type ListItem = SectionItem | ChannelItem;
+
+function ChannelCard({ ch }: { ch: any }) {
+  return (
+    <TouchableOpacity
+      style={[styles.channelCard, ch.isInternalComm && styles.channelCardOfficial]}
+      onPress={() => router.push(`/channel/${ch.id}`)}
+      activeOpacity={0.85}
+    >
+      {/* Cover image or icon */}
+      {ch.coverImageUrl ? (
+        <View style={styles.coverWrap}>
+          <Image source={{ uri: ch.coverImageUrl }} style={styles.coverImg} resizeMode="cover" />
+          <View style={[styles.iconOverlay, (ch.color || ch.isInternalComm) && { backgroundColor: ch.color || C.tint }]}>
+            <Feather
+              name={(ICON_MAP[ch.icon] as any) || "hash"}
+              size={14}
+              color="#fff"
+            />
+          </View>
+        </View>
+      ) : (
+        <View style={[
+          styles.iconContainer,
+          ch.isInternalComm
+            ? styles.iconContainerComm
+            : ch.color
+            ? { backgroundColor: `${ch.color}22` }
+            : null,
+        ]}>
+          <Feather
+            name={(ICON_MAP[ch.icon] as any) || "hash"}
+            size={22}
+            color={ch.isInternalComm ? "#fff" : (ch.color || C.tint)}
+          />
+        </View>
+      )}
+
+      {/* Channel info */}
+      <View style={styles.channelInfo}>
+        <View style={styles.nameRow}>
+          <Text style={styles.channelName}>{ch.name}</Text>
+          {ch.isInternalComm && (
+            <View style={styles.commBadge}>
+              <Feather name="shield" size={9} color={C.tint} />
+              <Text style={styles.commBadgeText}>Oficial</Text>
+            </View>
+          )}
+        </View>
+        {ch.description ? (
+          <Text style={styles.channelDesc} numberOfLines={1}>{ch.description}</Text>
+        ) : null}
+      </View>
+
+      <Feather name="chevron-right" size={18} color={C.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
 export default function ChannelsScreen() {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
@@ -29,70 +90,57 @@ export default function ChannelsScreen() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
+  const officialChannels = (channels as any[]).filter((ch: any) => ch.isInternalComm);
+  const regularChannels = (channels as any[]).filter((ch: any) => !ch.isInternalComm);
+  const hasOfficialAndRegular = officialChannels.length > 0 && regularChannels.length > 0;
+
+  const listData: ListItem[] = [
+    ...(officialChannels.length > 0
+      ? [
+          { type: "section" as const, label: "Canais Oficiais", icon: "shield" },
+          ...officialChannels.map((ch: any) => ({ type: "channel" as const, data: ch })),
+        ]
+      : []),
+    ...(hasOfficialAndRegular
+      ? [{ type: "section" as const, label: "Outros Canais", icon: "hash" }]
+      : []),
+    ...regularChannels.map((ch: any) => ({ type: "channel" as const, data: ch })),
+  ];
+
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Canais</Text>
-        <Text style={styles.subtitle}>{channels.length} canal{channels.length !== 1 ? "is" : ""} disponíve{channels.length !== 1 ? "is" : "l"}</Text>
+        <Text style={styles.subtitle}>
+          {channels.length} canal{channels.length !== 1 ? "is" : ""} disponíve{channels.length !== 1 ? "is" : "l"}
+        </Text>
       </View>
 
       <FlatList
-        data={channels}
-        keyExtractor={(item: any) => String(item.id)}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.channelCard}
-            onPress={() => router.push(`/channel/${item.id}`)}
-            activeOpacity={0.85}
-          >
-            {/* Cover image or icon */}
-            {item.coverImageUrl ? (
-              <View style={styles.coverWrap}>
-                <Image source={{ uri: item.coverImageUrl }} style={styles.coverImg} resizeMode="cover" />
-                <View style={[styles.iconOverlay, (item.color || item.isInternalComm) && { backgroundColor: item.color || C.tint }]}>
-                  <Feather
-                    name={(ICON_MAP[item.icon] as any) || "hash"}
-                    size={14}
-                    color={item.color || item.isInternalComm ? "#fff" : C.tint}
-                  />
-                </View>
-              </View>
-            ) : (
-              <View style={[
-                styles.iconContainer,
-                item.color
-                  ? { backgroundColor: `${item.color}22` }
-                  : item.isInternalComm
-                  ? styles.iconContainerComm
-                  : null,
-              ]}>
+        data={listData}
+        keyExtractor={(item: ListItem, idx) =>
+          item.type === "section" ? `section-${idx}` : String((item as ChannelItem).data.id)
+        }
+        renderItem={({ item }: { item: ListItem }) => {
+          if (item.type === "section") {
+            return (
+              <View style={styles.sectionHeader}>
                 <Feather
-                  name={(ICON_MAP[item.icon] as any) || "hash"}
-                  size={22}
-                  color={item.color || (item.isInternalComm ? "#fff" : C.tint)}
+                  name={(item.icon as any) || "hash"}
+                  size={13}
+                  color={item.icon === "shield" ? C.tint : C.textMuted}
                 />
+                <Text style={[
+                  styles.sectionHeaderText,
+                  item.icon === "shield" && styles.sectionHeaderTextOfficial,
+                ]}>
+                  {item.label}
+                </Text>
               </View>
-            )}
-
-            {/* Channel info */}
-            <View style={styles.channelInfo}>
-              <View style={styles.nameRow}>
-                <Text style={styles.channelName}>{item.name}</Text>
-                {item.isInternalComm && (
-                  <View style={styles.commBadge}>
-                    <Feather name="shield" size={9} color={C.tint} />
-                    <Text style={styles.commBadgeText}>Oficial</Text>
-                  </View>
-                )}
-              </View>
-              {item.description ? (
-                <Text style={styles.channelDesc} numberOfLines={1}>{item.description}</Text>
-              ) : null}
-            </View>
-
-            <Feather name="chevron-right" size={18} color={C.textMuted} />
-          </TouchableOpacity>
-        )}
+            );
+          }
+          return <ChannelCard ch={(item as ChannelItem).data} />;
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -130,6 +178,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
   subtitle: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
 
+  sectionHeader: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 4, paddingTop: 10, paddingBottom: 6,
+  },
+  sectionHeaderText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.6 },
+  sectionHeaderTextOfficial: { color: C.tint },
+
   listContent: { padding: 14, gap: 10 },
 
   channelCard: {
@@ -141,6 +196,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.borderLight,
     padding: 12,
   },
+  channelCardOfficial: {
+    borderColor: "#BFDBFE", borderWidth: 1.5,
+    backgroundColor: "#FAFCFF",
+  },
 
   /* Cover image variant */
   coverWrap: { position: "relative", width: 56, height: 42, borderRadius: 10, overflow: "hidden" },
@@ -150,7 +209,6 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 5,
     backgroundColor: "#f0fdf4", alignItems: "center", justifyContent: "center",
   },
-  iconOverlayComm: { backgroundColor: C.tint },
 
   /* Icon-only variant */
   iconContainer: {
