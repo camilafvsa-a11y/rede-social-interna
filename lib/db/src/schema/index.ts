@@ -11,3 +11,4 @@ export * from "./ticket-reads";
 export * from "./channel-reads";
 export * from "./dms";
 export * from "./gamification";
+export * from "./onboarding";

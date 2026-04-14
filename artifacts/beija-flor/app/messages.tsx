@@ -21,8 +21,14 @@ function timeAgo(dateStr: string): string {
   if (diff < 60) return "agora";
   if (diff < 3600) return `${Math.floor(diff / 60)}m`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
-  return date.toLocaleDateString("pt-BR");
+  const days = Math.floor(diff / 86400);
+  if (days === 1) return "ontem";
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function getInitials(name: string): string {
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
 function LastMessagePreview({ msg }: { msg: any }) {
@@ -160,6 +166,7 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const [showNewConv, setShowNewConv] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: conversations = [], isLoading } = useQuery<any[]>({
     queryKey: ["dms"],
@@ -167,13 +174,31 @@ export default function MessagesScreen() {
     refetchInterval: 15_000,
   });
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return conversations;
+    const q = search.toLowerCase();
+    return conversations.filter((c: any) =>
+      c.otherUser?.name?.toLowerCase().includes(q) ||
+      c.lastMessage?.content?.toLowerCase().includes(q)
+    );
+  }, [conversations, search]);
+
+  const totalUnread = conversations.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0);
+
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Mensagens</Text>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.title}>Mensagens</Text>
+          {totalUnread > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{totalUnread > 99 ? "99+" : totalUnread}</Text>
+            </View>
+          )}
+        </View>
         <TouchableOpacity
           style={styles.composeBtn}
           onPress={() => setShowNewConv(true)}
@@ -183,64 +208,106 @@ export default function MessagesScreen() {
         </TouchableOpacity>
       </View>
 
+      {conversations.length > 2 && (
+        <View style={styles.searchBar}>
+          <Feather name="search" size={15} color={C.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar conversa..."
+            placeholderTextColor={C.textMuted}
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Feather name="x" size={15} color={C.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={C.tint} />
         </View>
-      ) : conversations.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <View style={styles.center}>
-          <Feather name="send" size={40} color={C.textMuted} />
-          <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
-          <Text style={styles.emptyText}>Toque em ✏️ para iniciar uma nova conversa</Text>
-          <TouchableOpacity style={styles.newConvBtn} onPress={() => setShowNewConv(true)} activeOpacity={0.8}>
-            <Feather name="edit-2" size={16} color="#fff" />
-            <Text style={styles.newConvBtnText}>Nova Conversa</Text>
-          </TouchableOpacity>
+          {search ? (
+            <>
+              <Feather name="search" size={40} color={C.textMuted} />
+              <Text style={styles.emptyTitle}>Nenhuma conversa encontrada</Text>
+              <Text style={styles.emptyText}>Tente um nome diferente</Text>
+            </>
+          ) : (
+            <>
+              <Feather name="send" size={40} color={C.textMuted} />
+              <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
+              <Text style={styles.emptyText}>Toque em ✏️ para iniciar uma nova conversa</Text>
+              <TouchableOpacity style={styles.newConvBtn} onPress={() => setShowNewConv(true)} activeOpacity={0.8}>
+                <Feather name="edit-2" size={16} color="#fff" />
+                <Text style={styles.newConvBtnText}>Nova Conversa</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filtered}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 118 : 20 }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.convRow}
-              onPress={() => router.push(`/messages/${item.id}` as any)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.avatarWrap}>
-                {item.otherUser?.avatarUrl ? (
-                  <Image source={{ uri: item.otherUser.avatarUrl }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Feather name="user" size={20} color="#9CA3AF" />
-                  </View>
-                )}
-                {item.unreadCount > 0 && <View style={styles.unreadDot} />}
-              </View>
+          renderItem={({ item }) => {
+            const name = item.otherUser?.name || "Usuário";
+            const initials = getInitials(name);
+            const hasUnread = item.unreadCount > 0;
 
-              <View style={styles.convInfo}>
-                <View style={styles.convTop}>
-                  <Text style={[styles.convName, item.unreadCount > 0 && styles.convNameBold]}>
-                    {item.otherUser?.name || "Usuário"}
-                  </Text>
-                  {item.lastMessage && (
-                    <Text style={styles.convTime}>{timeAgo(item.lastMessage.createdAt)}</Text>
+            return (
+              <TouchableOpacity
+                style={[styles.convRow, hasUnread && styles.convRowUnread]}
+                onPress={() => router.push(`/messages/${item.id}` as any)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.avatarWrap}>
+                  {item.otherUser?.avatarUrl ? (
+                    <Image source={{ uri: item.otherUser.avatarUrl }} style={styles.avatar} />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Text style={styles.avatarInitials}>{initials}</Text>
+                    </View>
                   )}
+                  {hasUnread && <View style={styles.unreadDot} />}
                 </View>
-                <LastMessagePreview msg={item.lastMessage} />
-              </View>
 
-              {item.unreadCount > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{item.unreadCount > 99 ? "99+" : item.unreadCount}</Text>
+                <View style={styles.convInfo}>
+                  <View style={styles.convTop}>
+                    <Text style={[styles.convName, hasUnread && styles.convNameBold]} numberOfLines={1}>
+                      {name}
+                    </Text>
+                    {item.lastMessage && (
+                      <Text style={[styles.convTime, hasUnread && styles.convTimeUnread]}>
+                        {timeAgo(item.lastMessage.createdAt)}
+                      </Text>
+                    )}
+                  </View>
+                  {(item.otherUser?.position || item.otherUser?.sector) && !item.lastMessage && (
+                    <Text style={styles.convRole} numberOfLines={1}>
+                      {[item.otherUser.position, item.otherUser.sector].filter(Boolean).join(" · ")}
+                    </Text>
+                  )}
+                  <LastMessagePreview msg={item.lastMessage} />
                 </View>
-              ) : (
-                <Feather name="chevron-right" size={16} color={C.borderLight} />
-              )}
-            </TouchableOpacity>
-          )}
+
+                {hasUnread ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{item.unreadCount > 99 ? "99+" : item.unreadCount}</Text>
+                  </View>
+                ) : (
+                  <Feather name="chevron-right" size={16} color={C.borderLight} />
+                )}
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
 
@@ -256,12 +323,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
   },
+  headerTitleWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
+  headerBadge: { backgroundColor: C.tint, borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  headerBadgeText: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
   composeBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: "#EFF6FF",
     alignItems: "center", justifyContent: "center",
   },
+  searchBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 16, marginTop: 10, marginBottom: 4,
+    backgroundColor: C.inputBg, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderWidth: 1, borderColor: C.border,
+  },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center" },
@@ -277,19 +355,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: C.surface,
   },
+  convRowUnread: { backgroundColor: "#FAFCFF" },
   avatarWrap: { position: "relative" },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.border },
-  avatarFallback: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
+  avatarFallback: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" },
+  avatarInitials: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.tint },
   unreadDot: {
     position: "absolute", bottom: 2, right: 2,
     width: 12, height: 12, borderRadius: 6,
     backgroundColor: C.tint, borderWidth: 2, borderColor: C.surface,
   },
-  convInfo: { flex: 1 },
+  convInfo: { flex: 1, overflow: "hidden" },
   convTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  convName: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.text },
+  convName: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.text, flex: 1, marginRight: 8 },
   convNameBold: { fontFamily: "Inter_700Bold" },
-  convTime: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  convTime: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, flexShrink: 0 },
+  convTimeUnread: { color: C.tint, fontFamily: "Inter_600SemiBold" },
+  convRole: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 1 },
   convLast: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
   badge: {
     minWidth: 22, height: 22, borderRadius: 11,

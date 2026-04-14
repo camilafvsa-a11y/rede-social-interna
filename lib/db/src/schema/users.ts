@@ -1,9 +1,10 @@
-import { pgTable, serial, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, boolean, pgEnum, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const userTagEnum = pgEnum("user_tag", ["marketing", "adm", "socio", "posto", "churrascaria", "gerente"]);
 export const userRoleEnum = pgEnum("user_role", ["user", "moderator", "admin", "master_admin"]);
+export const inviteStatusEnum = pgEnum("invite_status", ["pending", "active", "inactive", "expired"]);
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -16,6 +17,11 @@ export const usersTable = pgTable("users", {
   birthDate: text("birth_date"),
   admissionDate: text("admission_date"),
   cpf: text("cpf"),
+  phone: text("phone"),
+  sector: text("sector"),
+  unit: text("unit"),
+  position: text("position"),
+  imageTermAccepted: boolean("image_term_accepted"),
   extraTags: text("extra_tags").array(),
   workTags: text("work_tags").array(),
   bannedUntil: timestamp("banned_until"),
@@ -37,6 +43,16 @@ export const allowedEmailsTable = pgTable("allowed_emails", {
   tag: userTagEnum("tag"),
   role: userRoleEnum("role").notNull().default("user"),
   temporaryPassword: text("temporary_password").notNull(),
+  phone: text("phone"),
+  sector: text("sector"),
+  unit: text("unit"),
+  position: text("position"),
+  status: inviteStatusEnum("status").notNull().default("pending"),
+  inviteCode: text("invite_code"),
+  invitedBy: integer("invited_by"),
+  invitedAt: timestamp("invited_at").notNull().defaultNow(),
+  resentAt: timestamp("resent_at"),
+  accountCreatedAt: timestamp("account_created_at"),
   addedAt: timestamp("added_at").notNull().defaultNow(),
 });
 

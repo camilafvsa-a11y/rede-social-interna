@@ -117,7 +117,7 @@ router.post("/", requireAdmin, async (req, res) => {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
     title, subtitle, content, pdfUrl, requiresSign, requiresRead,
     docKey: rawDocKey, iconName, sortOrder, isActive,
-    docType, showInIntegra, showInOnboarding, countsForProgress,
+    docType, showInIntegra, showInOnboarding, countsForProgress, confirmationText,
   } = req.body;
 
   if (!category || !title) {
@@ -160,6 +160,7 @@ router.post("/", requireAdmin, async (req, res) => {
       showInIntegra: showInIntegra !== false,
       showInOnboarding: showInOnboarding !== false,
       countsForProgress: countsForProgress !== false,
+      confirmationText: confirmationText || null,
     })
     .returning();
 
@@ -175,7 +176,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
     title, subtitle, content, pdfUrl, requiresSign, requiresRead,
     docKey, iconName, sortOrder, isActive,
-    docType, showInIntegra, showInOnboarding, countsForProgress,
+    docType, showInIntegra, showInOnboarding, countsForProgress, confirmationText,
   } = req.body;
 
   const updates: Partial<typeof integraItemsTable.$inferInsert> = {
@@ -200,6 +201,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (showInIntegra !== undefined) updates.showInIntegra = !!showInIntegra;
   if (showInOnboarding !== undefined) updates.showInOnboarding = !!showInOnboarding;
   if (countsForProgress !== undefined) updates.countsForProgress = !!countsForProgress;
+  if (confirmationText !== undefined) updates.confirmationText = confirmationText || null;
 
   const [item] = await db
     .update(integraItemsTable)

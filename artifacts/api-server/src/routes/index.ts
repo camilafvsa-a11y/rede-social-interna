@@ -15,6 +15,7 @@ import workTagsRouter from "./work-tags.js";
 import dmsRouter from "./dms.js";
 import uploadRouter from "./upload.js";
 import gamificationRouter from "./gamification.js";
+import signaturesRouter from "./signatures.js";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use("/work-tags", workTagsRouter);
 router.use("/dms", dmsRouter);
 router.use("/upload", uploadRouter);
 router.use("/gamification", gamificationRouter);
+router.use("/signatures", signaturesRouter);
 
 export default router;

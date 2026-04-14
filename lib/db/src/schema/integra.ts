@@ -21,6 +21,7 @@ export const integraItemsTable = pgTable("integra_items", {
   showInIntegra: boolean("show_in_integra").notNull().default(true),
   showInOnboarding: boolean("show_in_onboarding").notNull().default(true),
   countsForProgress: boolean("counts_for_progress").notNull().default(true),
+  confirmationText: text("confirmation_text"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

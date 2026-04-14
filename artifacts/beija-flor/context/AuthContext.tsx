@@ -12,6 +12,12 @@ export interface User {
   role: "user" | "moderator" | "admin" | "master_admin";
   birthDate?: string | null;
   admissionDate?: string | null;
+  cpf?: string | null;
+  phone?: string | null;
+  sector?: string | null;
+  unit?: string | null;
+  position?: string | null;
+  imageTermAccepted?: boolean | null;
   onboardingCompleted: boolean;
   acceptedTerms: boolean;
   readDocuments: boolean;

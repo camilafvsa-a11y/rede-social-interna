@@ -39,7 +39,7 @@ Internal social network for Grupo Beija-flor employees.
 - Master admin: `admin@beijaflor.com` / `admin123`
 
 ### Features
-- **Auth**: Login + 3-step onboarding (photo, manual reading, terms acceptance)
+- **Auth**: Login + 6-step onboarding (photo, personal data with masks, company values, documents, image term accept/refuse, summary)
 - **Feed**: Facebook-style main feed with 7 horizontal scrollable sub-tabs: Feed (Todos) | Destaques | Comunicação | Fotos | Vídeos | Salvos | Aniversários; search bar toggle, sort by Recentes/Populares, "Publicar" FAB
 - **PostCard**: Multi-media gallery (grid/swipe), save/bookmark toggle, share/repost button with embed, pinned/official/highlighted ribbon badges, admin pin+highlight actions, report post
 - **Composer (Enhanced)**: Multi-image picker (up to 6 images), video picker, category selector (8 categories), "Oficial" toggle for admins, mention autocomplete
@@ -50,8 +50,9 @@ Internal social network for Grupo Beija-flor employees.
 - **Internal Communication**: Restricted posting channel (Comunicação tab)
 - **Birthdays**: Upcoming birthday list with Hoje/Próximos sub-tabs
 - **Tickets**: Support ticket system with chat
-- **Admin Panel**: User management, email allowlist, channel CRUD, ticket handlers, reports, gamification panel
-- **DB extras**: postMediaTable, savedPostsTable, postSharesTable, postReportsTable; posts now have isPinned, isHighlighted, isOfficial, category, shareCount, saveCount, sharedFromId
+- **Admin Panel**: User management, invite management with status/resend/cancel, channel CRUD, ticket handlers, reports, gamification panel, signatures & terms panel (admin/signatures.tsx)
+- **Signatures Panel**: 3 tabs — document signatures (with CSV export), image term choices (accept/refuse), company values confirmations
+- **DB extras**: postMediaTable, savedPostsTable, postSharesTable, postReportsTable; posts now have isPinned, isHighlighted, isOfficial, category, shareCount, saveCount, sharedFromId; users now have cpf, phone, sector, unit, position, imageTermAccepted; onboardingStepsTable, documentSignaturesTable, companyValuesConfirmationsTable, imageTermChoicesTable
 
 ### Roles
 - `user` – regular employee
@@ -64,7 +65,7 @@ Internal social network for Grupo Beija-flor employees.
 
 ### App Screens
 - `app/login.tsx` – login screen
-- `app/onboarding.tsx` – 3-step onboarding
+- `app/onboarding.tsx` – 6-step onboarding (photo, personal data, company values, documents, image term, summary)
 - `app/(tabs)/index.tsx` – feed with DM icon, channel unread dots, notification bell
 - `app/(tabs)/channels.tsx` – channel list
 - `app/(tabs)/birthdays.tsx` – birthday list
@@ -80,8 +81,8 @@ Internal social network for Grupo Beija-flor employees.
 - `app/messages/[convId].tsx` – DM chat screen
 - `app/messages/with/[userId].tsx` – open/create DM with a user (redirect to convId)
 - `app/admin/index.tsx` – admin panel home
-- `app/admin/users.tsx` – user management
-- `app/admin/emails.tsx` – email allowlist
+- `app/admin/users.tsx` – user management + invite management (status, resend, cancel)
+- `app/admin/signatures.tsx` – signatures panel (document sigs, image terms, values confirmations + CSV export)
 - `app/admin/channels.tsx` – channel CRUD
 - `app/admin/reports.tsx` – reported comments
 - `app/admin/ticket-handlers.tsx` – ticket handler management
