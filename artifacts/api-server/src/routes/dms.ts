@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, dmConversationsTable, dmMessagesTable, usersTable } from "@workspace/db";
 import { eq, and, or, desc, isNull } from "drizzle-orm";
 import { requireAuth, formatUserBasic } from "../lib/auth.js";
+import { notifyNewDM } from "../lib/notify.js";
 
 const router = Router();
 
@@ -163,6 +164,19 @@ router.post("/:convId/messages", requireAuth, async (req, res) => {
     mediaType: msg.mediaType ?? null,
     readAt: null,
     createdAt: msg.createdAt?.toISOString?.() ?? msg.createdAt,
+  });
+
+  setImmediate(async () => {
+    try {
+      const recipientId = getOtherUserId(conv, user.id);
+      await notifyNewDM({
+        recipientId,
+        senderId: user.id,
+        senderName: user.name || "Alguém",
+        convId,
+        content: content?.trim() ?? null,
+      });
+    } catch (e) { console.error("[Notify DM]", e); }
   });
 });
 

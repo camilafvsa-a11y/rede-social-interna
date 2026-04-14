@@ -1,0 +1,428 @@
+Quero que você implemente um sistema centralizado, padronizado e confiável de notificações do aplicativo, para que todas as notificações fiquem organizadas, consistentes e fáceis de administrar.
+
+O objetivo é acabar com comportamentos soltos ou inconsistentes e criar uma lógica clara para quando notificar, quem notificar, como notificar, o que mostrar e como registrar essas notificações.
+
+1. Objetivo geral
+
+Criar um sistema único de notificações para o app, que cubra todas as situações importantes da plataforma e funcione de forma consistente no frontend, backend e painel administrativo.
+
+Esse sistema deve notificar corretamente os usuários sobre:
+
+novos documentos
+documentos obrigatórios para leitura
+documentos obrigatórios para assinatura
+novos posts no feed
+novas postagens no canal Comunicação Interna
+novas mensagens privadas
+comentários e interações relevantes
+pendências do onboarding / Integra
+lembretes de documentos não assinados ou não lidos
+atualizações futuras que possam usar esse mesmo centro de notificações
+2. Tipos de notificação obrigatórios
+
+Quero que o sistema suporte pelo menos os seguintes tipos:
+
+2.1 Documentos
+novo documento publicado
+novo documento obrigatório para leitura
+novo documento obrigatório para assinatura
+nova versão de documento
+lembrete de documento pendente
+confirmação de documento assinado
+confirmação de leitura registrada
+2.2 Feed
+nova postagem no feed
+nova postagem em canal seguido ou relevante
+nova postagem no canal Comunicação Interna
+comentário em postagem do usuário
+resposta a comentário do usuário
+curtida/reação em postagem do usuário, se essa notificação estiver ativa
+compartilhamento de postagem do usuário, se aplicável
+2.3 Comunicação Interna
+
+Quero um tratamento especial para esse tipo:
+
+toda nova postagem em Comunicação Interna deve gerar notificação com prioridade maior
+deve ficar visualmente diferente das notificações comuns
+deve ser identificada como conteúdo oficial/institucional
+2.4 Mensagens privadas
+nova mensagem privada recebida
+novo início de conversa
+mensagens não lidas
+2.5 Onboarding / Integra
+pendência de concluir primeiro acesso
+pendência de foto de perfil
+pendência de leitura dos valores da empresa
+pendência de assinatura de termo obrigatório
+lembrete de concluir etapas do onboarding
+documento disponível depois do primeiro acesso na aba Integra
+3. Centro de notificações do app
+
+Quero um centro de notificações dentro do aplicativo.
+
+3.1 Funcionalidades
+
+Cada usuário deve ter acesso a uma área/lista de notificações contendo:
+
+notificações mais recentes
+status de lida / não lida
+ícone por tipo de notificação
+título curto
+descrição curta
+data/hora
+ação clicável levando ao conteúdo relacionado
+3.2 Ações do usuário
+
+O usuário deve poder:
+
+abrir a notificação
+marcar como lida
+marcar todas como lidas
+ver histórico recente
+navegar para o conteúdo relacionado
+3.3 Ordenação
+
+As notificações devem ser exibidas por ordem de prioridade e data, considerando:
+
+notificações críticas/institucionais no topo
+depois as demais em ordem cronológica
+4. Regras específicas por evento
+4.1 Novo documento
+
+Quando um documento novo for criado e estiver ativo:
+
+notificar os usuários definidos pela regra de visibilidade
+se for obrigatório, a notificação deve deixar isso claro
+se exigir assinatura, a mensagem deve informar claramente que há necessidade de assinatura
+
+Exemplo:
+
+“Novo documento disponível”
+“Novo documento obrigatório para leitura”
+“Novo documento aguardando sua assinatura”
+4.2 Nova versão de documento
+
+Se um documento for atualizado com nova versão:
+
+notificar somente os usuários impactados
+se a nova versão exigir nova leitura ou nova assinatura, isso deve ser destacado
+4.3 Nova postagem comum
+
+Quando houver nova postagem no feed:
+
+notificar apenas se fizer sentido pela lógica do sistema
+evitar excesso de notificações para tudo
+deixar preparado para regras como:
+notificar seguidores do canal
+notificar usuários da unidade
+notificar usuários do setor
+notificar todos, se for postagem oficial
+4.4 Nova postagem em Comunicação Interna
+
+Toda nova postagem no canal Comunicação Interna deve:
+
+gerar notificação para todos os usuários elegíveis
+ter prioridade maior
+ter aparência diferente ou selo de “Comunicação Interna”
+abrir diretamente o post ao clicar
+4.5 Nova mensagem privada
+
+Quando um usuário receber nova mensagem privada:
+
+gerar notificação imediata
+mostrar remetente
+indicar conversa relacionada
+atualizar contador de não lidas
+4.6 Comentários e respostas
+
+Quando alguém comentar em post do usuário:
+
+notificar o autor do post
+
+Quando alguém responder comentário do usuário:
+
+notificar o autor do comentário
+4.7 Lembretes
+
+Quero que o sistema possa gerar lembretes automáticos para:
+
+documentos pendentes
+assinaturas pendentes
+onboarding incompleto
+leitura de valores ainda não confirmada
+
+Esses lembretes devem ser configuráveis para evitar excesso.
+
+5. Controle de frequência e anti-spam
+
+Quero evitar excesso de notificações.
+
+5.1 Agrupamento
+
+O sistema deve ser capaz de agrupar notificações parecidas quando fizer sentido.
+
+Exemplo:
+
+em vez de 10 notificações iguais de interação, mostrar algo consolidado
+“Você recebeu 5 novas interações”
+“Há 3 documentos pendentes para sua leitura”
+5.2 Cooldown / limite
+
+Permitir configurar limites para evitar spam de notificação.
+
+Exemplo:
+
+várias curtidas seguidas não precisam disparar notificação individual
+comentários podem ser agrupados
+múltiplas pendências podem ser resumidas
+5.3 Prioridade
+
+Definir níveis de prioridade, por exemplo:
+
+alta: Comunicação Interna, documentos obrigatórios, mensagens privadas
+média: comentários, respostas, novos documentos
+baixa: curtidas e interações leves
+6. Painel administrativo de notificações
+
+Quero um menu administrativo para gerenciar notificações.
+
+6.1 O admin deve conseguir:
+visualizar notificações disparadas
+filtrar por tipo
+filtrar por usuário
+filtrar por período
+ver status de entrega/leitura
+reenviar notificação, se aplicável
+desativar tipos de notificação
+configurar textos padrão
+configurar prioridade
+configurar regras de envio
+6.2 Configurações por tipo
+
+Para cada tipo de notificação, o admin deve poder configurar:
+
+ativo/inativo
+título padrão
+texto padrão
+prioridade
+se aparece em push
+se aparece no centro de notificações
+se pode ser agrupada
+tempo ou regra de lembrete
+7. Templates de notificação
+
+Quero que o sistema use templates padronizados.
+
+7.1 Cada notificação deve ter:
+tipo
+título
+descrição
+ícone
+prioridade
+ação/rota de destino
+entidade relacionada
+data/hora
+status
+7.2 Exemplos de templates
+Novo documento disponível
+Documento aguardando assinatura
+Nova versão de documento
+Nova postagem
+Nova publicação em Comunicação Interna
+Nova mensagem privada
+Novo comentário no seu post
+Responderam seu comentário
+Você tem pendências no Integra
+8. Navegação ao clicar na notificação
+
+Cada notificação deve levar corretamente ao conteúdo relacionado.
+
+Exemplo:
+
+documento → abrir documento
+assinatura pendente → abrir modal ou página do documento
+post novo → abrir post
+comunicação interna → abrir post oficial
+mensagem privada → abrir conversa
+onboarding pendente → abrir etapa correspondente
+Integra → abrir aba correspondente
+
+Se o conteúdo não existir mais:
+
+mostrar mensagem amigável
+marcar como indisponível
+não quebrar a navegação
+9. Estados da notificação
+
+Cada notificação deve ter pelo menos:
+
+criada
+entregue
+lida
+arquivada, se fizer sentido
+falha, se o envio falhar
+
+Também quero:
+
+contador de não lidas
+atualização em tempo real, se possível
+fallback seguro se tempo real não estiver disponível
+10. Push notification e notificação interna
+
+Quero deixar o sistema preparado para dois canais:
+
+10.1 Notificação interna
+
+Sempre deve existir dentro do app, no centro de notificações.
+
+10.2 Push notification
+
+Deixar preparado para push notification, principalmente para:
+
+comunicação interna
+mensagem privada
+documento obrigatório
+pendências importantes
+
+No painel admin, quero poder configurar quais tipos podem ou não virar push.
+
+11. Regras especiais para Comunicação Interna
+
+Como o canal Comunicação Interna é oficial, quero regras especiais:
+
+toda postagem nova nesse canal deve notificar todos os usuários permitidos
+deve ter ícone ou selo específico
+deve ter prioridade maior
+deve aparecer destacada no centro de notificações
+deve ser facilmente distinguida das outras notificações
+deve poder ter texto padrão como:
+“Nova comunicação oficial publicada”
+“Novo aviso da Comunicação Interna”
+12. Integração com Integra e onboarding
+
+Quero que o sistema de notificações converse com o módulo Integra e com o onboarding.
+
+12.1 Casos de uso
+documento novo apareceu na Integra
+documento obrigatório está pendente
+usuário ainda não assinou documento
+usuário ainda não confirmou valores da empresa
+onboarding foi iniciado mas não concluído
+novo documento foi adicionado ao primeiro acesso
+12.2 Regras
+notificações de pendência devem ser configuráveis
+evitar notificação repetitiva excessiva
+permitir lembretes em intervalos definidos
+13. Estrutura de dados sugerida
+
+Quero uma arquitetura equivalente a algo como:
+
+notifications
+notification_templates
+notification_preferences
+notification_delivery_logs
+notification_groups
+notification_types
+notification_targets
+unread_notification_counters
+
+Campos mínimos que devem existir na lógica:
+
+id
+user_id
+type
+title
+body
+icon
+priority
+entity_type
+entity_id
+route_path
+is_read
+is_archived
+created_at
+read_at
+delivered_at
+failed_at
+metadata_json
+14. Preferências do usuário
+
+Quero prever uma área futura de preferências de notificação por usuário.
+
+Mesmo que não implemente tudo agora, a estrutura deve ficar preparada para permitir:
+
+receber ou não certos tipos de notificação
+controlar push
+controlar interações sociais
+manter obrigatórias as notificações institucionais, se a empresa quiser
+15. Logs e auditoria
+
+Tudo precisa ser rastreável.
+
+Quero registrar:
+
+qual notificação foi gerada
+para quem
+por qual evento
+se foi entregue
+se foi lida
+se falhou
+se foi agrupada
+qual conteúdo originou a notificação
+
+No caso de notificações administrativas/institucionais, quero também registrar:
+
+qual admin gerou o conteúdo
+qual post ou documento originou a notificação
+16. Prevenção de erros
+
+Quero que o sistema trate bem os cenários abaixo:
+
+16.1 Duplicidade
+evitar criar a mesma notificação várias vezes para o mesmo evento
+usar idempotência por evento
+16.2 Conteúdo removido
+se o post ou documento for apagado, tratar navegação sem quebrar
+16.3 Falha de entrega
+registrar falha
+permitir reprocessamento, se necessário
+16.4 Performance
+paginação no centro de notificações
+não recalcular tudo sempre
+usar contadores eficientes de não lidas
+16.5 Tempo real
+se houver atualização em tempo real, garantir consistência com o estado salvo
+se não houver, ter fallback por polling ou atualização ao abrir a tela
+17. UX esperada
+
+No app:
+
+interface limpa
+notificações fáceis de entender
+títulos curtos e claros
+descrição objetiva
+bom comportamento no mobile
+contador de não lidas visível
+destaque especial para Comunicação Interna e documentos obrigatórios
+
+No admin:
+
+filtros úteis
+visual profissional
+boa visibilidade dos tipos de notificação
+fácil configuração dos templates e regras
+18. Resultado esperado
+
+Quero um sistema de notificações padronizado e centralizado no aplicativo, onde:
+
+documentos novos geram notificações corretas
+documentos para leitura e assinatura geram alertas claros
+novas postagens geram notificações conforme regra
+novas postagens de Comunicação Interna tenham prioridade maior
+mensagens privadas gerem notificação
+interações do feed gerem notificações organizadas
+onboarding e Integra tenham notificações de pendência e conclusão
+o admin consiga controlar tudo isso num painel
+o sistema seja seguro, consistente, auditável e escalável
+
+Implemente isso no frontend, backend e banco de dados, com foco em estabilidade, clareza e experiência mobile.

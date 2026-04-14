@@ -4,14 +4,21 @@ import { inArray } from "drizzle-orm";
 
 const expo = new Expo({ useFcmV1: false });
 
+export interface NotificationPayload {
+  type: string;
+  title: string;
+  body: string;
+  icon?: string;
+  priority?: "high" | "medium" | "low";
+  entityType?: string;
+  entityId?: number;
+  routePath?: string;
+  data?: Record<string, any>;
+}
+
 export async function sendPushToUsers(
   userIds: number[],
-  notification: {
-    type: string;
-    title: string;
-    body: string;
-    data?: Record<string, any>;
-  }
+  notification: NotificationPayload
 ) {
   if (userIds.length === 0) return;
 
@@ -21,8 +28,14 @@ export async function sendPushToUsers(
       type: notification.type,
       title: notification.title,
       body: notification.body,
+      icon: notification.icon ?? null,
+      priority: notification.priority ?? "medium",
+      entityType: notification.entityType ?? null,
+      entityId: notification.entityId ?? null,
+      routePath: notification.routePath ?? null,
       data: notification.data ? JSON.stringify(notification.data) : null,
       read: false,
+      isArchived: false,
     }))
   );
 
@@ -38,8 +51,9 @@ export async function sendPushToUsers(
     to: t.token,
     title: notification.title,
     body: notification.body,
-    data: notification.data || {},
+    data: { ...notification.data, type: notification.type, routePath: notification.routePath },
     sound: "default" as const,
+    priority: notification.priority === "high" ? "high" as const : "normal" as const,
   }));
 
   const chunks = expo.chunkPushNotifications(messages);

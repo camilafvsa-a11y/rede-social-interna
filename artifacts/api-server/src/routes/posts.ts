@@ -6,7 +6,8 @@ import {
 } from "@workspace/db";
 import { eq, and, sql, desc, or, ilike, inArray } from "drizzle-orm";
 import { requireAuth, formatUserBasic } from "../lib/auth.js";
-import { sendPushToUsers, parseMentions } from "../lib/push.js";
+import { parseMentions } from "../lib/push.js";
+import { notifyInternalCommPost, notifyNewComment, notifyCommentReply, notifyMentions } from "../lib/notify.js";
 import { processGamificationEvent } from "./gamification.js";
 
 const router = Router();
@@ -207,36 +208,20 @@ router.post("/", requireAuth, async (req, res) => {
     try {
       const authorName = user.name || "Alguém";
       const safeContent = content ?? "";
-      const preview = safeContent.length > 80 ? safeContent.slice(0, 77) + "…" : safeContent || "📷 Mídia";
       if (ch.isInternalComm) {
-        const allUsers = await db.select({ id: usersTable.id }).from(usersTable)
-          .where(sql`${usersTable.id} != ${user.id}`);
-        const targetIds = allUsers.map((u) => u.id);
-        if (targetIds.length > 0) {
-          await sendPushToUsers(targetIds, {
-            type: "comunicacao_interna",
-            title: `📢 ${ch.name}`,
-            body: `${authorName}: ${preview}`,
-            data: { postId: post.id, channelId },
-          });
-        }
+        await notifyInternalCommPost({
+          postId: post.id, channelId, channelName: ch.name,
+          authorName, content: safeContent, authorId: user.id,
+        });
       }
       const mentionedNames = parseMentions(safeContent);
-      if (mentionedNames.length > 0) {
+      if (mentionedNames.length > 0 && !ch.isInternalComm) {
         const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
           .where(sql`${usersTable.id} != ${user.id}`);
         const mentionedIds = allUsers
           .filter((u) => mentionedNames.some((m) => u.name?.toLowerCase() === m.toLowerCase()))
-          .map((u) => u.id)
-          .filter((_id) => !ch.isInternalComm);
-        if (mentionedIds.length > 0) {
-          await sendPushToUsers(mentionedIds, {
-            type: "mention",
-            title: `🔔 ${authorName} mencionou você`,
-            body: preview,
-            data: { postId: post.id, channelId },
-          });
-        }
+          .map((u) => u.id);
+        await notifyMentions({ mentionedIds, authorId: user.id, authorName, postId: post.id, content: safeContent });
       }
     } catch (e) { console.error("[Notify post]", e); }
   });
@@ -416,14 +401,25 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
       await processGamificationEvent({ userId: user.id, actionType: "comment", entityType: "post", entityId: postId, commentContent: content, idempotencyKey: `comment_${user.id}_${comment.id}` });
     } catch (e) { console.error("[Gamification comment]", e); }
     try {
+      const authorName = user.name || "Alguém";
+      // Notify post author
+      const [originalPost] = await db.select({ authorId: postsTable.authorId }).from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+      if (originalPost) {
+        await notifyNewComment({ postId, postAuthorId: originalPost.authorId, commentAuthorId: user.id, commentAuthorName: authorName, content: content ?? null, commentId: comment.id });
+      }
+      // Notify parent comment author (reply)
+      if (parentId) {
+        const [parentComment] = await db.select({ authorId: commentsTable.authorId }).from(commentsTable).where(eq(commentsTable.id, parentId)).limit(1);
+        if (parentComment) {
+          await notifyCommentReply({ postId, parentCommentAuthorId: parentComment.authorId, replyAuthorId: user.id, replyAuthorName: authorName, content: content ?? null, commentId: comment.id });
+        }
+      }
+      // Notify mentions
       const mentionedNames = parseMentions(content ?? "");
-      if (mentionedNames.length === 0) return;
-      const preview = (content ?? "").length > 80 ? (content ?? "").slice(0, 77) + "…" : content || "💬 Comentário";
-      const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
-        .where(sql`${usersTable.id} != ${user.id}`);
-      const mentionedIds = allUsers.filter((u) => mentionedNames.some((m) => u.name?.toLowerCase() === m.toLowerCase())).map((u) => u.id);
-      if (mentionedIds.length > 0) {
-        await sendPushToUsers(mentionedIds, { type: "mention", title: `💬 ${user.name || "Alguém"} mencionou você`, body: preview, data: { postId, commentId: comment.id } });
+      if (mentionedNames.length > 0) {
+        const allUsers = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(sql`${usersTable.id} != ${user.id}`);
+        const mentionedIds = allUsers.filter((u) => mentionedNames.some((m) => u.name?.toLowerCase() === m.toLowerCase())).map((u) => u.id);
+        await notifyMentions({ mentionedIds, authorId: user.id, authorName, postId, commentId: comment.id, content: content ?? null });
       }
     } catch (e) { console.error("[Notify comment]", e); }
   });
