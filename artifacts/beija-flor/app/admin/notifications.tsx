@@ -170,7 +170,7 @@ export default function AdminNotificationsScreen() {
   });
 
   const byTypeEntries: [string, number][] = stats?.byType
-    ? Object.entries(stats.byType).sort((a: any, b: any) => b[1] - a[1])
+    ? (Object.entries(stats.byType) as [string, number][]).sort((a, b) => b[1] - a[1])
     : [];
 
   const filterChips = [

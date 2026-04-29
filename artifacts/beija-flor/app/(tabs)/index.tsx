@@ -37,251 +37,221 @@ const TAG_LABELS_BD: Record<string, string> = {
   posto: "Posto", churrascaria: "Churrascaria", gerente: "Gerente",
 };
 const MONTHS_BD = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const MONTHS_SHORT_BD = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-function formatFullDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return `${day} de ${MONTHS_BD[month - 1]} de ${year}`;
-}
-function formatDayMonth(dateStr: string): string {
-  const [, month, day] = dateStr.split("-").map(Number);
-  return `${day} de ${MONTHS_SHORT_BD[month - 1]}`;
-}
-function getAge(dateStr: string): number {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const today = new Date();
-  let age = today.getFullYear() - year;
-  const hadBirthday = today.getMonth() + 1 > month ||
-    (today.getMonth() + 1 === month && today.getDate() >= day);
-  if (!hadBirthday) age--;
-  return age;
-}
-
-function BirthdayCard({ item, showFullDate }: { item: any; showFullDate?: boolean }) {
-  const tagStyle = (C.tagColors as any)[item.tag] || null;
-  const isToday = item.daysUntil === 0;
-  const age = item.birthDate ? getAge(item.birthDate) : null;
-  return (
-    <View style={[styles.bdCard, isToday && styles.bdCardToday]}>
-      <View style={styles.bdAvatarWrap}>
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.bdAvatar} />
-        ) : (
-          <View style={[styles.bdAvatarFallback, isToday && styles.bdAvatarFallbackToday]}>
-            <Text style={styles.bdAvatarInitial}>{item.name?.[0]?.toUpperCase()}</Text>
-          </View>
-        )}
-        {isToday && <Text style={styles.bdCakeEmoji}>🎂</Text>}
-      </View>
-      <View style={styles.bdInfo}>
-        <Text style={[styles.bdName, isToday && styles.bdNameToday]}>{item.name}</Text>
-        <View style={styles.bdMetaRow}>
-          {tagStyle && item.tag && (
-            <View style={[styles.bdTagBadge, { backgroundColor: tagStyle.bg }]}>
-              <Text style={[styles.bdTagText, { color: tagStyle.text }]}>{TAG_LABELS_BD[item.tag]}</Text>
-            </View>
-          )}
-        </View>
-        {item.birthDate && (
-          <View style={styles.bdDateRow}>
-            <Feather name="calendar" size={12} color={isToday ? C.tint : C.textMuted} />
-            <Text style={[styles.bdDateText, isToday && { color: C.tint }]}>
-              {showFullDate ? formatFullDate(item.birthDate) : formatDayMonth(item.birthDate)}
-              {age !== null && !isToday && <Text style={styles.bdAgeSuffix}> · {age} anos</Text>}
-              {age !== null && isToday && <Text style={[styles.bdAgeSuffix, { color: C.tint }]}> · {age + 1} anos! 🎉</Text>}
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={[styles.bdDaysBadge, isToday && styles.bdDaysBadgeToday]}>
-        {isToday ? (
-          <Text style={styles.bdTodayEmoji}>🎉</Text>
-        ) : (
-          <>
-            <Text style={styles.bdDaysNum}>{item.daysUntil}</Text>
-            <Text style={styles.bdDaysLabel}>dias</Text>
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
-
-// ─── Birthday compact row (for today list & calendar) ─────────────────────────
-function BirthdayCompactRow({ item, isToday, showBorder }: { item: any; isToday?: boolean; showBorder?: boolean }) {
-  const tagStyle = (C.tagColors as any)[item.tag] || null;
-  return (
-    <View style={[bcs.row, showBorder && bcs.rowBorder]}>
-      {item.avatarUrl ? (
-        <Image source={{ uri: item.avatarUrl }} style={bcs.avatar} />
-      ) : (
-        <View style={[bcs.avatarFb, isToday && { backgroundColor: "#059669" }]}>
-          <Text style={bcs.avatarInitial}>{item.name?.[0]?.toUpperCase()}</Text>
-        </View>
-      )}
-      <Text style={bcs.name} numberOfLines={1}>{item.name}</Text>
-      {tagStyle && item.tag && (
-        <View style={[bcs.tagBadge, { backgroundColor: tagStyle.bg }]}>
-          <Text style={[bcs.tagText, { color: tagStyle.text }]}>{TAG_LABELS_BD[item.tag]}</Text>
-        </View>
-      )}
-      {isToday && <Text style={bcs.todayBadge}>🎉</Text>}
-    </View>
-  );
-}
-const bcs = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(60,60,67,0.1)" },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F3F4F6" },
-  avatarFb: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
-  avatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 14 },
-  name: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
-  tagBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  todayBadge: { fontSize: 16 },
-});
-
-// ─── Birthday Calendar Modal ───────────────────────────────────────────────────
-function BirthdayCalendarModal({ visible, onClose, allBirthdays }: {
-  visible: boolean; onClose: () => void; allBirthdays: any[];
+// ─── BirthdaysTab — calendário inline + lista ────────────────────────────────
+function BirthdaysTab({ allBirthdays, loading, refreshing, onRefresh, botPad }: {
+  allBirthdays: any[]; loading: boolean; refreshing: boolean;
+  onRefresh: () => void; botPad: number;
 }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth()); // 0-based
-  const [selDay, setSelDay] = useState<number | null>(today.getDate());
+  const [month, setMonth] = useState(today.getMonth());
+  const [selDay, setSelDay] = useState(today.getDate());
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDOW = new Date(year, month, 1).getDay();
+  const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+  const isSelToday = isCurrentMonth && selDay === today.getDate();
 
-  function getBirthdaysForDay(day: number) {
+  function bdForDay(d: number, m: number) {
     return allBirthdays.filter((b: any) => {
       if (!b.birthDate) return false;
-      const [, m, d] = b.birthDate.split("-").map(Number);
-      return m === month + 1 && d === day;
+      const parts = b.birthDate.split("-");
+      return parseInt(parts[1]) === m + 1 && parseInt(parts[2]) === d;
     });
   }
-  function hasBirthday(day: number) { return getBirthdaysForDay(day).length > 0; }
+
   function prevMonth() {
     if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1);
-    setSelDay(null);
+    setSelDay(1);
   }
   function nextMonth() {
     if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1);
-    setSelDay(null);
+    setSelDay(1);
+  }
+  function goToToday() {
+    setYear(today.getFullYear()); setMonth(today.getMonth()); setSelDay(today.getDate());
   }
 
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDOW; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const selectedBDs = selDay ? getBirthdaysForDay(selDay) : [];
-  const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+  const selectedBDs = bdForDay(selDay, month);
+  const selLabel = isSelToday
+    ? "🎉 Hoje"
+    : `${selDay} de ${MONTHS_BD[month]}${year !== today.getFullYear() ? " de " + year : ""}`;
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={cal.container}>
-        {/* Header */}
-        <View style={cal.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Feather name="x" size={22} color={C.text} />
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[bd.scrollContent, { paddingBottom: botPad }]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} colors={[C.tint]} />}
+    >
+      {/* Page header */}
+      <View style={bd.pageHeader}>
+        <Text style={bd.pageTitle}>🎂 Aniversariantes</Text>
+        {!isSelToday && (
+          <TouchableOpacity style={bd.todayBtn} onPress={goToToday} activeOpacity={0.8}>
+            <Feather name="calendar" size={13} color={C.tint} />
+            <Text style={bd.todayBtnText}>Hoje</Text>
           </TouchableOpacity>
-          <Text style={cal.title}>Consultar por data</Text>
-          <View style={{ width: 22 }} />
-        </View>
+        )}
+      </View>
 
-        {/* Month navigation */}
-        <View style={cal.monthNav}>
-          <TouchableOpacity onPress={prevMonth} style={cal.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      {/* Inline calendar */}
+      <View style={bd.calBox}>
+        <View style={bd.monthNav}>
+          <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Feather name="chevron-left" size={22} color={C.text} />
           </TouchableOpacity>
-          <Text style={cal.monthLabel}>{MONTHS_BD[month]} {year}</Text>
-          <TouchableOpacity onPress={nextMonth} style={cal.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={bd.monthLabel}>{MONTHS_BD[month]} {year}</Text>
+          <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Feather name="chevron-right" size={22} color={C.text} />
           </TouchableOpacity>
         </View>
 
-        {/* Weekday labels */}
-        <View style={cal.weekRow}>
-          {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
-            <Text key={i} style={cal.weekLabel}>{d}</Text>
+        <View style={bd.weekRow}>
+          {["D","S","T","Q","Q","S","S"].map((l, i) => (
+            <Text key={i} style={bd.weekLabel}>{l}</Text>
           ))}
         </View>
 
-        {/* Day grid */}
-        <View style={cal.dayGrid}>
+        <View style={bd.dayGrid}>
           {cells.map((day, i) => {
-            if (!day) return <View key={`e-${i}`} style={cal.dayCell} />;
+            if (!day) return <View key={`e${i}`} style={bd.dayCell} />;
             const isTd = isCurrentMonth && day === today.getDate();
             const isSel = day === selDay;
-            const hasBD = hasBirthday(day);
+            const hasBD = bdForDay(day, month).length > 0;
             return (
               <TouchableOpacity
-                key={day}
-                style={[cal.dayCell, isSel && cal.dayCellSel, isTd && !isSel && cal.dayCellToday]}
+                key={`d${day}`}
+                style={[bd.dayCell, isSel && bd.dayCellSel, !isSel && isTd && bd.dayCellToday]}
                 onPress={() => setSelDay(day)}
                 activeOpacity={0.7}
               >
-                <Text style={[cal.dayNum, isSel && cal.dayNumSel, isTd && !isSel && cal.dayNumToday]}>{day}</Text>
-                {hasBD && <View style={[cal.dot, isSel && cal.dotSel]} />}
+                <Text style={[bd.dayNum, isSel && bd.dayNumSel, !isSel && isTd && bd.dayNumToday]}>{day}</Text>
+                {hasBD && <View style={[bd.dot, isSel && bd.dotSel]} />}
               </TouchableOpacity>
             );
           })}
         </View>
-
-        {/* Selected day birthday list */}
-        <View style={cal.listSection}>
-          <Text style={cal.listTitle}>
-            {selDay
-              ? `Aniversariantes de ${selDay} de ${MONTHS_BD[month]}`
-              : "Toque em um dia para ver aniversariantes"}
-          </Text>
-          {selDay && selectedBDs.length === 0 && (
-            <Text style={cal.listEmpty}>Nenhum aniversariante nesta data.</Text>
-          )}
-          {selectedBDs.map((b: any, i: number) => (
-            <BirthdayCompactRow key={b.id} item={b} showBorder={i > 0}
-              isToday={isCurrentMonth && selDay === today.getDate()} />
-          ))}
-        </View>
       </View>
-    </Modal>
+
+      {/* List section */}
+      <View style={bd.listBox}>
+        <View style={bd.listHeader}>
+          <Text style={[bd.listTitle, isSelToday && bd.listTitleToday]}>{selLabel}</Text>
+          {selectedBDs.length > 0 && (
+            <View style={bd.countBadge}><Text style={bd.countText}>{selectedBDs.length}</Text></View>
+          )}
+        </View>
+
+        {loading ? (
+          <View style={bd.listLoading}><ActivityIndicator color={C.tint} /></View>
+        ) : selectedBDs.length === 0 ? (
+          <View style={bd.listEmpty}>
+            <Text style={bd.listEmptyEmoji}>{isSelToday ? "🎂" : "📅"}</Text>
+            <Text style={bd.listEmptyText}>
+              {isSelToday ? "Nenhum aniversariante hoje" : "Nenhum aniversariante nesta data."}
+            </Text>
+          </View>
+        ) : (
+          selectedBDs.map((b: any, i: number) => {
+            const tagStyle = (C.tagColors as any)[b.tag] || null;
+            const parts = b.birthDate?.split("-") || [];
+            const birthStr = parts.length === 3
+              ? `${parseInt(parts[2])}/${parseInt(parts[1]).toString().padStart(2, "0")}`
+              : "";
+            return (
+              <View key={b.id} style={[bd.bdRow, i > 0 && bd.bdRowBorder]}>
+                {b.avatarUrl ? (
+                  <Image source={{ uri: b.avatarUrl }} style={bd.bdAvatar} />
+                ) : (
+                  <View style={[bd.bdAvatarFb, isSelToday && { backgroundColor: "#059669" }]}>
+                    <Text style={bd.bdAvatarInitial}>{b.name?.[0]?.toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={bd.bdName} numberOfLines={1}>{b.name}</Text>
+                  {birthStr !== "" && (
+                    <Text style={bd.bdDateSmall}>{birthStr}</Text>
+                  )}
+                </View>
+                {tagStyle && b.tag && (
+                  <View style={[bd.bdTag, { backgroundColor: tagStyle.bg }]}>
+                    <Text style={[bd.bdTagText, { color: tagStyle.text }]}>{TAG_LABELS_BD[b.tag]}</Text>
+                  </View>
+                )}
+                {isSelToday && <Text style={{ fontSize: 20 }}>🎉</Text>}
+              </View>
+            );
+          })
+        )}
+      </View>
+    </ScrollView>
   );
 }
-const cal = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.background },
-  header: {
+const bd = StyleSheet.create({
+  scrollContent: { gap: 0 },
+  pageHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingTop: Platform.OS === "web" ? 20 : 56, paddingBottom: 14,
-    backgroundColor: C.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(60,60,67,0.2)",
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: C.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(60,60,67,0.18)",
   },
-  title: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
-  monthNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingVertical: 16, backgroundColor: C.surface },
-  navBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  monthLabel: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
-  weekRow: { flexDirection: "row", paddingHorizontal: 12, paddingBottom: 6, backgroundColor: C.surface },
-  weekLabel: { flex: 1, textAlign: "center", fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textMuted },
-  dayGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, paddingBottom: 8, backgroundColor: C.surface },
+  pageTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
+  todayBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "#EFF6FF", paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1, borderColor: "#BFDBFE",
+  },
+  todayBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.tint },
+
+  calBox: { backgroundColor: C.surface, paddingBottom: 8, marginBottom: 12 },
+  monthNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14 },
+  monthLabel: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
+  weekRow: { flexDirection: "row", paddingHorizontal: 14, marginBottom: 4 },
+  weekLabel: { flex: 1, textAlign: "center", fontSize: 11, fontFamily: "Inter_700Bold", color: C.textMuted, textTransform: "uppercase" },
+  dayGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 14 },
   dayCell: { width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center", position: "relative" },
-  dayCellSel: { backgroundColor: C.tint, borderRadius: 22 },
-  dayCellToday: { backgroundColor: "#EFF6FF", borderRadius: 22 },
-  dayNum: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
+  dayCellSel: { backgroundColor: C.tint, borderRadius: 999 },
+  dayCellToday: { backgroundColor: "#EFF6FF", borderRadius: 999 },
+  dayNum: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.text },
   dayNumSel: { color: "#fff", fontFamily: "Inter_700Bold" },
   dayNumToday: { color: C.tint, fontFamily: "Inter_700Bold" },
-  dot: { position: "absolute", bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: C.tint },
-  dotSel: { backgroundColor: "rgba(255,255,255,0.9)" },
-  listSection: {
-    flex: 1, backgroundColor: C.surface,
-    marginTop: 10, marginHorizontal: 12, borderRadius: 16,
+  dot: { position: "absolute", bottom: 3, width: 5, height: 5, borderRadius: 3, backgroundColor: C.tint },
+  dotSel: { backgroundColor: "rgba(255,255,255,0.85)" },
+
+  listBox: {
+    marginHorizontal: 14, backgroundColor: C.surface, borderRadius: 16, overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(60,60,67,0.12)",
-    overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
-  listTitle: {
-    fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary,
+  listHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 14, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(60,60,67,0.1)",
-    textTransform: "uppercase", letterSpacing: 0.5,
+    backgroundColor: C.surfaceAlt,
   },
-  listEmpty: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", padding: 20, textAlign: "center" },
+  listTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 },
+  listTitleToday: { color: "#166534" },
+  countBadge: { backgroundColor: C.tint, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  countText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
+  listLoading: { padding: 24, alignItems: "center" },
+  listEmpty: { padding: 28, alignItems: "center", gap: 8 },
+  listEmptyEmoji: { fontSize: 36 },
+  listEmptyText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
+
+  bdRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  bdRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(60,60,67,0.08)" },
+  bdAvatar: { width: 42, height: 42, borderRadius: 21 },
+  bdAvatarFb: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
+  bdAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 16 },
+  bdName: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.text },
+  bdDateSmall: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
+  bdTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  bdTagText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -327,7 +297,6 @@ export default function FeedScreen() {
   const [savedRefreshing, setSavedRefreshing] = useState(false);
   const [bdRefreshing, setBdRefreshing] = useState(false);
   const [bdBannerDismissedOn, setBdBannerDismissedOn] = useState<string | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(false);
   const todayKey = new Date().toDateString();
   const bdBannerDismissed = bdBannerDismissedOn === todayKey;
 
@@ -819,68 +788,13 @@ export default function FeedScreen() {
 
       {/* ══ ANIVERSÁRIOS TAB ══ */}
       {mainTab === "aniversarios" && (
-        <>
-          {/* Section header */}
-          <View style={styles.bdPageHeader}>
-            <View>
-              <Text style={styles.bdPageTitle}>🎂 Aniversariantes</Text>
-              <Text style={styles.bdPageSub}>{getTodayLabel()}</Text>
-            </View>
-            <TouchableOpacity style={styles.bdCalBtn} onPress={() => setCalendarVisible(true)} activeOpacity={0.8}>
-              <Feather name="calendar" size={15} color={C.tint} />
-              <Text style={styles.bdCalBtnText}>Calendário</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: botPad }}
-            refreshControl={<RefreshControl refreshing={bdRefreshing} onRefresh={async () => { setBdRefreshing(true); await bdAllQ.refetch(); setBdRefreshing(false); }} tintColor={C.tint} colors={[C.tint]} />}
-          >
-            {/* ── Hoje ── */}
-            <View style={styles.bdSectionWrap}>
-              <Text style={styles.bdSectionLabel}>Hoje</Text>
-              {bdTodayList.length > 0 ? (
-                <View style={styles.bdTodayCard}>
-                  {bdTodayList.map((b: any, i: number) => (
-                    <BirthdayCompactRow key={b.id} item={b} isToday showBorder={i > 0} />
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.bdNoneCard}>
-                  <Text style={styles.bdNoneEmoji}>🎂</Text>
-                  <Text style={styles.bdNoneText}>Nenhum aniversariante hoje</Text>
-                </View>
-              )}
-            </View>
-
-            {/* ── Próximos ── */}
-            <View style={styles.bdSectionWrap}>
-              <Text style={styles.bdSectionLabel}>Próximos — 365 dias</Text>
-              {bdUpcomingList.length > 0 ? (
-                <View style={{ gap: 8 }}>
-                  {bdUpcomingList.map((item: any) => <BirthdayCard key={item.id} item={item} />)}
-                </View>
-              ) : (
-                !bdAllQ.isLoading && (
-                  <View style={styles.bdNoneCard}>
-                    <Text style={styles.bdNoneEmoji}>📅</Text>
-                    <Text style={styles.bdNoneText}>Nenhum aniversário nos próximos 365 dias</Text>
-                  </View>
-                )
-              )}
-            </View>
-          </ScrollView>
-
-          {bdAllQ.isLoading && <View style={styles.loadingOverlay}><ActivityIndicator size="large" color={C.tint} /></View>}
-
-          {/* Calendar Modal */}
-          <BirthdayCalendarModal
-            visible={calendarVisible}
-            onClose={() => setCalendarVisible(false)}
-            allBirthdays={allBirthdays}
-          />
-        </>
+        <BirthdaysTab
+          allBirthdays={allBirthdays}
+          loading={bdAllQ.isLoading}
+          refreshing={bdRefreshing}
+          onRefresh={async () => { setBdRefreshing(true); await bdAllQ.refetch(); setBdRefreshing(false); }}
+          botPad={botPad}
+        />
       )}
     </View>
   );
@@ -928,7 +842,7 @@ const styles = StyleSheet.create({
   },
   tabItemActive: {},
   tabEmoji: { fontSize: 14 },
-  tabText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary, whiteSpace: "nowrap" as any },
+  tabText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary } as any,
   tabTextActive: { color: C.tint, fontFamily: "Inter_700Bold" },
   tabIndicator: { position: "absolute", bottom: 0, left: "10%", right: "10%", height: 3, backgroundColor: C.tint, borderRadius: 3 },
   tabBadge: { backgroundColor: "#EF4444", borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, marginLeft: 1 },
@@ -1015,67 +929,6 @@ const styles = StyleSheet.create({
 
   listContent: { paddingTop: 4 },
 
-  // ── Birthday tab new styles ───────────────────────────────────────────────
-  bdPageHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: C.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(60,60,67,0.2)",
-  },
-  bdPageTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
-  bdPageSub: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", marginTop: 2 },
-  bdCalBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#EFF6FF", paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, borderColor: "#BFDBFE",
-  },
-  bdCalBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.tint },
-  bdSectionWrap: { marginHorizontal: 14, marginTop: 16 },
-  bdSectionLabel: {
-    fontSize: 11, fontFamily: "Inter_700Bold", color: C.textMuted,
-    textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8,
-  },
-  bdTodayCard: {
-    backgroundColor: C.surface, borderRadius: 16, overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(60,60,67,0.12)",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-  },
-  bdNoneCard: {
-    backgroundColor: C.surface, borderRadius: 16, alignItems: "center",
-    paddingVertical: 20, paddingHorizontal: 16,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(60,60,67,0.12)",
-  },
-  bdNoneEmoji: { fontSize: 32, marginBottom: 6 },
-  bdNoneText: { fontSize: 14, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" },
-  // ── BirthdayCard component styles (kept for "Próximos" list) ─────────────
-  bdCard: {
-    flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.surface,
-    borderRadius: 16, padding: 14,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(60,60,67,0.12)",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-  },
-  bdCardToday: { borderWidth: 1.5, borderColor: C.tint, backgroundColor: "#f0fdf4" },
-  bdAvatarWrap: { position: "relative" },
-  bdAvatar: { width: 52, height: 52, borderRadius: 26 },
-  bdAvatarFallback: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.tint, alignItems: "center", justifyContent: "center" },
-  bdAvatarFallbackToday: { backgroundColor: "#059669" },
-  bdAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 20 },
-  bdCakeEmoji: { position: "absolute", bottom: -4, right: -4, fontSize: 18 },
-  bdInfo: { flex: 1, gap: 3 },
-  bdName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
-  bdNameToday: { color: "#166534" },
-  bdMetaRow: { flexDirection: "row", gap: 6 },
-  bdTagBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  bdTagText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  bdDateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 },
-  bdDateText: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
-  bdAgeSuffix: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" },
-  bdDaysBadge: { alignItems: "center", justifyContent: "center", backgroundColor: C.surfaceAlt, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, minWidth: 52 },
-  bdDaysBadgeToday: { backgroundColor: "#dcfce7" },
-  bdTodayEmoji: { fontSize: 22 },
-  bdDaysNum: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
-  bdDaysLabel: { fontSize: 10, color: C.textSecondary, fontFamily: "Inter_400Regular" },
 
   empty: { alignItems: "center", paddingTop: 60, paddingHorizontal: 40, gap: 10 },
   emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", marginBottom: 4 },

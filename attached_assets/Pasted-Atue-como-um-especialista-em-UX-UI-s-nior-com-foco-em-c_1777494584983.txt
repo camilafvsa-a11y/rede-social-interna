@@ -1,0 +1,187 @@
+Atue como um especialista em UX/UI sênior com foco em consistência visual, design systems e experiência de produto digital. Revise todo o aplicativo e implemente melhorias profundas de consistência visual, comportamento de interface e experiência do usuário, com base em boas práticas de produtos como iOS, Apple Human Interface Guidelines, Material Design e sistemas modernos de design.
+
+OBJETIVO PRINCIPAL:
+Garantir uma experiência 100% consistente, previsível e intuitiva em todo o app, especialmente em:
+- notificações
+- links
+- menções (@)
+- ícones
+- estados de interação
+- feedback visual
+
+---------------------------------------
+🔵 CONSISTÊNCIA DE LINKS E INTERAÇÕES
+---------------------------------------
+
+- Todo elemento que for clicável deve parecer clicável.
+- Padronizar links com:
+  - cor consistente (ex: azul padrão do app)
+  - comportamento de hover/press (mudança leve de opacidade ou cor)
+  - feedback visual ao toque (mobile)
+- Links devem SEMPRE ser clicáveis (não apenas coloridos).
+- Evitar textos azuis que não sejam links.
+
+👉 Problema atual a corrigir:
+- Quando um usuário é mencionado com @, apenas o primeiro nome fica azul e NÃO é clicável.
+
+👉 Correção obrigatória:
+- O nome completo deve ser destacado
+- Deve ser clicável
+- Deve levar ao perfil do usuário
+- Deve ter estado de interação (hover/press)
+
+---------------------------------------
+🟡 MENÇÕES (@USUÁRIO)
+---------------------------------------
+
+- Padronizar menções em todo o sistema:
+  - formato consistente (@Nome Sobrenome)
+  - destaque visual uniforme
+  - clique leva ao perfil
+- Diferenciar visualmente menções de texto comum, mas sem poluir.
+- Garantir que funcione em:
+  - feed
+  - comentários
+  - notificações
+
+---------------------------------------
+🔔 SISTEMA DE NOTIFICAÇÕES (UX)
+---------------------------------------
+
+- Criar consistência total entre:
+  - notificações internas
+  - notificações visuais (badges, listas)
+  - estados (lida / não lida)
+
+Diretrizes:
+- Notificações não lidas devem ter destaque claro (ex: fundo leve ou bold)
+- Notificações lidas devem perder destaque
+- Cada notificação deve ser clicável e levar para a ação correspondente
+
+Exemplo:
+- “João comentou no seu post” → leva direto ao post
+- “Maria te mencionou” → leva ao comentário com highlight
+
+- Criar hierarquia visual:
+  - título
+  - contexto
+  - tempo (ex: “há 2h”)
+
+- Garantir feedback imediato ao clicar:
+  - remover badge
+  - atualizar estado
+
+---------------------------------------
+🔘 BOTÕES E ELEMENTOS INTERATIVOS
+---------------------------------------
+
+- Padronizar TODOS os botões:
+  - mesmo raio de borda
+  - mesma altura mínima
+  - mesmo comportamento de clique
+- Estados obrigatórios:
+  - normal
+  - hover (desktop)
+  - pressed (mobile)
+  - disabled
+
+- Evitar botões com estilos diferentes sem motivo.
+
+---------------------------------------
+🧩 ÍCONES (CONSISTÊNCIA)
+---------------------------------------
+
+- Usar um único estilo de ícone (outline OU filled, não misturar)
+- Mesma espessura de traço
+- Mesmo tamanho base
+- Alinhamento consistente
+
+- Ícones devem sempre:
+  - ter significado claro
+  - não depender só da cor para comunicação
+  - ter label ou contexto quando necessário
+
+---------------------------------------
+📱 PADRÕES DE EXPERIÊNCIA (UX)
+---------------------------------------
+
+- Garantir previsibilidade:
+  - ações iguais devem ter comportamento igual
+- Evitar surpresas na navegação
+- Reduzir esforço cognitivo
+
+Aplicar:
+- Lei de Jakob (usuário espera padrões conhecidos)
+- Consistência > criatividade
+
+---------------------------------------
+📐 HIERARQUIA VISUAL
+---------------------------------------
+
+- Definir claramente:
+  - o que é clicável
+  - o que é informativo
+  - o que é secundário
+
+- Usar:
+  - tamanho
+  - peso de fonte
+  - cor
+  - espaçamento
+
+---------------------------------------
+🎯 FEEDBACK DE INTERAÇÃO
+---------------------------------------
+
+Todo clique deve ter resposta visual:
+- botão → muda levemente
+- link → responde ao toque
+- item clicável → feedback claro
+
+Evitar:
+- elementos que parecem clicáveis mas não são
+- elementos clicáveis sem feedback
+
+---------------------------------------
+📦 PADRONIZAÇÃO GLOBAL
+---------------------------------------
+
+Criar consistência em:
+- cores
+- espaçamentos
+- tipografia
+- bordas
+- sombras
+
+Se possível, estruturar como um mini design system:
+- tokens de cor
+- tamanhos padrão
+- componentes reutilizáveis
+
+---------------------------------------
+🚨 PROBLEMAS CRÍTICOS A CORRIGIR
+---------------------------------------
+
+- Menções (@) não clicáveis
+- Links que parecem links mas não funcionam
+- Falta de padrão em botões
+- Notificações sem hierarquia ou ação clara
+- Ícones inconsistentes
+
+---------------------------------------
+✅ ANTES DE FINALIZAR
+---------------------------------------
+
+- Testar fluxo completo de notificações
+- Testar cliques em menções
+- Testar todos os links
+- Verificar consistência visual entre telas
+- Garantir que tudo funcione bem no mobile
+
+---------------------------------------
+RESULTADO ESPERADO:
+Um app com experiência fluida, previsível e profissional, onde o usuário entende intuitivamente:
+- o que pode clicar
+- o que vai acontecer ao clicar
+- onde encontrar informações
+- como navegar sem esforço
