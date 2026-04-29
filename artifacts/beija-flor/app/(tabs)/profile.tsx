@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { uploadMedia } from "@/lib/upload";
@@ -25,13 +25,6 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador", master_admin: "Administrador Master",
 };
 
-const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-function formatDayMonth(dateStr: string): string {
-  const [, month, day] = dateStr.split("-").map(Number);
-  return `${day} de ${MONTHS_SHORT[month - 1]}`;
-}
-
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, updateUser } = useAuth();
@@ -45,16 +38,6 @@ export default function ProfileScreen() {
 
   const isAdmin = user?.role === "admin" || user?.role === "master_admin";
   const tagStyle = user?.tag ? (C.tagColors as any)[user.tag] : null;
-
-  const { data: birthdays = [] } = useQuery<any[]>({
-    queryKey: ["birthdays-preview"],
-    queryFn: () => api.get("/birthdays?days=30"),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const todayBirthdays = birthdays.filter((b: any) => b.daysUntil === 0);
-  const upcomingBirthdays = birthdays.filter((b: any) => b.daysUntil > 0).slice(0, 3);
-  const previewList = todayBirthdays.length > 0 ? todayBirthdays.slice(0, 3) : upcomingBirthdays;
 
   async function pickAvatar() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -144,68 +127,6 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-      </View>
-
-      {/* ── Aniversários do Time ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Aniversários do Time</Text>
-        <TouchableOpacity
-          style={styles.birthdayCard}
-          onPress={() => router.push("/(tabs)/birthdays")}
-          activeOpacity={0.85}
-        >
-          {/* Card header */}
-          <View style={styles.birthdayCardHeader}>
-            <View style={styles.birthdayIconBox}>
-              <Text style={styles.birthdayIconEmoji}>🎂</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.birthdayCardTitle}>Aniversários do Time</Text>
-              <Text style={styles.birthdayCardSub}>
-                {todayBirthdays.length > 0
-                  ? `🎉 ${todayBirthdays.length} aniversário${todayBirthdays.length > 1 ? "s" : ""} hoje!`
-                  : upcomingBirthdays.length > 0
-                    ? `${upcomingBirthdays.length} próximos em 30 dias`
-                    : "Nenhum aniversário em 30 dias"}
-              </Text>
-            </View>
-            <View style={styles.birthdayVerTodos}>
-              <Text style={styles.birthdayVerTodosText}>Ver todos</Text>
-              <Feather name="chevron-right" size={14} color={C.tint} />
-            </View>
-          </View>
-
-          {/* Preview list */}
-          {previewList.length > 0 && (
-            <View style={styles.birthdayPreviewList}>
-              {previewList.map((b: any, i: number) => (
-                <View key={b.id} style={[styles.birthdayPreviewRow, i > 0 && styles.birthdayPreviewBorder]}>
-                  {b.avatarUrl ? (
-                    <Image source={{ uri: b.avatarUrl }} style={styles.birthdayAvatar} />
-                  ) : (
-                    <View style={[styles.birthdayAvatarFallback, b.daysUntil === 0 && { backgroundColor: "#059669" }]}>
-                      <Text style={styles.birthdayAvatarInitial}>{b.name?.[0]?.toUpperCase()}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.birthdayPreviewName} numberOfLines={1}>{b.name}</Text>
-                  <Text style={styles.birthdayPreviewDate}>
-                    {b.daysUntil === 0
-                      ? "🎉 Hoje!"
-                      : b.birthDate
-                        ? formatDayMonth(b.birthDate)
-                        : `em ${b.daysUntil}d`}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {previewList.length === 0 && (
-            <View style={styles.birthdayEmptyRow}>
-              <Text style={styles.birthdayEmptyText}>Nenhum aniversário nos próximos 30 dias</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -346,49 +267,6 @@ const styles = StyleSheet.create({
   actionText: { flex: 1, fontSize: 14, color: C.text, fontFamily: "Inter_500Medium" },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#FEF2F2", borderRadius: 14, padding: 14, borderColor: "#FECACA" },
   logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.danger },
-
-  /* Birthday card */
-  birthdayCard: {
-    backgroundColor: C.surface, borderRadius: 16,
-    borderColor: "#BFDBFE",
-    overflow: "hidden",
-    shadowColor: "#2563EB", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
-  },
-  birthdayCardHeader: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    padding: 14, borderBottomWidth: 1, borderBottomColor: C.borderLight,
-    backgroundColor: "#EFF6FF",
-  },
-  birthdayIconBox: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: "#DBEAFE",
-    alignItems: "center", justifyContent: "center",
-  },
-  birthdayIconEmoji: { fontSize: 22 },
-  birthdayCardTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#1E40AF" },
-  birthdayCardSub: { fontSize: 12, color: "#3B82F6", fontFamily: "Inter_400Regular", marginTop: 2 },
-  birthdayVerTodos: { flexDirection: "row", alignItems: "center", gap: 2 },
-  birthdayVerTodosText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.tint },
-
-  /* Preview list */
-  birthdayPreviewList: { paddingVertical: 4 },
-  birthdayPreviewRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
-  },
-  birthdayPreviewBorder: { borderTopWidth: 1, borderTopColor: C.borderLight },
-  birthdayAvatar: { width: 34, height: 34, borderRadius: 17 },
-  birthdayAvatarFallback: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
-  },
-  birthdayAvatarInitial: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 },
-  birthdayPreviewName: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
-  birthdayPreviewDate: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.tint },
-
-  birthdayEmptyRow: { padding: 14, alignItems: "center" },
-  birthdayEmptyText: { fontSize: 13, color: C.textMuted, fontFamily: "Inter_400Regular" },
 
   /* Avatar preview modal */
   previewOverlay: {
