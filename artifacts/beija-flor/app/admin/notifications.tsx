@@ -460,11 +460,12 @@ const styles = StyleSheet.create({
   modalDesc: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular", lineHeight: 18 },
   fieldLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary, marginBottom: 2 },
   input: {
-    borderWidth: 1, borderColor: C.border, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: C.inputBorder, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 15, fontFamily: "Inter_400Regular", color: C.text,
+    backgroundColor: C.inputBg,
   },
-  inputMulti: { minHeight: 80, textAlignVertical: "top" },
+  inputMulti: { minHeight: 90, textAlignVertical: "top", paddingTop: 12 },
   sendBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, backgroundColor: C.tint, borderRadius: 12, paddingVertical: 14, marginTop: 4,

@@ -335,9 +335,9 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row", alignItems: "center", gap: 8,
     marginHorizontal: 16, marginTop: 10, marginBottom: 4,
-    backgroundColor: C.inputBg, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 9,
-    borderWidth: 1, borderColor: C.border,
+    backgroundColor: C.inputBg, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderWidth: 1, borderColor: C.inputBorder,
   },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
@@ -408,8 +408,8 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 8,
     marginHorizontal: 16, marginBottom: 8,
     backgroundColor: C.inputBg, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderWidth: 1, borderColor: C.inputBorder,
   },
   searchInput: {
     flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",

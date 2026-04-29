@@ -1191,8 +1191,8 @@ const styles = StyleSheet.create({
   banApplyBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
 
   input: {
-    backgroundColor: C.surfaceAlt, borderRadius: 10, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text,
+    backgroundColor: C.inputBg, borderRadius: 12, borderWidth: 1, borderColor: C.inputBorder,
+    paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, fontFamily: "Inter_400Regular", color: C.text,
   },
 
   termRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 10, borderRadius: 10, borderWidth: 1 },

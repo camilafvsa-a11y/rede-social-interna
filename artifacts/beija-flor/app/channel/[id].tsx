@@ -149,18 +149,21 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: "row", alignItems: "flex-end", gap: 10,
     paddingHorizontal: 16, paddingTop: 10,
-    backgroundColor: C.surface, borderTopWidth: 1, borderTopColor: C.border,
+    backgroundColor: C.surface,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(60,60,67,0.2)",
   },
   input: {
-    flex: 1, backgroundColor: C.inputBg, borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 14, fontFamily: "Inter_400Regular",
+    flex: 1, backgroundColor: C.surfaceAlt, borderRadius: 22,
+    paddingHorizontal: 16, paddingVertical: 11,
+    fontSize: 15, fontFamily: "Inter_400Regular",
     color: C.text, maxHeight: 100,
-    borderWidth: 1, borderColor: C.border,
+    borderWidth: 1, borderColor: "rgba(60,60,67,0.2)",
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: C.tint, alignItems: "center", justifyContent: "center",
+    shadowColor: C.tint, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25, shadowRadius: 4, elevation: 2,
   },
-  sendBtnDisabled: { opacity: 0.5 },
+  sendBtnDisabled: { backgroundColor: "rgba(60,60,67,0.18)", shadowOpacity: 0 },
 });

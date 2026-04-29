@@ -787,10 +787,11 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
 const styles = StyleSheet.create({
   card: {
     backgroundColor: C.surface, borderRadius: 16,
-    paddingTop: 12, paddingHorizontal: 16, paddingBottom: 4,
-    marginHorizontal: 12, marginVertical: 5,
+    paddingTop: 14, paddingHorizontal: 16, paddingBottom: 4,
+    marginHorizontal: 12, marginVertical: 4,
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(60,60,67,0.10)",
   },
   ribbon: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 8 },
   ribbonTag: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },

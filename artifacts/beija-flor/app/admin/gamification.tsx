@@ -1155,9 +1155,9 @@ const st = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   fieldHint: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" },
   input: {
-    backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, fontFamily: "Inter_400Regular", color: C.text,
+    backgroundColor: C.inputBg, borderRadius: 12, borderWidth: 1, borderColor: C.inputBorder,
+    paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 15, fontFamily: "Inter_400Regular", color: C.text,
   },
   switchRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
   switchLabel: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },

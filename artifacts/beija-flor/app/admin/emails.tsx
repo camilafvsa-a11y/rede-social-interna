@@ -190,9 +190,9 @@ const styles = StyleSheet.create({
   modalContent: { padding: 16, gap: 4 },
   fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text, marginTop: 8, marginBottom: 4 },
   input: {
-    backgroundColor: C.inputBg, borderWidth: 1, borderColor: C.border,
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, color: C.text, fontFamily: "Inter_400Regular",
+    backgroundColor: C.inputBg, borderWidth: 1, borderColor: C.inputBorder,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 15, color: C.text, fontFamily: "Inter_400Regular",
   },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   optionChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },

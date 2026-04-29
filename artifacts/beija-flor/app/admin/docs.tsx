@@ -1350,11 +1350,11 @@ const styles = StyleSheet.create({
   fieldRow: { gap: 4, marginBottom: 4 },
   fieldLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   input: {
-    backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, color: C.text, fontFamily: "Inter_400Regular",
+    backgroundColor: C.inputBg, borderRadius: 12, borderWidth: 1, borderColor: C.inputBorder,
+    paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 15, color: C.text, fontFamily: "Inter_400Regular",
   },
-  inputMulti: { height: 140, textAlignVertical: "top", paddingTop: 10 },
+  inputMulti: { height: 140, textAlignVertical: "top", paddingTop: 12 },
 
   segmentRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   segmentBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface },

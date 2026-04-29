@@ -178,13 +178,20 @@ function MaskedInput({ label, value, onChangeText, mask, placeholder, icon, keyb
 const mStyles = StyleSheet.create({
   field: { gap: 6 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
-  req: { fontSize: 13, color: "#DC2626", fontFamily: "Inter_700Bold" },
-  inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, height: 48 },
-  inputWrapError: { borderColor: "#DC2626" },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text },
-  error: { fontSize: 11, color: "#DC2626", fontFamily: "Inter_400Regular" },
+  label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  req: { fontSize: 14, color: C.danger, fontFamily: "Inter_700Bold" },
+  inputWrap: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: C.inputBg, borderRadius: 12,
+    borderWidth: 1, borderColor: C.inputBorder,
+    paddingHorizontal: 14, height: 52,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 2,
+  },
+  inputWrapError: { borderColor: C.danger, borderWidth: 1.5 },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: C.text, padding: 0 },
+  error: { fontSize: 12, color: C.danger, fontFamily: "Inter_400Regular" },
 });
 
 // ─── Tela principal ───────────────────────────────────────────────────────────

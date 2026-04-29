@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
   modalContent: { padding: 16, gap: 4 },
   fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text, marginTop: 12, marginBottom: 6 },
-  input: { backgroundColor: C.inputBg, borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.text, fontFamily: "Inter_400Regular" },
+  input: { backgroundColor: C.inputBg, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: C.text, fontFamily: "Inter_400Regular" },
 
   /* Cover picker */
   coverPickerBtn: { borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border, borderStyle: "dashed" },
