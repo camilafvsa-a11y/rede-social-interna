@@ -10,6 +10,7 @@ import Colors from "@/constants/colors";
 const C = Colors.light;
 
 const ADMIN_SECTIONS = [
+  { icon: "bell", title: "Central de Notificações", desc: "Ver todas as notificações do app, estatísticas por tipo e enviar comunicados", route: "/admin/notifications" },
   { icon: "award", title: "Gamificação", desc: "Ranking, competições, regras de pontuação e controle anti-spam", route: "/admin/gamification" },
   { icon: "users", title: "Usuários & Convites", desc: "Gerenciar usuários, convites, permissões e e-mails autorizados", route: "/admin/users" },
   { icon: "edit-3", title: "Assinaturas & Termos", desc: "Ver assinaturas de documentos, escolhas de uso de imagem e confirmações de valores", route: "/admin/signatures" },

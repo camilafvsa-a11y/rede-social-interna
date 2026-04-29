@@ -15,6 +15,7 @@ export default function AdminLayout() {
       <Stack.Screen name="export-import" />
       <Stack.Screen name="test-lab" />
       <Stack.Screen name="preview-onboarding" />
+      <Stack.Screen name="notifications" />
     </Stack>
   );
 }
