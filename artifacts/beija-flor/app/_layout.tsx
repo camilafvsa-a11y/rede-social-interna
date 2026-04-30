@@ -5,6 +5,12 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from "@expo-google-fonts/poppins";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,6 +21,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { AppearanceProvider } from "@/context/AppearanceContext";
 
 SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
@@ -57,6 +64,10 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
   });
 
   useEffect(() => {
@@ -70,17 +81,19 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <NotificationProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </NotificationProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <AppearanceProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <NotificationProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </NotificationProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </AppearanceProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

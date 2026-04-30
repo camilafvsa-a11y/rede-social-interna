@@ -15,6 +15,7 @@ const ADMIN_SECTIONS = [
   { icon: "users", title: "Usuários & Convites", desc: "Gerenciar usuários, convites, permissões e e-mails autorizados", route: "/admin/users" },
   { icon: "tag", title: "Tags & Estrutura", desc: "Gerenciar opções de Unidade, Setor e Cargo para seleção pelos colaboradores", route: "/admin/tags" },
   { icon: "shield", title: "Configurações de Segurança", desc: "Senha padrão, regras de senha, primeiro acesso e reset de senha", route: "/admin/security" },
+  { icon: "type", title: "Aparência", desc: "Escolher a fonte global do app e personalizar a identidade visual para todos os usuários", route: "/admin/aparencia" },
   { icon: "edit-3", title: "Assinaturas & Termos", desc: "Ver assinaturas de documentos, escolhas de uso de imagem e confirmações de valores", route: "/admin/signatures" },
   { icon: "hash", title: "Canais", desc: "Criar e editar canais", route: "/admin/channels" },
   { icon: "inbox", title: "Chamados", desc: "Gerenciar chamados, delegar e configurar responsáveis por área", route: "/admin/tickets" },

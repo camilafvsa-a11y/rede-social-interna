@@ -543,10 +543,13 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
   const isPinned = post.isPinned ?? false;
   const isHighlighted = post.isHighlighted ?? false;
   const isOfficial = post.isOfficial ?? false;
+  const isInternalComm = (post.channel as any)?.isInternalComm ?? false;
   const category = post.category ?? null;
 
-  // Compose bordered style for highlighted posts
-  const cardBorderStyle = isHighlighted
+  // Compose bordered style for highlighted/official posts
+  const cardBorderStyle = isInternalComm
+    ? { borderWidth: 2, borderColor: "#F59E0B", borderLeftWidth: 4, borderLeftColor: "#F59E0B" }
+    : isHighlighted
     ? { borderWidth: 2, borderColor: "#2563EB" }
     : isPinned
     ? { borderWidth: 1.5, borderColor: "#FFD700" }
@@ -555,9 +558,15 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
   return (
     <>
       <View style={[styles.card, cardBorderStyle]}>
-        {/* ── Pinned / Official / Highlighted ribbon ── */}
-        {(isPinned || isOfficial || isHighlighted) && (
+        {/* ── Pinned / Official / Highlighted / InternalComm ribbon ── */}
+        {(isPinned || isOfficial || isHighlighted || isInternalComm) && (
           <View style={styles.ribbon}>
+            {isInternalComm && (
+              <View style={[styles.ribbonTag, { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A" }]}>
+                <Text style={{ fontSize: 11 }}>⭐</Text>
+                <Text style={[styles.ribbonText, { color: "#92400E", fontFamily: "Inter_700Bold" }]}>Comunicação Interna</Text>
+              </View>
+            )}
             {isHighlighted && (
               <View style={[styles.ribbonTag, { backgroundColor: "#EEF2FF" }]}>
                 <Feather name="star" size={11} color="#4F46E5" />
@@ -570,10 +579,10 @@ export default function PostCard({ post, onLikeChange, onDelete, onSaveChange, c
                 <Text style={[styles.ribbonText, { color: "#D97706" }]}>Fixado</Text>
               </View>
             )}
-            {isOfficial && (
-              <View style={[styles.ribbonTag, { backgroundColor: "#EFF6FF" }]}>
-                <Feather name="shield" size={11} color="#2563EB" />
-                <Text style={[styles.ribbonText, { color: "#2563EB" }]}>Oficial</Text>
+            {isOfficial && !isInternalComm && (
+              <View style={[styles.ribbonTag, { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" }]}>
+                <Text style={[styles.ribbonText, { color: "#DC2626", fontFamily: "Inter_700Bold", fontSize: 12 }]}>!</Text>
+                <Text style={[styles.ribbonText, { color: "#DC2626" }]}>Importante!</Text>
               </View>
             )}
             {category && CATEGORY_LABELS[category] && (

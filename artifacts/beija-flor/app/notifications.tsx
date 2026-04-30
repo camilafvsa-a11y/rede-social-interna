@@ -23,14 +23,14 @@ type TypeCfg = {
 };
 
 const TYPE_CONFIG: Record<string, TypeCfg> = {
-  comunicacao_interna: { icon: "megaphone",         color: "#2563EB", bg: "#EFF6FF",  label: "Comunicação Interna", priority: "high" },
+  comunicacao_interna: { icon: "star",              color: "#D97706", bg: "#FFFBEB",  label: "Comunicação Interna", priority: "high" },
   broadcast:           { icon: "bell",              color: "#2563EB", bg: "#EFF6FF",  label: "Comunicado Oficial",  priority: "high" },
   doc_sign_required:   { icon: "edit-3",            color: "#DC2626", bg: "#FEF2F2",  label: "Assinatura pendente", priority: "high" },
   doc_read_required:   { icon: "book-open",         color: "#D97706", bg: "#FFFBEB",  label: "Leitura obrigatória", priority: "high" },
   doc_new:             { icon: "file-text",         color: "#059669", bg: "#F0FDF4",  label: "Novo documento",      priority: "medium" },
   doc_signed:          { icon: "check-circle",      color: "#059669", bg: "#F0FDF4",  label: "Doc. assinado",       priority: "low" },
   doc_read:            { icon: "check",             color: "#059669", bg: "#F0FDF4",  label: "Leitura confirmada",  priority: "low" },
-  dm:                  { icon: "mail",              color: "#7C3AED", bg: "#F5F3FF",  label: "Mensagem privada",    priority: "high" },
+  dm:                  { icon: "message-circle",    color: "#7C3AED", bg: "#F5F3FF",  label: "Mensagem privada",    priority: "high" },
   comment:             { icon: "message-circle",    color: "#0891B2", bg: "#ECFEFF",  label: "Comentário",          priority: "medium" },
   comment_reply:       { icon: "corner-down-right", color: "#0891B2", bg: "#ECFEFF",  label: "Resposta",            priority: "medium" },
   mention:             { icon: "at-sign",           color: "#7C3AED", bg: "#F5F3FF",  label: "Menção",              priority: "medium" },
@@ -74,45 +74,64 @@ function NotifCard({ item, onPress, onArchive }: {
   onArchive: (id: number) => void;
 }) {
   const cfg = TYPE_CONFIG[item.type] ?? DEFAULT_CFG;
+  const isComm = item.type === "comunicacao_interna";
+  const isBroadcast = item.type === "broadcast";
   const isHighPriority = cfg.priority === "high";
-  const isComm = item.type === "comunicacao_interna" || item.type === "broadcast";
 
   return (
-    <View style={[styles.card, !item.read && styles.cardUnread, isComm && styles.cardComm]}>
+    <View style={[
+      styles.card,
+      !item.read && styles.cardUnread,
+      isComm && styles.cardComm,
+      !item.read && isHighPriority && { borderLeftWidth: 3, borderLeftColor: cfg.color },
+    ]}>
       <TouchableOpacity
         style={styles.cardInner}
         onPress={() => onPress(item)}
         activeOpacity={0.75}
       >
-        {/* Priority left border */}
-        <View style={[styles.priorityBar, { backgroundColor: cfg.color }]} />
-
         {/* Icon */}
-        <View style={[styles.iconWrap, { backgroundColor: cfg.bg }]}>
-          <Feather name={cfg.icon} size={18} color={cfg.color} />
+        <View style={[styles.iconWrap, { backgroundColor: isComm ? "#FEF9C3" : cfg.bg }]}>
+          {isComm ? (
+            <Text style={{ fontSize: 20 }}>⭐</Text>
+          ) : (
+            <Feather name={cfg.icon} size={18} color={cfg.color} />
+          )}
         </View>
 
         {/* Content */}
         <View style={styles.cardContent}>
           <View style={styles.cardTop}>
             <View style={styles.cardTopLeft}>
-              {isComm && (
-                <View style={[styles.typeBadge, { backgroundColor: cfg.bg }]}>
-                  <Feather name="shield" size={9} color={cfg.color} />
-                  <Text style={[styles.typeBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+              {(isComm || isBroadcast) && (
+                <View style={[styles.typeBadge, {
+                  backgroundColor: isComm ? "#FFFBEB" : cfg.bg,
+                  borderWidth: 1,
+                  borderColor: isComm ? "#FDE68A" : cfg.color + "40",
+                }]}>
+                  {isComm && <Text style={{ fontSize: 9 }}>⭐</Text>}
+                  {!isComm && <Feather name="bell" size={9} color={cfg.color} />}
+                  <Text style={[styles.typeBadgeText, { color: isComm ? "#92400E" : cfg.color }]}>{cfg.label}</Text>
                 </View>
               )}
-              <Text style={[styles.cardTitle, isComm && { color: cfg.color }]} numberOfLines={1}>
+              <Text style={[
+                styles.cardTitle,
+                isComm && { color: "#92400E", fontFamily: "Inter_700Bold" },
+                isBroadcast && { color: cfg.color },
+                !item.read && { fontFamily: "Inter_600SemiBold" },
+              ]} numberOfLines={1}>
                 {item.title}
               </Text>
             </View>
             <Text style={styles.cardTime}>{formatRelative(item.createdAt)}</Text>
           </View>
-          <Text style={styles.cardBody} numberOfLines={2}>{item.body}</Text>
+          <Text style={[styles.cardBody, !item.read && { color: C.text }]} numberOfLines={2}>
+            {item.body}
+          </Text>
         </View>
 
         {/* Unread dot */}
-        {!item.read && <View style={[styles.unreadDot, { backgroundColor: cfg.color }]} />}
+        {!item.read && <View style={[styles.unreadDot, { backgroundColor: isComm ? "#F59E0B" : cfg.color }]} />}
       </TouchableOpacity>
 
       {/* Archive button */}

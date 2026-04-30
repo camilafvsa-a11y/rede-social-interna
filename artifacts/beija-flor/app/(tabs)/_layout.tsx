@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, Text } from "react-native";
 import Colors from "@/constants/colors";
@@ -33,12 +33,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Feed",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={{ position: "relative" }}>
               {isIOS ? (
-                <SymbolView name="house" tintColor={color} size={24} />
+                <SymbolView name={focused ? "house.fill" : "house"} tintColor={color} size={24} />
               ) : (
-                <Feather name="home" size={22} color={color} />
+                <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
               )}
               {unreadCount > 0 && (
                 <View style={styles.tabBadge}>
@@ -53,11 +53,11 @@ export default function TabLayout() {
         name="channels"
         options={{
           title: "Canais",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="number" tintColor={color} size={24} />
+              <SymbolView name={focused ? "number.square.fill" : "number.square"} tintColor={color} size={24} />
             ) : (
-              <Feather name="hash" size={22} color={color} />
+              <Ionicons name={focused ? "grid" : "grid-outline"} size={22} color={color} />
             ),
         }}
       />
@@ -65,11 +65,11 @@ export default function TabLayout() {
         name="integra"
         options={{
           title: "Integra",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="doc.text" tintColor={color} size={24} />
+              <SymbolView name={focused ? "doc.text.fill" : "doc.text"} tintColor={color} size={24} />
             ) : (
-              <Feather name="file-text" size={22} color={color} />
+              <Ionicons name={focused ? "document-text" : "document-text-outline"} size={24} color={color} />
             ),
         }}
       />
@@ -77,11 +77,11 @@ export default function TabLayout() {
         name="ranking"
         options={{
           title: "Ranking",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="trophy" tintColor={color} size={24} />
+              <SymbolView name={focused ? "trophy.fill" : "trophy"} tintColor={color} size={24} />
             ) : (
-              <Feather name="award" size={22} color={color} />
+              <Ionicons name={focused ? "trophy" : "trophy-outline"} size={24} color={color} />
             ),
         }}
       />
@@ -89,12 +89,12 @@ export default function TabLayout() {
         name="tickets"
         options={{
           title: "Chamados",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={{ position: "relative" }}>
               {isIOS ? (
-                <SymbolView name="questionmark.bubble" tintColor={color} size={24} />
+                <SymbolView name={focused ? "questionmark.bubble.fill" : "questionmark.bubble"} tintColor={color} size={24} />
               ) : (
-                <Feather name="help-circle" size={22} color={color} />
+                <Ionicons name={focused ? "help-circle" : "help-circle-outline"} size={24} color={color} />
               )}
               {ticketUnreadCount > 0 && (
                 <View style={styles.tabBadge}>
@@ -109,11 +109,11 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="person" tintColor={color} size={24} />
+              <SymbolView name={focused ? "person.fill" : "person"} tintColor={color} size={24} />
             ) : (
-              <Feather name="user" size={22} color={color} />
+              <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
             ),
         }}
       />
