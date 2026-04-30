@@ -27,6 +27,7 @@ type IntegraItem = {
   pdfUrl: string | null;
   requiresSign: boolean;
   requiresRead: boolean;
+  actionType: string;
   docKey: string;
   iconName: string | null;
   sortOrder: number;
@@ -163,11 +164,15 @@ function CircularProgress({ percent, size = 110 }: { percent: number; size?: num
 
 // ─── Checkbox de leitura ──────────────────────────────────────────────────────
 function ReadCheckbox({
-  isRead, onPress, loading,
-}: { isRead: boolean; onPress: () => void; loading: boolean }) {
+  isRead, onPress, loading, actionType,
+}: { isRead: boolean; onPress: () => void; loading: boolean; actionType?: string }) {
+  const isAceite = actionType === "aceite";
+  const pendingLabel = isAceite ? "Li e concordo com este documento" : "Marcar como lido";
+  const doneLabel = isAceite ? "Confirmado" : "Marcado como lido";
+
   return (
     <TouchableOpacity
-      style={[styles.readCheckRow, isRead && styles.readCheckRowDone]}
+      style={[styles.readCheckRow, isRead && styles.readCheckRowDone, isAceite && !isRead && styles.readCheckRowAceite]}
       onPress={onPress}
       disabled={isRead || loading}
       activeOpacity={0.8}
@@ -180,9 +185,10 @@ function ReadCheckbox({
             : null}
       </View>
       <Text style={[styles.readCheckLabel, isRead && styles.readCheckLabelDone]}>
-        {isRead ? "Marcado como lido" : "Marcar como lido"}
+        {isRead ? doneLabel : pendingLabel}
       </Text>
       {isRead && <Feather name="check-circle" size={14} color="#059669" />}
+      {isAceite && !isRead && !loading && <Feather name="check-square" size={14} color="#D97706" />}
     </TouchableOpacity>
   );
 }
@@ -215,12 +221,26 @@ function PolicyCard({
             <Text style={styles.policyTitle} numberOfLines={expanded ? undefined : 1}>
               {item.title}
             </Text>
-            {item.requiresRead && !isRead && (
-              <View style={styles.requiredBadge}>
-                <Text style={styles.requiredText}>Obrigatório</Text>
+            {/* Badge based on actionType + read status */}
+            {(item.actionType === "aceite" || (item.actionType !== "assinatura" && item.requiresRead)) && !isRead && (
+              <View style={styles.aceitePendenteBadge}>
+                <Feather name="check-square" size={9} color="#D97706" />
+                <Text style={styles.aceitePendenteText}>Confirmar</Text>
               </View>
             )}
-            {isRead && (
+            {(item.actionType === "aceite" || (item.actionType !== "assinatura" && item.requiresRead)) && isRead && (
+              <View style={styles.readBadge}>
+                <Feather name="check" size={9} color="#059669" />
+                <Text style={styles.readBadgeText}>Aceito</Text>
+              </View>
+            )}
+            {(item.actionType === "informativo" && !item.requiresRead) && !isRead && (
+              <View style={styles.informativoBadgeApp}>
+                <Feather name="eye" size={9} color="#6B7280" />
+                <Text style={styles.informativoText}>Pendente</Text>
+              </View>
+            )}
+            {(item.actionType === "informativo" && !item.requiresRead) && isRead && (
               <View style={styles.readBadge}>
                 <Feather name="check" size={9} color="#059669" />
                 <Text style={styles.readBadgeText}>Lido</Text>
@@ -870,6 +890,18 @@ const styles = StyleSheet.create({
     borderRadius: 4, flexShrink: 0, borderWidth: 1, borderColor: "#BBF7D0",
   },
   readBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#059669" },
+  aceitePendenteBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "#FFFBEB", paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, flexShrink: 0, borderWidth: 1, borderColor: "#FDE68A",
+  },
+  aceitePendenteText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#D97706" },
+  informativoBadgeApp: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "#F9FAFB", paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, flexShrink: 0, borderWidth: 1, borderColor: "#E5E7EB",
+  },
+  informativoText: { fontSize: 10, fontFamily: "Inter_500Medium", color: "#6B7280" },
 
   /* Read checkbox row */
   readCheckRow: {

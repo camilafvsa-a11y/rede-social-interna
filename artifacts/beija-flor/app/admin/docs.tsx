@@ -28,6 +28,7 @@ type IntegraItem = {
   pdfUrl: string | null;
   requiresSign: boolean;
   requiresRead: boolean;
+  actionType: string;
   docKey: string;
   iconName: string | null;
   sortOrder: number;
@@ -48,6 +49,8 @@ type SectionDef = {
   count: number;
 };
 
+type ActionType = "informativo" | "aceite" | "assinatura";
+
 type FormState = {
   title: string;
   subtitle: string;
@@ -60,8 +63,7 @@ type FormState = {
   docType: string;
   content: string;
   pdfUrl: string;
-  requiresSign: boolean;
-  requiresRead: boolean;
+  actionType: ActionType;
   countsForProgress: boolean;
   showInIntegra: boolean;
   showInOnboarding: boolean;
@@ -73,12 +75,28 @@ const EMPTY_FORM: FormState = {
   title: "", subtitle: "", category: "conduct",
   sectionName: "", sectionIcon: "shield", sectionColor: "#2563EB", sectionColorBg: "#EFF6FF",
   iconName: "file-text", docType: "text", content: "", pdfUrl: "",
-  requiresSign: false, requiresRead: true, countsForProgress: true,
+  actionType: "informativo", countsForProgress: true,
   showInIntegra: true, showInOnboarding: true,
   sortOrder: "0", isActive: true,
 };
 
+const EMPTY_VALUE_FORM: FormState = {
+  title: "", subtitle: "", category: "values",
+  sectionName: "", sectionIcon: "heart", sectionColor: "#DC2626", sectionColorBg: "#FEF2F2",
+  iconName: "heart", docType: "text", content: "", pdfUrl: "",
+  actionType: "informativo", countsForProgress: false,
+  showInIntegra: true, showInOnboarding: false,
+  sortOrder: "0", isActive: true,
+};
+
 function itemToForm(item: IntegraItem): FormState {
+  // Derive actionType from DB or from legacy boolean fields
+  let actionType: ActionType = (item.actionType as ActionType) || "informativo";
+  if (!item.actionType) {
+    if (item.requiresSign) actionType = "assinatura";
+    else if (item.requiresRead) actionType = "aceite";
+    else actionType = "informativo";
+  }
   return {
     title: item.title,
     subtitle: item.subtitle || "",
@@ -91,8 +109,7 @@ function itemToForm(item: IntegraItem): FormState {
     docType: item.docType || "text",
     content: item.content || "",
     pdfUrl: item.pdfUrl || "",
-    requiresSign: item.requiresSign,
-    requiresRead: item.requiresRead,
+    actionType,
     countsForProgress: item.countsForProgress,
     showInIntegra: item.showInIntegra,
     showInOnboarding: item.showInOnboarding,
@@ -637,10 +654,22 @@ function DocCard({ item, onEdit, onToggleActive, onDelete }: {
           {!item.isActive && (
             <View style={styles.inactiveBadge}><Text style={styles.inactiveBadgeText}>Inativo</Text></View>
           )}
-          {item.requiresSign && (
+          {(item.actionType === "assinatura" || item.requiresSign) && (
             <View style={styles.signBadge}>
               <Feather name="edit-3" size={9} color="#7C3AED" />
-              <Text style={styles.signBadgeText}>Assin.</Text>
+              <Text style={styles.signBadgeText}>Assinatura</Text>
+            </View>
+          )}
+          {(item.actionType === "aceite" && !item.requiresSign) && (
+            <View style={styles.aceiteBadge}>
+              <Feather name="check-square" size={9} color="#D97706" />
+              <Text style={styles.aceiteBadgeText}>Aceite</Text>
+            </View>
+          )}
+          {(item.actionType === "informativo" && !item.requiresSign && !item.requiresRead) && (
+            <View style={styles.informativoBadge}>
+              <Feather name="info" size={9} color="#2563EB" />
+              <Text style={styles.informativoBadgeText}>Informativo</Text>
             </View>
           )}
           {item.docType === "pdf" && (
@@ -676,23 +705,28 @@ function DocCard({ item, onEdit, onToggleActive, onDelete }: {
 }
 
 // ─── DocFormModal ─────────────────────────────────────────────────────────────
-function DocFormModal({ visible, item, sections, onClose, onSaved }: {
+function DocFormModal({ visible, item, sections, defaultCategory, onClose, onSaved }: {
   visible: boolean;
   item: IntegraItem | null;
   sections: SectionDef[];
+  defaultCategory?: string | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const isEdit = !!item;
-  const [form, setForm] = useState<FormState>(item ? itemToForm(item) : EMPTY_FORM);
+  const getEmptyForm = () => {
+    const base = defaultCategory === "values" ? EMPTY_VALUE_FORM : EMPTY_FORM;
+    return { ...base };
+  };
+  const [form, setForm] = useState<FormState>(item ? itemToForm(item) : getEmptyForm());
   const [saving, setSaving] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [secPickerOpen, setSecPickerOpen] = useState(false);
 
   React.useEffect(() => {
-    if (visible) setForm(item ? itemToForm(item) : EMPTY_FORM);
-  }, [visible, item]);
+    if (visible) setForm(item ? itemToForm(item) : getEmptyForm());
+  }, [visible, item, defaultCategory]);
 
   function set(key: keyof FormState, value: any) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -731,8 +765,7 @@ function DocFormModal({ visible, item, sections, onClose, onSaved }: {
         docType: form.docType,
         content: form.docType === "text" ? (form.content.trim() || null) : null,
         pdfUrl: form.docType === "pdf" ? (form.pdfUrl.trim() || null) : null,
-        requiresSign: form.requiresSign,
-        requiresRead: form.requiresRead,
+        actionType: form.actionType,
         countsForProgress: form.countsForProgress,
         showInIntegra: form.showInIntegra,
         showInOnboarding: form.showInOnboarding,
@@ -850,13 +883,62 @@ function DocFormModal({ visible, item, sections, onClose, onSaved }: {
               </FieldRow>
             )}
 
+            {/* ── Tipo de Documento ── */}
+            <Text style={styles.sectionLabel}>Tipo de Documento</Text>
+            <Text style={styles.sectionHint}>Define o que o usuário precisa fazer ao ler este documento.</Text>
+            {([
+              {
+                value: "informativo" as ActionType,
+                label: "Informativo",
+                desc: "Apenas leitura — sem confirmação necessária",
+                icon: "eye" as const,
+                color: "#2563EB",
+                bg: "#EFF6FF",
+              },
+              {
+                value: "aceite" as ActionType,
+                label: "Aceite",
+                desc: "Usuário confirma leitura com botão \"Li e concordo\"",
+                icon: "check-square" as const,
+                color: "#D97706",
+                bg: "#FFFBEB",
+              },
+              {
+                value: "assinatura" as ActionType,
+                label: "Assinatura",
+                desc: "Assinatura formal obrigatória com registro",
+                icon: "edit-3" as const,
+                color: "#7C3AED",
+                bg: "#F5F3FF",
+              },
+            ] as const).map((opt) => {
+              const active = form.actionType === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.actionTypeCard, active && { borderColor: opt.color, backgroundColor: opt.bg }]}
+                  onPress={() => set("actionType", opt.value)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.actionTypeIcon, { backgroundColor: active ? opt.color : C.surfaceAlt }]}>
+                    <Feather name={opt.icon} size={16} color={active ? "#fff" : C.textMuted} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.actionTypeLabel, active && { color: opt.color }]}>{opt.label}</Text>
+                    <Text style={styles.actionTypeDesc}>{opt.desc}</Text>
+                  </View>
+                  <View style={[styles.actionTypeRadio, active && { borderColor: opt.color }]}>
+                    {active && <View style={[styles.actionTypeRadioDot, { backgroundColor: opt.color }]} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
             {/* ── Comportamento ── */}
             <Text style={styles.sectionLabel}>Comportamento</Text>
             <SwitchRow label="Exibir no Integra" value={form.showInIntegra} onValueChange={(v) => set("showInIntegra", v)} desc="Aparece na aba Integra do app" />
             <SwitchRow label="Exibir no Onboarding" value={form.showInOnboarding} onValueChange={(v) => set("showInOnboarding", v)} desc="Aparece no primeiro acesso" />
             <SwitchRow label="Conta para Progresso" value={form.countsForProgress} onValueChange={(v) => set("countsForProgress", v)} desc="Incluído no percentual de leitura" />
-            <SwitchRow label="Requer Leitura" value={form.requiresRead} onValueChange={(v) => set("requiresRead", v)} desc="Mostra checkbox 'Marcar como lido'" />
-            <SwitchRow label="Requer Assinatura" value={form.requiresSign} onValueChange={(v) => set("requiresSign", v)} desc="Exibe fluxo de assinatura formal" />
             <SwitchRow label="Ativo" value={form.isActive} onValueChange={(v) => set("isActive", v)} desc="Documentos inativos ficam ocultos" />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -990,6 +1072,67 @@ const confirmStyles = StyleSheet.create({
   deleteText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
 });
 
+// ─── ValuesView ───────────────────────────────────────────────────────────────
+function ValuesView({ values, isLoading, onAdd, onEdit, onToggleActive, onDelete }: {
+  values: IntegraItem[];
+  isLoading: boolean;
+  onAdd: () => void;
+  onEdit: (item: IntegraItem) => void;
+  onToggleActive: (item: IntegraItem) => void;
+  onDelete: (item: IntegraItem) => void;
+}) {
+  if (isLoading) return <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 40 }} />;
+  return (
+    <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }}>
+      <TouchableOpacity style={styles.createSectionBtn} onPress={onAdd} activeOpacity={0.8}>
+        <Feather name="plus-circle" size={16} color="#DC2626" />
+        <Text style={[styles.createSectionBtnText, { color: "#DC2626" }]}>Novo Valor</Text>
+      </TouchableOpacity>
+
+      {values.length === 0 && (
+        <View style={styles.emptyState}>
+          <Feather name="heart" size={36} color={C.textMuted} />
+          <Text style={styles.emptyTitle}>Nenhum valor cadastrado</Text>
+          <Text style={{ fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+            Adicione os valores da empresa com o botão acima.
+          </Text>
+        </View>
+      )}
+
+      {values.map((item) => {
+        const color = item.sectionColor || "#DC2626";
+        const bg = item.sectionColorBg || "#FEF2F2";
+        return (
+          <View key={item.id} style={[styles.sectionCard, !item.isActive && { opacity: 0.6 }]}>
+            <View style={[styles.sectionCardAccent, { backgroundColor: color }]} />
+            <View style={[styles.sectionCardIcon, { backgroundColor: bg }]}>
+              {item.iconName
+                ? <Feather name={item.iconName as any} size={18} color={color} />
+                : <Feather name="heart" size={18} color={color} />
+              }
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionCardName}>{item.title}</Text>
+              {item.subtitle ? <Text style={styles.sectionCardCount} numberOfLines={2}>{item.subtitle}</Text> : null}
+            </View>
+            <View style={{ flexDirection: "column", gap: 4 }}>
+              <TouchableOpacity onPress={() => onEdit(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name="edit-2" size={15} color={C.tint} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => onToggleActive(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name={item.isActive ? "eye-off" : "eye"} size={15} color={C.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => onDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name="trash-2" size={15} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 // ─── Tela Principal ───────────────────────────────────────────────────────────
 export default function AdminDocsScreen() {
   const insets = useSafeAreaInsets();
@@ -997,9 +1140,10 @@ export default function AdminDocsScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 118 : insets.bottom + 20;
 
-  const [view, setView] = useState<"docs" | "sections">("docs");
+  const [view, setView] = useState<"docs" | "sections" | "values">("docs");
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<IntegraItem | null>(null);
+  const [defaultCategory, setDefaultCategory] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] = useState<IntegraItem | null>(null);
@@ -1072,7 +1216,10 @@ export default function AdminDocsScreen() {
     );
   }
 
-  const filtered = items.filter((item) => {
+  const docItems = items.filter((i) => i.category !== "values");
+  const valueItems = items.filter((i) => i.category === "values");
+
+  const filtered = docItems.filter((item) => {
     if (filter === "active" && !item.isActive) return false;
     if (filter === "inactive" && item.isActive) return false;
     if (search) {
@@ -1089,9 +1236,17 @@ export default function AdminDocsScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="arrow-left" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Central de Documentos</Text>
-        {view === "docs" ? (
-          <TouchableOpacity onPress={() => { setEditItem(null); setShowModal(true); }} style={styles.addBtn} activeOpacity={0.8}>
+        <Text style={styles.title}>Integra Admin</Text>
+        {view === "docs" || view === "values" ? (
+          <TouchableOpacity
+            onPress={() => {
+              setEditItem(null);
+              setDefaultCategory(view === "values" ? "values" : null);
+              setShowModal(true);
+            }}
+            style={[styles.addBtn, view === "values" && { backgroundColor: "#DC2626" }]}
+            activeOpacity={0.8}
+          >
             <Feather name="plus" size={18} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -1102,18 +1257,18 @@ export default function AdminDocsScreen() {
       {/* Stats bar */}
       <View style={styles.statsBar}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{items.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{items.filter((i) => i.isActive).length}</Text>
-          <Text style={styles.statLabel}>Ativos</Text>
+          <Text style={styles.statValue}>{items.filter((i) => i.category !== "values").length}</Text>
+          <Text style={styles.statLabel}>Docs</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{sections.length}</Text>
           <Text style={styles.statLabel}>Seções</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{items.filter((i) => i.category === "values").length}</Text>
+          <Text style={styles.statLabel}>Valores</Text>
         </View>
         <View style={styles.statDivider} />
         <TouchableOpacity style={styles.statItem} onPress={handleSeed} activeOpacity={0.8}>
@@ -1122,7 +1277,7 @@ export default function AdminDocsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* View toggle */}
+      {/* View toggle — 3 tabs */}
       <View style={styles.viewToggle}>
         <TouchableOpacity style={[styles.viewTab, view === "docs" && styles.viewTabActive]} onPress={() => setView("docs")} activeOpacity={0.8}>
           <Feather name="file-text" size={13} color={view === "docs" ? C.tint : C.textMuted} />
@@ -1132,9 +1287,13 @@ export default function AdminDocsScreen() {
           <Feather name="layers" size={13} color={view === "sections" ? C.tint : C.textMuted} />
           <Text style={[styles.viewTabText, view === "sections" && styles.viewTabTextActive]}>Seções</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.viewTab, view === "values" && styles.viewTabActive]} onPress={() => setView("values")} activeOpacity={0.8}>
+          <Feather name="heart" size={13} color={view === "values" ? "#DC2626" : C.textMuted} />
+          <Text style={[styles.viewTabText, view === "values" && { color: "#DC2626", fontFamily: "Inter_600SemiBold" }]}>Valores</Text>
+        </TouchableOpacity>
       </View>
 
-      {view === "docs" ? (
+      {view === "docs" && (
         <>
           {/* Search */}
           <View style={styles.searchBar}>
@@ -1168,9 +1327,9 @@ export default function AdminDocsScreen() {
             <View style={styles.emptyState}>
               <Feather name="file-text" size={40} color={C.textMuted} />
               <Text style={styles.emptyTitle}>
-                {items.length === 0 ? "Nenhum documento cadastrado" : "Nenhum resultado"}
+                {docItems.length === 0 ? "Nenhum documento cadastrado" : "Nenhum resultado"}
               </Text>
-              {items.length === 0 && (
+              {docItems.length === 0 && (
                 <TouchableOpacity style={styles.seedBtn} onPress={handleSeed} activeOpacity={0.8}>
                   <Feather name="database" size={14} color="#fff" />
                   <Text style={styles.seedBtnText}>Inicializar com conteúdo padrão</Text>
@@ -1183,7 +1342,7 @@ export default function AdminDocsScreen() {
                 <DocCard
                   key={item.id}
                   item={item}
-                  onEdit={() => { setEditItem(item); setShowModal(true); }}
+                  onEdit={() => { setEditItem(item); setDefaultCategory(null); setShowModal(true); }}
                   onToggleActive={() => toggleActive.mutate({ id: item.id, isActive: item.isActive })}
                   onDelete={() => handleDelete(item)}
                 />
@@ -1191,18 +1350,32 @@ export default function AdminDocsScreen() {
             </ScrollView>
           )}
         </>
-      ) : (
+      )}
+
+      {view === "sections" && (
         <SectionsView
           sections={sections}
           isLoading={sectionsLoading}
-          onCreateNew={() => { setEditItem(null); setShowModal(true); setView("docs"); }}
+          onCreateNew={() => { setEditItem(null); setDefaultCategory(null); setShowModal(true); setView("docs"); }}
           onDelete={handleDeleteSection}
+        />
+      )}
+
+      {view === "values" && (
+        <ValuesView
+          values={valueItems}
+          isLoading={isLoading}
+          onAdd={() => { setEditItem(null); setDefaultCategory("values"); setShowModal(true); }}
+          onEdit={(item) => { setEditItem(item); setDefaultCategory("values"); setShowModal(true); }}
+          onToggleActive={(item) => toggleActive.mutate({ id: item.id, isActive: item.isActive })}
+          onDelete={handleDelete}
         />
       )}
 
       <DocFormModal
         visible={showModal}
         item={editItem}
+        defaultCategory={defaultCategory}
         sections={sections}
         onClose={() => setShowModal(false)}
         onSaved={invalidateAll}
@@ -1296,6 +1469,10 @@ const styles = StyleSheet.create({
   inactiveBadgeText: { fontSize: 9, color: "#DC2626", fontFamily: "Inter_600SemiBold" },
   signBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F5F3FF", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
   signBadgeText: { fontSize: 9, color: "#7C3AED", fontFamily: "Inter_600SemiBold" },
+  aceiteBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#FFFBEB", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
+  aceiteBadgeText: { fontSize: 9, color: "#D97706", fontFamily: "Inter_600SemiBold" },
+  informativoBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#EFF6FF", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
+  informativoBadgeText: { fontSize: 9, color: "#2563EB", fontFamily: "Inter_600SemiBold" },
   pdfBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#FEF2F2", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
   pdfBadgeText: { fontSize: 9, color: "#DC2626", fontFamily: "Inter_600SemiBold" },
   docCardSubtitle: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular", marginHorizontal: 12, marginBottom: 8, lineHeight: 17 },
@@ -1347,6 +1524,18 @@ const styles = StyleSheet.create({
   modalContent: { padding: 16, gap: 4, paddingBottom: 60 },
 
   sectionLabel: { fontSize: 11, fontFamily: "Inter_700Bold", color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8, marginTop: 16, marginBottom: 4 },
+  sectionHint: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted, marginBottom: 8, lineHeight: 17 },
+
+  actionTypeCard: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: C.surface, borderRadius: 12, borderWidth: 1.5, borderColor: C.border,
+    padding: 12, marginBottom: 8,
+  },
+  actionTypeIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  actionTypeLabel: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 2 },
+  actionTypeDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 16 },
+  actionTypeRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: C.border, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  actionTypeRadioDot: { width: 10, height: 10, borderRadius: 5 },
   fieldRow: { gap: 4, marginBottom: 4 },
   fieldLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   input: {

@@ -1,0 +1,188 @@
+Atue como um Product Designer e UX Specialist sênior e reestruture completamente o painel administrativo relacionado à aba “Integra” do aplicativo.
+
+OBJETIVO:
+Tornar o sistema de criação, organização e gestão de documentos claro, escalável e consistente, respeitando boas práticas de UX e organização de conteúdo.
+
+O sistema atual possui:
+- Documentos que precisam de assinatura
+- Documentos que NÃO precisam de assinatura
+- Seção de valores da empresa
+- Seções agrupando conteúdos
+
+O objetivo é reorganizar tudo isso com clareza, separação lógica e facilidade de uso no painel administrativo.
+
+--------------------------------------------------
+🧩 1. REESTRUTURAÇÃO DO CADASTRO DE DOCUMENTOS
+--------------------------------------------------
+
+Criar um sistema claro para criação e edição de documentos.
+
+Ao criar/editar um documento, o admin deve ter:
+
+📌 Campos obrigatórios:
+- Título do documento
+- Descrição (curta)
+- Conteúdo (texto ou arquivo)
+- Tipo de documento (SELETOR)
+- Seção (categoria)
+- Status (ativo/inativo)
+
+📌 Tipo de documento (ESSENCIAL):
+Criar um seletor claro:
+
+- Documento informativo (não exige assinatura)
+- Documento com aceite (exige confirmação simples)
+- Documento com assinatura (exige aceite formal)
+
+👉 O sistema deve mudar o comportamento automaticamente com base nisso.
+
+Exemplo:
+- Informativo → só leitura
+- Aceite → botão “Li e concordo”
+- Assinatura → botão “Assinar” + registro
+
+--------------------------------------------------
+📂 2. ORGANIZAÇÃO POR SEÇÕES (CATEGORIAS)
+--------------------------------------------------
+
+Criar um sistema de seções totalmente gerenciável.
+
+O admin deve poder:
+- Criar seção
+- Editar seção
+- Definir ordem das seções
+- Ativar/desativar seção
+
+Cada documento deve pertencer a uma seção.
+
+Exemplo de seções:
+- Políticas internas
+- RH
+- Treinamentos
+- Normas operacionais
+- Valores da empresa
+
+👉 No app:
+- Exibir documentos agrupados por seção
+- Separação visual clara entre seções
+- Melhor escaneabilidade
+
+--------------------------------------------------
+📊 3. DIFERENCIAÇÃO VISUAL (NO APP)
+--------------------------------------------------
+
+Garantir que o usuário entenda rapidamente:
+
+- O que precisa assinar
+- O que já assinou
+- O que é só leitura
+
+Criar diferenciação visual clara:
+- Badge: “Assinar”
+- Badge: “Pendente”
+- Badge: “Lido”
+- Badge: “Assinado”
+
+Evitar confusão entre tipos de documento.
+
+--------------------------------------------------
+📈 4. SISTEMA DE STATUS (BACKEND + UX)
+--------------------------------------------------
+
+Cada documento deve ter controle de status por usuário:
+
+- Não visualizado
+- Visualizado
+- Aceito
+- Assinado
+
+O admin deve conseguir:
+- Ver quem assinou
+- Ver quem não assinou
+- Filtrar por status
+
+--------------------------------------------------
+🏢 5. REESTRUTURAÇÃO DA ÁREA “VALORES DA EMPRESA”
+--------------------------------------------------
+
+Separar completamente a área de valores dos documentos.
+
+Criar um módulo próprio no admin:
+
+📌 Gestão de valores:
+- Criar valor
+- Editar valor
+- Ordenar valores
+- Definir ícone
+- Definir cor
+- Texto curto + descrição
+
+📌 No app:
+- Exibir valores como cards organizados
+- Layout consistente
+- Melhor leitura
+- Possibilidade de expandir conteúdo
+
+👉 NÃO tratar valores como documentos.
+
+--------------------------------------------------
+🧭 6. MELHORIA NA EXPERIÊNCIA DO ADMIN
+--------------------------------------------------
+
+Organizar o painel administrativo em:
+
+1. Documentos
+2. Seções
+3. Valores da empresa
+
+Evitar tudo misturado.
+
+Criar:
+- Interface limpa
+- Formulários bem organizados
+- Labels claros
+- Ajuda contextual (ex: “Esse documento exige assinatura?”)
+
+--------------------------------------------------
+🎯 7. UX – BOAS PRÁTICAS
+--------------------------------------------------
+
+Aplicar:
+
+- Consistência de campos
+- Hierarquia visual clara
+- Redução de esforço cognitivo
+- Previsibilidade
+- Separação lógica de responsabilidades
+
+Evitar:
+- Ambiguidade (não saber se precisa assinar)
+- Mistura de tipos de conteúdo
+- Falta de organização
+
+--------------------------------------------------
+🔒 8. REGRAS IMPORTANTES
+--------------------------------------------------
+
+- Não quebrar dados existentes
+- Migrar documentos atuais para os novos tipos
+- Manter funcionamento atual do app
+- Apenas melhorar estrutura e organização
+
+--------------------------------------------------
+✅ 9. ANTES DE FINALIZAR
+--------------------------------------------------
+
+- Testar criação de documento
+- Testar edição
+- Testar tipos (informativo / aceite / assinatura)
+- Testar organização por seções
+- Testar visualização no app
+- Garantir clareza total para o usuário final
+
+--------------------------------------------------
+RESULTADO ESPERADO:
+Um sistema profissional, escalável e intuitivo, onde:
+- o admin consegue gerenciar facilmente
+- o usuário entende claramente o que precisa fazer
+- a aba Integra fica organizada, clara e eficiente

@@ -1,0 +1,271 @@
+Atue como um Product Designer, UX Specialist e Arquiteto de Sistemas e implemente um sistema completo de ONBOARDING (primeiro acesso), SEGURANÇA, GESTÃO DE USUÁRIOS e MELHORIAS DE UX no aplicativo.
+
+OBJETIVO:
+Criar uma experiência profissional, clara e eficiente para novos usuários, garantindo:
+- criação de senha
+- preenchimento de dados
+- leitura e assinatura de documentos
+- organização por tags
+- controle total pelo admin
+
+Sem quebrar funcionalidades existentes.
+
+--------------------------------------------------
+🚀 1. FLUXO DE PRIMEIRO ACESSO (ONBOARDING)
+--------------------------------------------------
+
+Criar fluxo obrigatório antes do acesso ao app.
+
+ESTRUTURA (4 etapas):
+
+🔐 ETAPA 1 — Segurança
+- Nova senha
+- Confirmar senha
+
+Regras:
+- mínimo 6 caracteres (configurável)
+- obrigar troca no primeiro acesso
+
+Texto:
+Título: Crie sua nova senha
+Descrição: Por segurança, você precisa definir uma nova senha para continuar.
+
+--------------------------------------------------
+
+👤 ETAPA 2 — Dados principais
+
+Campos obrigatórios:
+- Telefone (com máscara)
+- Unidade (dropdown)
+- Setor (dropdown)
+- Cargo (dropdown)
+
+Texto:
+Título: Complete seus dados
+Descrição: Precisamos de algumas informações para personalizar sua experiência.
+
+--------------------------------------------------
+
+📄 ETAPA 3 — Documentos (Integra)
+
+- Listar documentos obrigatórios primeiro
+- Separar:
+  - leitura
+  - aceite
+  - assinatura
+
+Regras:
+- bloquear avanço até concluir todos
+
+Texto:
+Título: Documentos importantes
+Descrição: Antes de continuar, revise e aceite os documentos obrigatórios.
+Erro: Você precisa concluir todos os documentos para avançar.
+
+--------------------------------------------------
+
+🎉 ETAPA 4 — Finalização leve
+
+Campos:
+- Data de nascimento (opcional ou obrigatório configurável)
+- Possui filhos? (Sim/Não)
+- Quantidade de filhos (se aplicável)
+
+Texto:
+Título: Quase pronto!
+Descrição: Finalize seu cadastro com algumas informações adicionais.
+
+Botão: Finalizar cadastro
+
+--------------------------------------------------
+
+✅ SUCESSO FINAL
+
+Título: Tudo pronto! 🎉
+Descrição: Seu cadastro foi concluído com sucesso. Agora você já pode acessar o app.
+Botão: Ir para o app
+
+--------------------------------------------------
+📊 UX DO FLUXO
+--------------------------------------------------
+
+- Mostrar progresso: Etapa 1 de 4, etc
+- Layout simples e limpo
+- Evitar telas longas
+- Feedback visual claro
+- Mobile-first
+
+--------------------------------------------------
+🔒 2. CONFIGURAÇÕES DE SEGURANÇA (ADMIN)
+--------------------------------------------------
+
+Criar nova aba: “Configurações de Segurança”
+
+Permitir:
+- Definir senha padrão de primeiro acesso
+- Definir regras:
+  - tamanho mínimo
+  - obrigar número/letra
+- Forçar troca de senha no primeiro login (toggle)
+
+--------------------------------------------------
+🔑 3. RESET DE SENHA (ADMIN)
+--------------------------------------------------
+
+No painel de usuários:
+
+Adicionar botão: “Resetar senha”
+
+Comportamento:
+- redefine para senha padrão
+- marca usuário como “precisa redefinir senha”
+
+--------------------------------------------------
+📧 4. SISTEMA DE CONVITE POR EMAIL
+--------------------------------------------------
+
+Ao criar usuário:
+- Nome
+- Email
+- Tags opcionais
+
+Enviar email com:
+
+Assunto:
+Seu acesso ao app Beija-flor
+
+Mensagem:
+Olá!
+
+Você foi convidado para acessar o app do Grupo Beija-flor.
+
+🔐 Login: seu e-mail  
+🔑 Senha: [senha padrão]
+
+Ao acessar, você deverá:
+- Criar uma nova senha
+- Completar seus dados
+- Revisar e assinar os documentos
+
+👉 Clique abaixo para acessar:
+[link]
+
+--------------------------------------------------
+
+Melhorias:
+- Status do convite:
+  - enviado
+  - aberto
+  - concluído
+- Botões:
+  - reenviar convite
+  - copiar link
+
+--------------------------------------------------
+🏷️ 5. SISTEMA DE TAGS (EDITÁVEL)
+--------------------------------------------------
+
+Tipos:
+- Unidade
+- Local
+- Setor
+- Cargo
+
+Admin pode:
+- criar / editar / excluir
+- ativar/desativar
+- ordenar
+
+Usuário:
+- seleciona via dropdown
+- não pode digitar livre
+
+--------------------------------------------------
+👤 6. GESTÃO DE USUÁRIOS (ADMIN)
+--------------------------------------------------
+
+Permitir:
+- editar dados pessoais
+- editar tags
+- alterar unidade/setor/cargo
+- ver status de onboarding:
+  - incompleto
+  - completo
+- ver status de documentos:
+  - pendente
+  - assinado
+
+--------------------------------------------------
+📄 7. REGRAS DE DOCUMENTOS (INTEGRA)
+--------------------------------------------------
+
+Tipos:
+- Informativo (somente leitura)
+- Aceite (confirmar)
+- Assinatura (formal)
+
+Comportamento:
+- bloquear onboarding até completar obrigatórios
+
+--------------------------------------------------
+🏢 8. VALORES DA EMPRESA
+--------------------------------------------------
+
+Separar dos documentos.
+
+Criar módulo próprio:
+
+Admin pode:
+- criar valor
+- editar
+- ordenar
+- definir ícone
+- definir cor
+
+App:
+- exibir como cards
+- layout limpo
+- opção de expandir
+
+--------------------------------------------------
+🧪 9. LABORATÓRIO DE TESTES
+--------------------------------------------------
+
+Permitir simular:
+- fluxo completo de onboarding
+- criação de senha
+- preenchimento de dados
+- assinatura de termos
+
+Sem alterar banco real
+
+--------------------------------------------------
+⚠️ 10. REGRAS IMPORTANTES
+--------------------------------------------------
+
+- não quebrar usuários existentes
+- migrar dados antigos se necessário
+- manter compatibilidade
+- não remover funcionalidades atuais
+
+--------------------------------------------------
+✅ 11. VALIDAÇÃO FINAL
+--------------------------------------------------
+
+Testar:
+- onboarding completo
+- reset de senha
+- convite por email
+- edição de tags
+- bloqueio por documentos
+- mobile
+
+--------------------------------------------------
+RESULTADO ESPERADO:
+
+Um sistema profissional onde:
+- o usuário entra sem confusão
+- o admin tem controle total
+- os dados ficam organizados
+- o onboarding tem alta taxa de conclusão
+- o app tem padrão de produto grande

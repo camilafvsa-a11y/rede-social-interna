@@ -13,6 +13,7 @@ export const integraItemsTable = pgTable("integra_items", {
   pdfUrl: text("pdf_url"),
   requiresSign: boolean("requires_sign").notNull().default(false),
   requiresRead: boolean("requires_read").notNull().default(true),
+  actionType: varchar("action_type", { length: 20 }).notNull().default("informativo"),
   docKey: varchar("doc_key", { length: 100 }).notNull().unique(),
   iconName: varchar("icon_name", { length: 50 }).default("file-text"),
   sortOrder: integer("sort_order").notNull().default(0),

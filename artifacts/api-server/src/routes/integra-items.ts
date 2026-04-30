@@ -111,11 +111,29 @@ router.delete("/sections/:name", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── Helper: derive actionType ↔ requiresSign/requiresRead ───────────────────
+function resolveActionFlags(body: Record<string, any>): {
+  actionType: string;
+  requiresSign: boolean;
+  requiresRead: boolean;
+} {
+  const { actionType, requiresSign, requiresRead } = body;
+  if (actionType) {
+    if (actionType === "assinatura") return { actionType: "assinatura", requiresSign: true, requiresRead: true };
+    if (actionType === "aceite") return { actionType: "aceite", requiresSign: false, requiresRead: true };
+    return { actionType: "informativo", requiresSign: false, requiresRead: false };
+  }
+  // legacy: derive from booleans
+  if (requiresSign) return { actionType: "assinatura", requiresSign: true, requiresRead: true };
+  if (requiresRead !== false && requiresRead !== undefined) return { actionType: "aceite", requiresSign: false, requiresRead: true };
+  return { actionType: "informativo", requiresSign: false, requiresRead: false };
+}
+
 // ─── POST /integra-items — create item (admin) ────────────────────────────────
 router.post("/", requireAdmin, async (req, res) => {
   const {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
-    title, subtitle, content, pdfUrl, requiresSign, requiresRead,
+    title, subtitle, content, pdfUrl,
     docKey: rawDocKey, iconName, sortOrder, isActive,
     docType, showInIntegra, showInOnboarding, countsForProgress, confirmationText,
   } = req.body;
@@ -124,6 +142,8 @@ router.post("/", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "category e title são obrigatórios" });
     return;
   }
+
+  const { actionType, requiresSign, requiresRead } = resolveActionFlags(req.body);
 
   const baseKey = (rawDocKey || generateDocKey(title)).trim();
   let resolvedDocKey = baseKey;
@@ -150,8 +170,9 @@ router.post("/", requireAdmin, async (req, res) => {
       subtitle: subtitle || null,
       content: content || null,
       pdfUrl: pdfUrl || null,
-      requiresSign: !!requiresSign,
-      requiresRead: requiresRead !== false,
+      requiresSign,
+      requiresRead,
+      actionType,
       docKey: resolvedDocKey,
       iconName: iconName || null,
       sortOrder: sortOrder ?? 0,
@@ -174,7 +195,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
 
   const {
     category, sectionName, sectionIcon, sectionColor, sectionColorBg,
-    title, subtitle, content, pdfUrl, requiresSign, requiresRead,
+    title, subtitle, content, pdfUrl,
     docKey, iconName, sortOrder, isActive,
     docType, showInIntegra, showInOnboarding, countsForProgress, confirmationText,
   } = req.body;
@@ -191,8 +212,15 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (subtitle !== undefined) updates.subtitle = subtitle || null;
   if (content !== undefined) updates.content = content || null;
   if (pdfUrl !== undefined) updates.pdfUrl = pdfUrl || null;
-  if (requiresSign !== undefined) updates.requiresSign = !!requiresSign;
-  if (requiresRead !== undefined) updates.requiresRead = !!requiresRead;
+
+  // Handle actionType (primary) with fallback to legacy requiresSign/requiresRead
+  if (req.body.actionType !== undefined || req.body.requiresSign !== undefined || req.body.requiresRead !== undefined) {
+    const resolved = resolveActionFlags(req.body);
+    updates.actionType = resolved.actionType;
+    updates.requiresSign = resolved.requiresSign;
+    updates.requiresRead = resolved.requiresRead;
+  }
+
   if (docKey !== undefined) updates.docKey = docKey;
   if (iconName !== undefined) updates.iconName = iconName;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;

@@ -1,0 +1,212 @@
+Atue como um Product Designer + UX Specialist + Arquiteto de Sistemas e reestruture completamente o fluxo de PRIMEIRO ACESSO (onboarding), gestão de usuários e segurança do aplicativo.
+
+OBJETIVO:
+Criar um fluxo de entrada claro, obrigatório e inteligente para novos colaboradores, garantindo:
+- preenchimento de dados
+- leitura de documentos
+- assinatura de termos
+- definição de senha segura
+- organização de dados por tags
+
+Sem quebrar o sistema atual.
+
+--------------------------------------------------
+🚀 1. FLUXO DE PRIMEIRO ACESSO (ONBOARDING)
+--------------------------------------------------
+
+Criar um fluxo obrigatório para novos usuários ao entrar pela primeira vez.
+
+Esse fluxo deve acontecer ANTES do acesso completo ao app.
+
+📌 Etapas do fluxo:
+
+1. Definir nova senha
+- Usuário recebe senha padrão
+- Obrigatório trocar no primeiro acesso
+- Campo: nova senha + confirmação
+- Regras de senha (mínimo, etc)
+
+2. Dados pessoais
+- Telefone (com máscara)
+- Data de nascimento (aniversário)
+- Possui filhos? (Sim/Não)
+- Se SIM → Quantidade de filhos
+
+3. Dados profissionais (com base em tags)
+- Unidade / Local (dropdown)
+- Setor (dropdown)
+- Cargo (dropdown)
+
+👉 Esses campos devem ser preenchidos pelo usuário
+👉 Mas podem ser editados depois pelo admin
+
+4. Documentação (Integra)
+- Mostrar documentos obrigatórios
+- Separar:
+  - leitura
+  - aceite
+  - assinatura
+
+👉 Bloquear avanço até:
+- leitura concluída
+- termos assinados
+
+5. Confirmação final
+- Mostrar resumo
+- Botão “Finalizar cadastro”
+
+--------------------------------------------------
+🔒 2. CONFIGURAÇÕES DE SEGURANÇA (ADMIN)
+--------------------------------------------------
+
+Criar uma nova aba no painel admin:
+
+👉 “Configurações de Segurança”
+
+Nela deve ser possível:
+
+- Definir senha padrão de primeiro acesso
+- Definir regras de senha:
+  - tamanho mínimo
+  - obrigatoriedade de número/letra
+
+- Configurar obrigatoriedade de:
+  - troca de senha no primeiro login
+  - preenchimento de dados
+
+--------------------------------------------------
+🔑 3. RESET DE SENHA (ADMIN)
+--------------------------------------------------
+
+No painel de usuários:
+
+Adicionar opção:
+
+👉 “Resetar senha”
+
+Comportamento:
+- Reseta para senha padrão definida
+- Marca usuário como “precisa redefinir senha”
+- Obriga passar pelo fluxo de onboarding novamente (opcional)
+
+--------------------------------------------------
+📧 4. MELHORIA DO SISTEMA DE CONVITE POR EMAIL
+--------------------------------------------------
+
+Reestruturar envio de convite:
+
+📌 Ao criar usuário:
+- Nome
+- Email
+- (Opcional) tags pré-definidas
+
+📌 Sistema envia email com:
+- Link de acesso
+- Senha padrão
+- Instrução clara de primeiro acesso
+
+📌 Melhorias:
+- Status do convite:
+  - Enviado
+  - Aberto
+  - Concluído
+- Reenviar convite
+- Copiar link manual
+
+--------------------------------------------------
+🏷️ 5. SISTEMA DE TAGS (ESTRUTURA DE DADOS)
+--------------------------------------------------
+
+Criar sistema editável de tags:
+
+📌 Tipos de tags:
+- Unidade (ex: Posto, Churrascaria, etc)
+- Local específico (ex: Teresa Cristina, Lourdes)
+- Setor
+- Cargo
+
+📌 No painel admin:
+- Criar / editar / excluir opções
+- Definir ordem
+- Ativar/desativar
+
+📌 No cadastro do usuário:
+- Seleção via dropdown (não texto livre)
+
+--------------------------------------------------
+👤 6. GESTÃO DE USUÁRIOS (ADMIN)
+--------------------------------------------------
+
+No painel de usuários:
+
+Permitir:
+- Editar dados pessoais
+- Editar dados profissionais (tags)
+- Alterar unidade, setor, cargo
+- Ver status de onboarding:
+  - incompleto
+  - completo
+
+- Ver status de documentos:
+  - pendente
+  - assinado
+
+--------------------------------------------------
+📱 7. EXPERIÊNCIA DO USUÁRIO
+--------------------------------------------------
+
+Garantir:
+
+- Fluxo simples e guiado
+- Feedback claro em cada etapa
+- Não deixar usuário perdido
+- Progresso visível (ex: barra de progresso)
+
+Evitar:
+- telas longas demais
+- campos confusos
+- falta de feedback
+
+--------------------------------------------------
+🧪 8. INTEGRAÇÃO COM LABORATÓRIO DE TESTES
+--------------------------------------------------
+
+Atualizar o laboratório de testes para:
+
+- Simular fluxo completo de onboarding
+- Testar:
+  - criação de senha
+  - preenchimento de dados
+  - assinatura de termos
+
+Sem alterar dados reais
+
+--------------------------------------------------
+⚠️ 9. REGRAS IMPORTANTES
+--------------------------------------------------
+
+- Não quebrar usuários existentes
+- Manter compatibilidade com dados atuais
+- Migrar dados antigos se necessário
+- Não perder informações já cadastradas
+
+--------------------------------------------------
+✅ 10. ANTES DE FINALIZAR
+--------------------------------------------------
+
+- Testar fluxo completo de novo usuário
+- Testar reset de senha
+- Testar convite por email
+- Testar edição de tags
+- Testar bloqueio por falta de assinatura
+- Testar experiência no mobile
+
+--------------------------------------------------
+RESULTADO ESPERADO:
+
+Um sistema profissional de onboarding e gestão, onde:
+- o admin tem controle total
+- o usuário entra com clareza
+- os dados ficam organizados
+- a segurança é garantida
+- e o app fica com padrão de produto grande
