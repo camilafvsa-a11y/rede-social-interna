@@ -1,0 +1,129 @@
+Atue como UX/UI Designer sênior e ajuste a consistência visual do app, com foco em ícones, tipografia global, notificações e destaque de Comunicação Interna.
+
+OBJETIVO:
+Melhorar a experiência visual do app e padronizar elementos importantes para que o usuário identifique rapidamente conteúdos relevantes.
+
+--------------------------------------------------
+1. ÍCONES DO APP
+--------------------------------------------------
+
+- Revisar todos os ícones do aplicativo.
+- Trocar os ícones para o estilo filled/preenchido.
+- Evitar mistura entre outline e filled.
+- Padronizar:
+  - tamanho
+  - espessura visual
+  - alinhamento
+  - cor
+  - espaçamento
+
+Os ícones devem ficar mais consistentes, modernos e fáceis de reconhecer.
+
+--------------------------------------------------
+2. CONFIGURAÇÃO GLOBAL DE FONTE
+--------------------------------------------------
+
+No painel administrativo, criar em:
+
+Admin > Configurações > Aparência
+
+Uma opção para alterar a fonte/letra do app inteiro.
+
+O admin deve conseguir:
+- escolher entre opções de fontes disponíveis
+- aplicar a fonte globalmente
+- visualizar a mudança no app
+
+Regras:
+- a fonte escolhida deve afetar todas as telas do app
+- manter boa legibilidade
+- não quebrar layout
+- preservar hierarquia de títulos, subtítulos e textos
+
+--------------------------------------------------
+3. MELHORIA DAS NOTIFICAÇÕES
+--------------------------------------------------
+
+Revisar o sistema visual de notificações.
+
+Melhorar:
+- clareza
+- hierarquia
+- ícones
+- estados de lida/não lida
+- destaque visual para notificações importantes
+
+Toda notificação deve deixar claro:
+- o que aconteceu
+- onde aconteceu
+- o que o usuário pode fazer
+
+--------------------------------------------------
+4. COMUNICAÇÃO INTERNA
+--------------------------------------------------
+
+Sempre que algo for postado no canal “Comunicação Interna”:
+
+- a notificação deve usar uma estrelinha amarela como ícone principal
+- essa mesma estrelinha amarela também deve aparecer no card da postagem
+- o card deve ter destaque visual sutil, sem poluir o feed
+
+Objetivo:
+O usuário deve identificar rapidamente que aquele conteúdo veio da Comunicação Interna.
+
+--------------------------------------------------
+5. TAG DE POSTAGEM IMPORTANTE
+--------------------------------------------------
+
+Trocar a tag atual:
+
+De:
+“Postagem Oficial”
+
+Para:
+“Importante!”
+
+Também alterar:
+- ícone da tag para um ponto de exclamação “!”
+- cor da tag para vermelho
+- manter bom contraste e legibilidade
+
+A tag deve aparecer de forma clara no card da postagem e nas áreas onde esse conteúdo for exibido.
+
+--------------------------------------------------
+6. CONSISTÊNCIA VISUAL
+--------------------------------------------------
+
+Garantir que:
+- ícones filled estejam consistentes em todo o app
+- notificações sigam o mesmo padrão visual
+- cards importantes tenham linguagem visual coerente
+- tags tenham cores e significados claros
+- elementos clicáveis continuem evidentes
+
+--------------------------------------------------
+7. REGRAS IMPORTANTES
+--------------------------------------------------
+
+- Não remover funcionalidades existentes.
+- Não quebrar o feed.
+- Não alterar regras de permissão.
+- Não mudar lógica de postagem.
+- Apenas melhorar visual, consistência, notificações e configurações de aparência.
+
+--------------------------------------------------
+8. TESTES OBRIGATÓRIOS
+--------------------------------------------------
+
+Antes de finalizar, testar:
+
+- Ícones em todas as abas principais
+- Troca global de fonte pelo admin
+- Postagem em Comunicação Interna
+- Notificação com estrelinha amarela
+- Card com estrelinha amarela
+- Tag “Importante!” vermelha com ícone de “!”
+- Visual em telas pequenas e grandes
+
+RESULTADO ESPERADO:
+Um app mais consistente, moderno e profissional, com ícones preenchidos, fonte configurável pelo admin e destaque claro para conteúdos importantes da Comunicação Interna.
