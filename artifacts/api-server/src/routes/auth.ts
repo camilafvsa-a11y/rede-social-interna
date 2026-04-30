@@ -34,6 +34,7 @@ router.post("/login", async (req, res) => {
       sector: allowed.sector,
       unit: allowed.unit,
       position: allowed.position,
+      needsPasswordReset: true,
     }).returning();
     // Mark invite as active and record creation time
     await db.update(allowedEmailsTable).set({
@@ -66,10 +67,25 @@ router.post("/logout", (_req, res) => {
   res.json({ success: true, message: "Logged out" });
 });
 
+// ── Change password (onboarding step 0) ──────────────────────────────────────
+router.post("/change-password", requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 4) {
+    res.status(400).json({ error: "Senha deve ter pelo menos 4 caracteres" });
+    return;
+  }
+  const [updated] = await db.update(usersTable)
+    .set({ passwordHash: simpleHash(newPassword), needsPasswordReset: false })
+    .where(eq(usersTable.id, user.id))
+    .returning();
+  res.json(formatUser(updated));
+});
+
 // ── Update profile (personal data step) ──────────────────────────────────────
 router.put("/update-profile", requireAuth, async (req, res) => {
   const user = (req as any).user;
-  const { name, cpf, phone, birthDate, admissionDate, sector, unit, position, avatarUrl } = req.body;
+  const { name, cpf, phone, birthDate, admissionDate, sector, unit, position, avatarUrl, hasKids, kidsCount } = req.body;
 
   const updates: any = {};
   if (name !== undefined) updates.name = name;
@@ -81,6 +97,8 @@ router.put("/update-profile", requireAuth, async (req, res) => {
   if (unit !== undefined) updates.unit = unit;
   if (position !== undefined) updates.position = position;
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+  if (hasKids !== undefined) updates.hasKids = hasKids;
+  if (kidsCount !== undefined) updates.kidsCount = kidsCount;
 
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Nenhum campo para atualizar" });

@@ -16,6 +16,8 @@ import dmsRouter from "./dms.js";
 import uploadRouter from "./upload.js";
 import gamificationRouter from "./gamification.js";
 import signaturesRouter from "./signatures.js";
+import tagsRouter from "./tags.js";
+import securitySettingsRouter from "./security-settings.js";
 
 const router: IRouter = Router();
 
@@ -36,5 +38,7 @@ router.use("/dms", dmsRouter);
 router.use("/upload", uploadRouter);
 router.use("/gamification", gamificationRouter);
 router.use("/signatures", signaturesRouter);
+router.use("/tags", tagsRouter);
+router.use("/security-settings", securitySettingsRouter);
 
 export default router;

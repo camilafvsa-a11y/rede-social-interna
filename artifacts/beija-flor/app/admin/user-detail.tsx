@@ -120,6 +120,7 @@ export default function UserDetailScreen() {
   const [admissionDate, setAdmissionDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [banning, setBanning] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // Original values for dirty-check
   const [origData, setOrigData] = useState<{
@@ -792,6 +793,46 @@ export default function UserDetailScreen() {
           )}
         </TouchableOpacity>
 
+        {/* ── Reset password button ── */}
+        {!isMaster && (
+          <TouchableOpacity
+            style={styles.resetPasswordBtn}
+            disabled={resettingPassword}
+            activeOpacity={0.8}
+            onPress={() => {
+              Alert.alert(
+                "Resetar senha",
+                `Redefinir a senha de ${user?.name} para a senha padrão? O usuário precisará trocar no próximo acesso.`,
+                [
+                  { text: "Cancelar", style: "cancel" },
+                  {
+                    text: "Resetar",
+                    style: "destructive",
+                    onPress: async () => {
+                      setResettingPassword(true);
+                      try {
+                        await api.post(`/users/${id}/reset-password`, {});
+                        Alert.alert("Senha redefinida", "A senha foi redefinida para o padrão. O usuário será solicitado a trocar no próximo acesso.");
+                        qc.invalidateQueries({ queryKey: ["admin-user", id] });
+                      } catch (e: any) {
+                        Alert.alert("Erro", e.message);
+                      } finally {
+                        setResettingPassword(false);
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            {resettingPassword
+              ? <ActivityIndicator size="small" color="#D97706" />
+              : <Feather name="refresh-cw" size={15} color="#D97706" />
+            }
+            <Text style={styles.resetPasswordBtnText}>Resetar senha para o padrão</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Delete user button (master_admin only) ── */}
         {isMasterAdmin && !isMaster && (
           <TouchableOpacity
@@ -1208,6 +1249,13 @@ const styles = StyleSheet.create({
   },
   saveBtnFullActive: { backgroundColor: "#16A34A", shadowColor: "#16A34A", shadowOpacity: 0.45, shadowRadius: 10, elevation: 6 },
   saveBtnFullText: { color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" },
+
+  resetPasswordBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    borderRadius: 14, paddingVertical: 14, marginTop: 4,
+    borderWidth: 1, borderColor: "#FDE68A", backgroundColor: "#FFFBEB",
+  },
+  resetPasswordBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#D97706" },
 
   deleteUserBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,

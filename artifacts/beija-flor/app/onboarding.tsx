@@ -14,14 +14,16 @@ import { RichText } from "@/components/RichText";
 
 const C = Colors.light;
 
-// ─── Etapas ──────────────────────────────────────────────────────────────────
-const STEPS = [
-  { id: "photo",         title: "Foto de Perfil",         description: "Adicione uma foto para seus colegas te reconhecerem" },
-  { id: "personal_data", title: "Dados Pessoais",          description: "Preencha suas informações pessoais. Esses dados são obrigatórios." },
+// ─── Todas as etapas possíveis ────────────────────────────────────────────────
+const ALL_STEPS = [
+  { id: "security",      title: "Crie sua nova senha",     description: "Por segurança, você precisa definir uma nova senha para continuar." },
+  { id: "photo",         title: "Foto de Perfil",          description: "Adicione uma foto para seus colegas te reconhecerem" },
+  { id: "personal_data", title: "Complete seus dados",     description: "Precisamos de algumas informações para personalizar sua experiência." },
   { id: "values",        title: "Valores da Empresa",      description: "Conheça e confirme os valores que guiam o Grupo Beija-flor" },
-  { id: "docs",          title: "Documentos & Políticas",  description: "Leia os documentos do Grupo Beija-flor para continuar" },
+  { id: "docs",          title: "Documentos importantes",  description: "Antes de continuar, revise e aceite os documentos obrigatórios." },
   { id: "image_term",    title: "Uso de Imagem",           description: "Leia e decida sobre o uso da sua imagem e voz" },
-  { id: "summary",       title: "Quase lá!",               description: "Revise o que foi concluído e acesse o aplicativo" },
+  { id: "finishing",     title: "Quase pronto!",           description: "Finalize seu cadastro com algumas informações adicionais." },
+  { id: "summary",       title: "Tudo pronto!",            description: "Seu cadastro foi concluído com sucesso." },
 ];
 
 // ─── Máscaras ─────────────────────────────────────────────────────────────────
@@ -145,6 +147,71 @@ const pStyles = StyleSheet.create({
   readLabelDone: { color: "#059669" },
 });
 
+// ─── PickerModal (dropdown) ───────────────────────────────────────────────────
+function PickerModal({
+  visible, title, options, selected, onSelect, onClose,
+}: {
+  visible: boolean; title: string; options: { id: number; nome: string }[];
+  selected: string; onSelect: (v: string) => void; onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={pickerStyles.overlay}>
+        <TouchableOpacity style={{ flex: 1 }} onPress={onClose} />
+        <View style={pickerStyles.sheet}>
+          <View style={pickerStyles.handle} />
+          <Text style={pickerStyles.title}>{title}</Text>
+          <ScrollView style={{ maxHeight: 320 }}>
+            {options.map((opt) => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[pickerStyles.option, selected === opt.nome && pickerStyles.optionSelected]}
+                onPress={() => { onSelect(opt.nome); onClose(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[pickerStyles.optionText, selected === opt.nome && pickerStyles.optionTextSelected]}>
+                  {opt.nome}
+                </Text>
+                {selected === opt.nome && <Feather name="check" size={16} color={C.tint} />}
+              </TouchableOpacity>
+            ))}
+            {options.length === 0 && (
+              <Text style={pickerStyles.empty}>Nenhuma opção cadastrada pelo administrador</Text>
+            )}
+          </ScrollView>
+          <TouchableOpacity style={pickerStyles.closeBtn} onPress={onClose}>
+            <Text style={pickerStyles.closeBtnText}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const pickerStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingBottom: 36,
+  },
+  handle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: "center", marginBottom: 16 },
+  title: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 12 },
+  option: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 14, paddingHorizontal: 8,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  optionSelected: { backgroundColor: "#EFF6FF", borderRadius: 8 },
+  optionText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.text },
+  optionTextSelected: { fontFamily: "Inter_600SemiBold", color: C.tint },
+  empty: { textAlign: "center", color: C.textMuted, fontFamily: "Inter_400Regular", fontSize: 14, paddingVertical: 24 },
+  closeBtn: {
+    marginTop: 16, height: 48, borderRadius: 12, borderWidth: 1, borderColor: C.border,
+    alignItems: "center", justifyContent: "center",
+  },
+  closeBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+});
+
 // ─── MaskedInput ──────────────────────────────────────────────────────────────
 function MaskedInput({ label, value, onChangeText, mask, placeholder, icon, keyboardType, required, error }: {
   label: string; value: string; onChangeText: (v: string) => void;
@@ -199,14 +266,28 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuth();
 
+  // Determine which steps to show (security step only if needsPasswordReset)
+  const STEPS = ALL_STEPS.filter((s) => {
+    if (s.id === "security") return !!user?.needsPasswordReset;
+    return true;
+  });
+
   const [currentStep, setCurrentStep] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [loading, setLoading] = useState(false);
 
-  // Step 1: Photo
+  // Step 0 (conditional): Security — password change
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPwd1, setShowPwd1] = useState(false);
+  const [showPwd2, setShowPwd2] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [secSettings, setSecSettings] = useState<Record<string, string>>({});
+
+  // Photo step
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
 
-  // Step 2: Personal Data
+  // Personal Data step
   const [cpf, setCpf] = useState(user?.cpf ? maskCPF(user.cpf.replace(/\D/g, "")) : "");
   const [phone, setPhone] = useState(user?.phone ? maskPhone(user.phone.replace(/\D/g, "")) : "");
   const [birthDate, setBirthDate] = useState(user?.birthDate || "");
@@ -216,15 +297,25 @@ export default function OnboardingScreen() {
   const [position, setPosition] = useState(user?.position || "");
   const [personalErrors, setPersonalErrors] = useState<Record<string, string>>({});
 
-  // Step 3: Company values
+  // Tags (for dropdowns)
+  const [unitTags, setUnitTags] = useState<{ id: number; nome: string }[]>([]);
+  const [sectorTags, setSectorTags] = useState<{ id: number; nome: string }[]>([]);
+  const [cargoTags, setCargoTags] = useState<{ id: number; nome: string }[]>([]);
+  const [pickerOpen, setPickerOpen] = useState<"unit" | "sector" | "cargo" | null>(null);
+
+  // Finishing step
+  const [hasKids, setHasKids] = useState<boolean | null>(user?.hasKids ?? null);
+  const [kidsCount, setKidsCount] = useState(String(user?.kidsCount ?? 1));
+
+  // Company values
   const [valuesConfirmed, setValuesConfirmed] = useState(false);
 
-  // Step 4: Documents
+  // Documents
   const [onboardingItems, setOnboardingItems] = useState<IntegraItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
-  // Step 5: Image term
+  // Image term
   const [imageTermChoice, setImageTermChoice] = useState<boolean | null>(user?.imageTermAccepted ?? null);
   const [showImageTermConfirm, setShowImageTermConfirm] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<boolean | null>(null);
@@ -234,6 +325,10 @@ export default function OnboardingScreen() {
       .then((data: IntegraItem[]) => setOnboardingItems(data))
       .catch(() => {})
       .finally(() => setItemsLoading(false));
+    api.get("/tags?tipo=unidade").then(setUnitTags).catch(() => {});
+    api.get("/tags?tipo=setor").then(setSectorTags).catch(() => {});
+    api.get("/tags?tipo=cargo").then(setCargoTags).catch(() => {});
+    api.get("/security-settings/password-policy").then(setSecSettings).catch(() => {});
   }, []);
 
   const policyItems = onboardingItems.filter((i) => !i.requiresSign);
@@ -273,13 +368,36 @@ export default function OnboardingScreen() {
     }
   }
 
+  // ── Password validation & change ──────────────────────────────────────────
+  function validatePassword(): boolean {
+    const errs: Record<string, string> = {};
+    const minLen = parseInt(secSettings.min_password_length || "6");
+    const requireNum = secSettings.require_number === "true";
+    const requireLetter = secSettings.require_letter === "true";
+    if (newPassword.length < minLen) errs.password = `Senha deve ter ao menos ${minLen} caracteres`;
+    if (requireNum && !/\d/.test(newPassword)) errs.password = "Senha deve conter ao menos um número";
+    if (requireLetter && !/[a-zA-Z]/.test(newPassword)) errs.password = "Senha deve conter ao menos uma letra";
+    if (newPassword !== confirmPassword) errs.confirm = "As senhas não coincidem";
+    setPasswordErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function changePassword() {
+    if (!validatePassword()) return false;
+    try {
+      const updated = await api.post("/auth/change-password", { newPassword });
+      updateUser(updated);
+      return true;
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível alterar a senha");
+      return false;
+    }
+  }
+
   // ── Personal data validation ───────────────────────────────────────────────
   function validatePersonal(): boolean {
     const errs: Record<string, string> = {};
-    if (cpf.replace(/\D/g, "").length < 11) errs.cpf = "CPF deve ter 11 dígitos";
     if (phone.replace(/\D/g, "").length < 10) errs.phone = "Telefone deve ter ao menos 10 dígitos";
-    if (!validateDate(birthDate)) errs.birthDate = "Data inválida. Use DD/MM/AAAA";
-    if (!validateDate(admissionDate)) errs.admissionDate = "Data inválida. Use DD/MM/AAAA";
     setPersonalErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -288,10 +406,10 @@ export default function OnboardingScreen() {
     if (!validatePersonal()) return false;
     try {
       const updated = await api.put("/auth/update-profile", {
-        cpf: cpf.replace(/\D/g, ""),
+        cpf: cpf ? cpf.replace(/\D/g, "") : undefined,
         phone: phone.replace(/\D/g, ""),
-        birthDate,
-        admissionDate,
+        birthDate: birthDate || undefined,
+        admissionDate: admissionDate || undefined,
         sector: sector || null,
         unit: unit || null,
         position: position || null,
@@ -301,6 +419,23 @@ export default function OnboardingScreen() {
       return true;
     } catch (e: any) {
       Alert.alert("Erro", e.message || "Não foi possível salvar os dados");
+      return false;
+    }
+  }
+
+  // ── Save finishing data (kids, birthdate) ─────────────────────────────────
+  async function saveFinishingData() {
+    try {
+      const updated = await api.put("/auth/update-profile", {
+        hasKids: hasKids ?? false,
+        kidsCount: hasKids ? (parseInt(kidsCount) || 0) : 0,
+        birthDate: birthDate || undefined,
+      });
+      updateUser(updated);
+      await api.post("/auth/onboarding-step", { step: "finishing" });
+      return true;
+    } catch (e: any) {
+      Alert.alert("Erro", e.message || "Não foi possível salvar as informações adicionais");
       return false;
     }
   }
@@ -339,29 +474,40 @@ export default function OnboardingScreen() {
 
   // ── Can proceed ────────────────────────────────────────────────────────────
   function canProceed(): boolean {
-    switch (currentStep) {
-      case 0: return true;
-      case 1: return true;
-      case 2: return valuesConfirmed;
-      case 3: return requiredDone || itemsLoading;
-      case 4: return imageTermChoice !== null;
-      case 5: return true;
+    const stepId = STEPS[currentStep]?.id;
+    switch (stepId) {
+      case "security": return newPassword.length >= 4 && confirmPassword.length >= 4;
+      case "photo": return true;
+      case "personal_data": return true;
+      case "values": return valuesConfirmed;
+      case "docs": return requiredDone || itemsLoading;
+      case "image_term": return imageTermChoice !== null;
+      case "finishing": return hasKids !== null;
+      case "summary": return true;
       default: return true;
     }
   }
 
   // ── Next step ──────────────────────────────────────────────────────────────
   async function nextStep() {
-    if (currentStep === 1) {
+    const stepId = STEPS[currentStep]?.id;
+
+    if (stepId === "security") {
+      const ok = await changePassword();
+      if (!ok) return;
+    }
+    if (stepId === "personal_data") {
       const ok = await savePersonalData();
       if (!ok) return;
     }
-    if (currentStep === 3) {
-      // Mark docs as read
+    if (stepId === "docs") {
       for (const key of Array.from(readKeys)) {
         try { await api.post("/docs/mark", { documentKey: key }); } catch {}
       }
       await api.post("/auth/onboarding-step", { step: "docs" }).catch(() => {});
+    }
+    if (stepId === "finishing") {
+      await saveFinishingData();
     }
     if (currentStep < STEPS.length - 1) {
       setCurrentStep((s) => s + 1);
@@ -392,8 +538,11 @@ export default function OnboardingScreen() {
 
   // ── Summary items ──────────────────────────────────────────────────────────
   const summaryItems = [
-    { label: "Foto de perfil", done: !!avatarUri, icon: "camera" },
-    { label: "Dados pessoais", done: cpf.length > 0 && phone.length > 0, icon: "user" },
+    ...(user?.needsPasswordReset === false && newPassword
+      ? [{ label: "Senha atualizada com sucesso", done: true, icon: "lock" }]
+      : []),
+    { label: "Foto de perfil", done: !!avatarUri, icon: "image" },
+    { label: "Dados de contato e trabalho", done: phone.length > 0, icon: "user" },
     { label: "Valores da empresa", done: valuesConfirmed, icon: "star" },
     { label: "Documentos lidos", done: readKeys.size > 0, icon: "book-open" },
     {
@@ -402,6 +551,7 @@ export default function OnboardingScreen() {
       icon: "camera",
       accent: imageTermChoice === false ? "#DC2626" : undefined,
     },
+    { label: hasKids !== null ? (hasKids ? `${kidsCount} ${parseInt(kidsCount) === 1 ? "filho" : "filhos"} cadastrado(s)` : "Sem filhos registrado") : "Informações familiares", done: hasKids !== null, icon: "heart" },
   ];
 
   return (
@@ -427,8 +577,73 @@ export default function OnboardingScreen() {
           <Text style={styles.title}>{step.title}</Text>
           <Text style={styles.desc}>{step.description}</Text>
 
-          {/* ── Step 0: Photo ───────────────────────────────────────────────── */}
-          {currentStep === 0 && (
+          {/* ── Step: Security (new password) ────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "security" && (
+            <View style={styles.formSection}>
+              <View style={[styles.hintBox, { borderColor: "#BFDBFE", backgroundColor: "#EFF6FF" }]}>
+                <Feather name="shield" size={13} color="#2563EB" />
+                <Text style={[styles.hintText, { color: "#1D4ED8" }]}>Você está usando a senha padrão. Por segurança, crie uma senha pessoal agora.</Text>
+              </View>
+
+              <View style={mStyles.field}>
+                <View style={mStyles.labelRow}>
+                  <Text style={mStyles.label}>Nova senha</Text>
+                  <Text style={mStyles.req}>*</Text>
+                </View>
+                <View style={[mStyles.inputWrap, passwordErrors.password ? mStyles.inputWrapError : null]}>
+                  <Feather name="lock" size={16} color={passwordErrors.password ? "#DC2626" : C.textSecondary} style={mStyles.inputIcon} />
+                  <TextInput
+                    style={mStyles.input}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="Mínimo 6 caracteres"
+                    placeholderTextColor={C.textMuted}
+                    secureTextEntry={!showPwd1}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setShowPwd1((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Feather name={showPwd1 ? "eye-off" : "eye"} size={16} color={C.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                {passwordErrors.password && <Text style={mStyles.error}>{passwordErrors.password}</Text>}
+              </View>
+
+              <View style={mStyles.field}>
+                <View style={mStyles.labelRow}>
+                  <Text style={mStyles.label}>Confirmar senha</Text>
+                  <Text style={mStyles.req}>*</Text>
+                </View>
+                <View style={[mStyles.inputWrap, passwordErrors.confirm ? mStyles.inputWrapError : null]}>
+                  <Feather name="lock" size={16} color={passwordErrors.confirm ? "#DC2626" : C.textSecondary} style={mStyles.inputIcon} />
+                  <TextInput
+                    style={mStyles.input}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repita a nova senha"
+                    placeholderTextColor={C.textMuted}
+                    secureTextEntry={!showPwd2}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setShowPwd2((v) => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Feather name={showPwd2 ? "eye-off" : "eye"} size={16} color={C.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                {passwordErrors.confirm && <Text style={mStyles.error}>{passwordErrors.confirm}</Text>}
+              </View>
+
+              {newPassword && confirmPassword && newPassword === confirmPassword && (
+                <View style={[styles.hintBox, { borderColor: "#BBF7D0", backgroundColor: "#F0FDF4" }]}>
+                  <Feather name="check-circle" size={13} color="#059669" />
+                  <Text style={[styles.hintText, { color: "#059669" }]}>As senhas coincidem!</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Step: Photo ──────────────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "photo" && (
             <View style={styles.photoSection}>
               <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.8}>
                 {avatarUri ? (
@@ -452,39 +667,61 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* ── Step 1: Personal Data ────────────────────────────────────────── */}
-          {currentStep === 1 && (
+          {/* ── Step: Personal Data ──────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "personal_data" && (
             <View style={styles.formSection}>
-              <MaskedInput label="CPF" value={cpf} onChangeText={setCpf} mask={maskCPF} placeholder="000.000.000-00" icon="credit-card" keyboardType="number-pad" required error={personalErrors.cpf} />
               <MaskedInput label="Telefone" value={phone} onChangeText={setPhone} mask={maskPhone} placeholder="(00) 00000-0000" icon="phone" keyboardType="number-pad" required error={personalErrors.phone} />
-              <MaskedInput label="Data de Nascimento" value={birthDate} onChangeText={setBirthDate} mask={maskDate} placeholder="DD/MM/AAAA" icon="calendar" keyboardType="number-pad" required error={personalErrors.birthDate} />
-              <MaskedInput label="Data de Admissão" value={admissionDate} onChangeText={setAdmissionDate} mask={maskDate} placeholder="DD/MM/AAAA" icon="briefcase" keyboardType="number-pad" required error={personalErrors.admissionDate} />
+              <MaskedInput label="Data de Admissão" value={admissionDate} onChangeText={setAdmissionDate} mask={maskDate} placeholder="DD/MM/AAAA" icon="briefcase" keyboardType="number-pad" />
 
               <View style={styles.dividerLine} />
-              <Text style={styles.sectionSub}>Informações de trabalho (opcional)</Text>
+              <Text style={styles.sectionSub}>Informações profissionais</Text>
 
-              <View style={mStyles.field}>
-                <Text style={mStyles.label}>Cargo / Função</Text>
-                <View style={mStyles.inputWrap}>
-                  <Feather name="tag" size={16} color={C.textSecondary} style={mStyles.inputIcon} />
-                  <TextInput style={mStyles.input} value={position} onChangeText={setPosition} placeholder="Ex: Operador de Caixa" placeholderTextColor={C.textMuted} />
-                </View>
-              </View>
-
-              <View style={mStyles.field}>
-                <Text style={mStyles.label}>Setor</Text>
-                <View style={mStyles.inputWrap}>
-                  <Feather name="layers" size={16} color={C.textSecondary} style={mStyles.inputIcon} />
-                  <TextInput style={mStyles.input} value={sector} onChangeText={setSector} placeholder="Ex: Recursos Humanos" placeholderTextColor={C.textMuted} />
-                </View>
-              </View>
-
+              {/* Unidade dropdown */}
               <View style={mStyles.field}>
                 <Text style={mStyles.label}>Unidade</Text>
-                <View style={mStyles.inputWrap}>
-                  <Feather name="map-pin" size={16} color={C.textSecondary} style={mStyles.inputIcon} />
-                  <TextInput style={mStyles.input} value={unit} onChangeText={setUnit} placeholder="Ex: Unidade Centro" placeholderTextColor={C.textMuted} />
-                </View>
+                <TouchableOpacity
+                  style={[mStyles.inputWrap, { justifyContent: "space-between" }]}
+                  onPress={() => setPickerOpen("unit")}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Feather name="map-pin" size={16} color={C.textSecondary} />
+                    <Text style={[mStyles.input, { color: unit ? C.text : C.textMuted }]}>{unit || "Selecionar unidade..."}</Text>
+                  </View>
+                  <Feather name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Setor dropdown */}
+              <View style={mStyles.field}>
+                <Text style={mStyles.label}>Setor</Text>
+                <TouchableOpacity
+                  style={[mStyles.inputWrap, { justifyContent: "space-between" }]}
+                  onPress={() => setPickerOpen("sector")}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Feather name="layers" size={16} color={C.textSecondary} />
+                    <Text style={[mStyles.input, { color: sector ? C.text : C.textMuted }]}>{sector || "Selecionar setor..."}</Text>
+                  </View>
+                  <Feather name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Cargo dropdown */}
+              <View style={mStyles.field}>
+                <Text style={mStyles.label}>Cargo / Função</Text>
+                <TouchableOpacity
+                  style={[mStyles.inputWrap, { justifyContent: "space-between" }]}
+                  onPress={() => setPickerOpen("cargo")}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Feather name="briefcase" size={16} color={C.textSecondary} />
+                    <Text style={[mStyles.input, { color: position ? C.text : C.textMuted }]}>{position || "Selecionar cargo..."}</Text>
+                  </View>
+                  <Feather name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.hintBox}>
@@ -494,8 +731,8 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* ── Step 2: Company Values ───────────────────────────────────────── */}
-          {currentStep === 2 && (
+          {/* ── Step: Company Values ─────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "values" && (
             <View style={styles.valuesSection}>
               {COMPANY_VALUES.map((v, i) => (
                 <View key={i} style={[styles.valueCard, { borderLeftColor: v.color }]}>
@@ -525,8 +762,8 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* ── Step 3: Documents ───────────────────────────────────────────── */}
-          {currentStep === 3 && (
+          {/* ── Step: Documents ──────────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "docs" && (
             <View style={{ gap: 0, marginTop: 8 }}>
               {itemsLoading ? (
                 <ActivityIndicator size="large" color={C.tint} style={{ marginTop: 40 }} />
@@ -569,8 +806,8 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* ── Step 4: Image Term ───────────────────────────────────────────── */}
-          {currentStep === 4 && (
+          {/* ── Step: Image Term ─────────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "image_term" && (
             <View style={styles.documentSection}>
               {firstTerm ? (
                 <>
@@ -629,8 +866,71 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* ── Step 5: Summary ──────────────────────────────────────────────── */}
-          {currentStep === 5 && (
+          {/* ── Step: Finishing ──────────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "finishing" && (
+            <View style={styles.formSection}>
+              <MaskedInput label="Data de Nascimento" value={birthDate} onChangeText={setBirthDate} mask={maskDate} placeholder="DD/MM/AAAA" icon="calendar" keyboardType="number-pad" />
+
+              <View style={styles.dividerLine} />
+              <Text style={styles.sectionSub}>Informações familiares</Text>
+
+              <View style={mStyles.field}>
+                <View style={mStyles.labelRow}>
+                  <Text style={mStyles.label}>Possui filhos?</Text>
+                  <Text style={mStyles.req}>*</Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                  <TouchableOpacity
+                    style={[finStyles.toggleBtn, hasKids === true && finStyles.toggleBtnActive]}
+                    onPress={() => setHasKids(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="check" size={15} color={hasKids === true ? "#fff" : C.textSecondary} />
+                    <Text style={[finStyles.toggleText, hasKids === true && finStyles.toggleTextActive]}>Sim</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[finStyles.toggleBtn, hasKids === false && finStyles.toggleBtnNo]}
+                    onPress={() => setHasKids(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="x" size={15} color={hasKids === false ? "#fff" : C.textSecondary} />
+                    <Text style={[finStyles.toggleText, hasKids === false && finStyles.toggleTextActive]}>Não</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {hasKids === true && (
+                <View style={mStyles.field}>
+                  <Text style={mStyles.label}>Quantos filhos?</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginTop: 8 }}>
+                    <TouchableOpacity
+                      style={finStyles.counterBtn}
+                      onPress={() => setKidsCount((v) => String(Math.max(1, parseInt(v) - 1)))}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="minus" size={18} color={C.tint} />
+                    </TouchableOpacity>
+                    <Text style={finStyles.counterVal}>{kidsCount}</Text>
+                    <TouchableOpacity
+                      style={finStyles.counterBtn}
+                      onPress={() => setKidsCount((v) => String(Math.min(20, parseInt(v) + 1)))}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="plus" size={18} color={C.tint} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.hintBox}>
+                <Feather name="heart" size={13} color="#2563EB" />
+                <Text style={styles.hintText}>Esses dados são opcionais e ajudam o RH a celebrar momentos especiais da sua família!</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Step: Summary ────────────────────────────────────────────────── */}
+          {STEPS[currentStep]?.id === "summary" && (
             <View style={styles.summarySection}>
               <View style={styles.summaryHeader}>
                 <Text style={styles.summaryEmoji}>🎉</Text>
@@ -662,13 +962,17 @@ export default function OnboardingScreen() {
 
         {/* ── Footer ── */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-          {currentStep > 0 && currentStep < 5 && (
+          {currentStep > 0 && STEPS[currentStep]?.id !== "summary" && (
             <TouchableOpacity style={styles.backBtn} onPress={() => setCurrentStep((s) => s - 1)} activeOpacity={0.7}>
               <Feather name="arrow-left" size={16} color={C.textSecondary} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.nextBtn, !canProceed() && styles.nextBtnDisabled, currentStep > 0 && currentStep < 5 && { flex: 1 }]}
+            style={[
+              styles.nextBtn,
+              !canProceed() && styles.nextBtnDisabled,
+              currentStep > 0 && STEPS[currentStep]?.id !== "summary" && { flex: 1 },
+            ]}
             onPress={nextStep}
             disabled={!canProceed() || loading}
             activeOpacity={0.8}
@@ -678,13 +982,39 @@ export default function OnboardingScreen() {
             ) : (
               <>
                 <Text style={styles.nextBtnText}>
-                  {currentStep === STEPS.length - 1 ? "Entrar no Aplicativo" : "Continuar"}
+                  {STEPS[currentStep]?.id === "summary" ? "Entrar no Aplicativo" : "Continuar"}
                 </Text>
-                <Feather name={currentStep === STEPS.length - 1 ? "log-in" : "arrow-right"} size={16} color="#fff" />
+                <Feather name={STEPS[currentStep]?.id === "summary" ? "log-in" : "arrow-right"} size={16} color="#fff" />
               </>
             )}
           </TouchableOpacity>
         </View>
+
+        {/* ── Picker Modals ── */}
+        <PickerModal
+          visible={pickerOpen === "unit"}
+          title="Selecione a Unidade"
+          options={unitTags}
+          selected={unit}
+          onSelect={setUnit}
+          onClose={() => setPickerOpen(null)}
+        />
+        <PickerModal
+          visible={pickerOpen === "sector"}
+          title="Selecione o Setor"
+          options={sectorTags}
+          selected={sector}
+          onSelect={setSector}
+          onClose={() => setPickerOpen(null)}
+        />
+        <PickerModal
+          visible={pickerOpen === "cargo"}
+          title="Selecione o Cargo / Função"
+          options={cargoTags}
+          selected={position}
+          onSelect={setPosition}
+          onClose={() => setPickerOpen(null)}
+        />
 
         {/* ── Image term confirmation modal ── */}
         <Modal visible={showImageTermConfirm} transparent animationType="fade" onRequestClose={() => setShowImageTermConfirm(false)}>
@@ -876,4 +1206,21 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   modalConfirmBtn: { flex: 2, paddingVertical: 14, borderRadius: 10, backgroundColor: C.tint, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   modalConfirmText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+});
+
+const finStyles = StyleSheet.create({
+  toggleBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    height: 48, borderRadius: 12, borderWidth: 1.5, borderColor: C.border,
+    backgroundColor: C.surface,
+  },
+  toggleBtnActive: { backgroundColor: C.tint, borderColor: C.tint },
+  toggleBtnNo: { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+  toggleText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  toggleTextActive: { color: "#fff" },
+  counterBtn: {
+    width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: C.tint,
+    alignItems: "center", justifyContent: "center", backgroundColor: "#EFF6FF",
+  },
+  counterVal: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, minWidth: 40, textAlign: "center" },
 });

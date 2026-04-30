@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
-import { db, usersTable, allowedEmailsTable, onboardingStepsTable, companyValuesConfirmationsTable, imageTermChoicesTable, documentSignaturesTable } from "@workspace/db";
+import { db, usersTable, allowedEmailsTable, onboardingStepsTable, companyValuesConfirmationsTable, imageTermChoicesTable, documentSignaturesTable, securitySettingsTable } from "@workspace/db";
 import { eq, ilike, or, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin, simpleHash, formatUser, formatUserBasic } from "../lib/auth.js";
 
@@ -73,6 +73,9 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   if (appBanned !== undefined) updates.appBanned = appBanned;
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
   if (onboardingCompleted !== undefined) updates.onboardingCompleted = onboardingCompleted;
+  if ((req.body as any).hasKids !== undefined) updates.hasKids = (req.body as any).hasKids;
+  if ((req.body as any).kidsCount !== undefined) updates.kidsCount = (req.body as any).kidsCount;
+  if ((req.body as any).needsPasswordReset !== undefined) updates.needsPasswordReset = (req.body as any).needsPasswordReset;
 
   const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, parseInt(id))).returning();
   res.json(formatUser(updated));
@@ -93,6 +96,29 @@ router.delete("/:id", requireAdmin, async (req, res) => {
   }
   await db.delete(usersTable).where(eq(usersTable.id, parseInt(id)));
   res.json({ success: true });
+});
+
+// ── POST /users/:id/reset-password — reset to default password ───────────────
+router.post("/:id/reset-password", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(id))).limit(1);
+  if (!target) { res.status(404).json({ error: "Usuário não encontrado" }); return; }
+  if (target.role === "master_admin") {
+    res.status(403).json({ error: "Não é possível resetar a senha do master admin" });
+    return;
+  }
+
+  const settings = await db.select().from(securitySettingsTable);
+  const settingsMap: Record<string, string> = {};
+  for (const s of settings) settingsMap[s.key] = s.value;
+  const defaultPassword = settingsMap["default_password"] || "Beija2024";
+
+  const [updated] = await db.update(usersTable)
+    .set({ passwordHash: simpleHash(defaultPassword), needsPasswordReset: true })
+    .where(eq(usersTable.id, parseInt(id)))
+    .returning();
+
+  res.json({ success: true, user: formatUser(updated), message: `Senha redefinida para a senha padrão` });
 });
 
 router.post("/:id/avatar", requireAuth, async (req, res) => {

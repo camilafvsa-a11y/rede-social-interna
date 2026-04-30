@@ -12,3 +12,5 @@ export * from "./channel-reads";
 export * from "./dms";
 export * from "./gamification";
 export * from "./onboarding";
+export * from "./tags";
+export * from "./security-settings";
